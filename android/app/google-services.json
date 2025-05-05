@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "100863523566",
+    "project_id": "gymgenius-1332f",
+    "storage_bucket": "gymgenius-1332f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:100863523566:android:bb322c80c20d0ccd57d1ff",
+        "android_client_info": {
+          "package_name": "com.nareph.gymgenius"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDfd866P8uM_dKCltI3sN84zGKXldcml1E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

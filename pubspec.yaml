@@ -1,0 +1,42 @@
+name: gymgenius
+description: "AI-Powered Fitness App"
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  firebase_core: ^3.13.0
+  firebase_auth: ^5.5.3
+  google_sign_in: ^6.1.5
+  flutter_bloc: ^9.1.1
+  equatable: ^2.0.5
+  page_indicator: ^0.4.1 # Pour les indicateurs de progression
+  cloud_firestore: ^5.6.7
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+# --- AJOUTEZ CETTE SECTION ---
+flutter:
+  # La ligne suivante est cruciale pour que les icônes Material fonctionnent.
+  # Assurez-vous que l'indentation (deux espaces) est correcte.
+  uses-material-design: true
+
+  # --- Décommentez et utilisez ces sections si vous ajoutez des assets ou des polices ---
+  # assets:
+  #   - assets/images/ # Exemple : déclare tout un dossier d'images
+  #   - assets/icons/ # Exemple : déclare un dossier d'icônes
+  #   - assets/logo.png # Exemple : déclare un fichier spécifique
+
+  # fonts:
+  #   - family: MyCustomFont # Nom de la famille de police
+  #     fonts:
+  #       - asset: assets/fonts/MyCustomFont-Regular.ttf
+  #       - asset: assets/fonts/MyCustomFont-Bold.ttf
+  #         weight: 700
+  #   - family: MyIconFont # Nom de la police d'icônes personnalisées
+  #     fonts:
+  #       - asset: assets/fonts/MyIconFont.ttf

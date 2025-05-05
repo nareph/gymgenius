@@ -1,0 +1,99 @@
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    // AJOUT : Appliquer le plugin Google Services
+    id 'com.google.gms.google-services' // Peut être placé ici ou avec apply plugin à la fin
+    // Le plugin Flutter doit être appliqué après les plugins Android et Kotlin.
+    id "dev.flutter.flutter-gradle-plugin"
+}
+
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader('UTF-8') { reader ->
+        localProperties.load(reader)
+    }
+}
+
+def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
+if (flutterVersionCode == null) {
+    flutterVersionCode = '1'
+}
+
+def flutterVersionName = localProperties.getProperty('flutter.versionName')
+if (flutterVersionName == null) {
+    flutterVersionName = '1.0'
+}
+
+android {
+    // Récupère la valeur depuis gradle.properties si elle existe, sinon utilise la valeur par défaut
+    namespace = "com.nareph.gymgenius" // Assurez-vous que cela correspond à Firebase Console
+    compileSdk = Integer.parseInt(findProperty('flutter.compileSdkVersion') ?: '35')
+    ndkVersion = findProperty('flutter.ndkVersion') ?: "25.1.8937393" // Ou utilisez la valeur de gradle.properties
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = '1.8' // Simplifié
+    }
+
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+    }
+
+    defaultConfig {
+        applicationId = "com.nareph.gymgenius" // Assurez-vous que cela correspond à Firebase Console
+        // Utilise la valeur de gradle.properties si elle existe, sinon 21
+        minSdk = Integer.parseInt(findProperty('flutter.minSdkVersion') ?: '23')
+        // Utilise la valeur de gradle.properties si elle existe, sinon 35
+        targetSdk = Integer.parseInt(findProperty('flutter.targetSdkVersion') ?: '35')
+        versionCode = flutterVersionCode.toInteger()
+        versionName = flutterVersionName
+        // AJOUT : Recommandé pour certaines dépendances Firebase/AndroidX
+        multiDexEnabled true
+    }
+
+    buildTypes {
+        release {
+            signingConfig = signingConfigs.debug // Pour le développement uniquement
+            // Vous devrez configurer une signature correcte pour la publication
+             minifyEnabled true // Activer la minification
+             shrinkResources true // Activer la suppression des ressources non utilisées
+             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+             // Pas besoin de spécifier signingConfig explicitement, debug est par défaut
+        }
+    }
+     // AJOUT : Peut être nécessaire pour éviter les conflits de dépendances
+     packagingOptions {
+        exclude 'META-INF/AL2.0'
+        exclude 'META-INF/LGPL2.1'
+    }
+}
+
+flutter {
+    source = "../.."
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version" // Assurez-vous que $kotlin_version est défini (souvent dans build.gradle projet)
+    // AJOUT : Dépendances Firebase BoM (Bill of Materials) - Recommandé
+    implementation platform('com.google.firebase:firebase-bom:33.1.1') // Utilisez la dernière version BOM
+
+    // AJOUT : Dépendances Firebase spécifiques (sans spécifier de version car géré par BoM)
+    implementation 'com.google.firebase:firebase-auth' // Pour Firebase Auth
+    implementation 'com.google.firebase:firebase-analytics' // Si vous utilisez Analytics (souvent implicite ou recommandé)
+
+    // AJOUT : Dépendance MultiDex
+    implementation 'androidx.multidex:multidex:2.0.1'
+
+    // Vous pouvez ajouter d'autres dépendances natives ici si nécessaire
+}
+
+// AJOUT : Appliquer le plugin Google Services à la toute fin (méthode alternative/classique)
+// Si vous ne l'avez pas ajouté dans le bloc `plugins { ... }` au début, décommentez la ligne ci-dessous.
+// apply plugin: 'com.google.gms.google-services'
