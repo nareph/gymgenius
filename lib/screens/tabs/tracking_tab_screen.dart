@@ -42,7 +42,7 @@ class TrackingTabScreen extends StatelessWidget {
                 // backgroundColor: colorScheme.secondaryContainer,
                 // foregroundColor: colorScheme.onSecondaryContainer,
                 disabledBackgroundColor:
-                    colorScheme.surfaceVariant.withOpacity(0.5),
+                    colorScheme.surfaceContainerHighest.withOpacity(0.5),
                 disabledForegroundColor:
                     colorScheme.onSurfaceVariant.withOpacity(0.7),
               ),

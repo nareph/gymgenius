@@ -14,20 +14,16 @@ dependencies:
   equatable: ^2.0.5
   page_indicator: ^0.4.1 # Pour les indicateurs de progression
   cloud_firestore: ^5.6.7
+  intl: ^0.20.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
 
-# --- AJOUTEZ CETTE SECTION ---
 flutter:
-  # La ligne suivante est cruciale pour que les icônes Material fonctionnent.
-  # Assurez-vous que l'indentation (deux espaces) est correcte.
   uses-material-design: true
 
   # Ajoutez cette section pour les images et les polices
-  assets:
-    - assets/gifs/
   #   - assets/images/ # Exemple : déclare tout un dossier d'images
   #   - assets/icons/ # Exemple : déclare un dossier d'icônes
   #   - assets/logo.png # Exemple : déclare un fichier spécifique

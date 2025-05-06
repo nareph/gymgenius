@@ -79,27 +79,22 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
-  // Renvoie un tuple: (texte des semaines restantes, booléen si expiré)
   (String, bool) _getRoutineStatus(WeeklyRoutine? routine) {
     if (routine == null ||
         routine.createdAt == null ||
         routine.durationInWeeks <= 0) {
-      return (
-        "Duration not set",
-        false
-      ); // Non expiré par défaut si pas de données
+      return ("Duration not set", false);
     }
     final DateTime creationDate = routine.createdAt!.toDate();
     final DateTime endDate =
         creationDate.add(Duration(days: routine.durationInWeeks * 7));
 
     if (DateTime.now().isAfter(endDate)) {
-      return ("Plan finished", true); // Expiré
+      return ("Plan finished", true);
     }
 
     final Duration difference = endDate.difference(DateTime.now());
     int weeksRemaining = (difference.inDays / 7).ceil();
-    // Assurer que les semaines restantes ne dépassent pas la durée totale ou ne soient négatives
     if (weeksRemaining > routine.durationInWeeks)
       weeksRemaining = routine.durationInWeeks;
     if (weeksRemaining < 0) weeksRemaining = 0;
@@ -107,7 +102,7 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
     return (
       "$weeksRemaining week${weeksRemaining == 1 ? '' : 's'} remaining",
       false
-    ); // Non expiré
+    );
   }
 
   @override
@@ -168,15 +163,14 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
 
                   WeeklyRoutine? routine;
                   bool noRoutineExists = true;
-                  bool isRoutineExpired = false; // Initialisation
+                  bool isRoutineExpired = false;
                   String routineStatusText = "N/A";
 
                   if (snapshot.data != null && snapshot.data!.exists) {
                     noRoutineExists = false;
                     try {
                       routine = WeeklyRoutine.fromFirestore(snapshot.data!);
-                      final status = _getRoutineStatus(
-                          routine); // Utilise la nouvelle fonction
+                      final status = _getRoutineStatus(routine);
                       routineStatusText = status.$1;
                       isRoutineExpired = status.$2;
                     } catch (e) {
@@ -187,13 +181,12 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
                     }
                   }
 
-                  // --- AFFICHAGE BASÉ SUR L'ÉTAT DE LA ROUTINE ---
                   if (noRoutineExists || isRoutineExpired) {
                     String title = isRoutineExpired
                         ? "Routine Expired"
                         : "No Active Routine";
                     String message = isRoutineExpired
-                        ? "Your previous plan has finished after ${routine?.durationInWeeks ?? 0} weeks. Time for a new one!" // Affiche la durée si routine n'est pas null
+                        ? "Your previous plan has finished after ${routine?.durationInWeeks ?? 0} weeks. Time for a new one!"
                         : "Let's generate your personalized AI fitness plan!";
                     String buttonText = isRoutineExpired
                         ? "Generate New Plan"
@@ -217,12 +210,9 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
                           ),
                         Expanded(
                           child: Card(
-                              elevation: isRoutineExpired
-                                  ? 4
-                                  : 2, // Plus d'emphase si expirée
+                              elevation: isRoutineExpired ? 4 : 2,
                               color: isRoutineExpired
-                                  ? colorScheme.errorContainer.withOpacity(
-                                      0.3) // Couleur d'avertissement léger
+                                  ? colorScheme.errorContainer.withOpacity(0.3)
                                   : colorScheme.surface.withOpacity(0.8),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(15.0),
@@ -270,10 +260,8 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
                                               : Icons.auto_awesome)),
                                       label: _isGeneratingRoutine
                                           ? const SizedBox(
-                                              // Utilise le label pour l'indicateur pour garder la taille du bouton
                                               height: 20,
-                                              width:
-                                                  90, // Approx. la largeur du texte
+                                              width: 90,
                                               child: Center(
                                                   child: SizedBox(
                                                       width: 20,
@@ -294,7 +282,7 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
                                               foregroundColor:
                                                   colorScheme.onError,
                                             )
-                                          : null, // Style par défaut sinon
+                                          : null,
                                     )
                                   ],
                                 ),
@@ -302,9 +290,7 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
                         ),
                       ],
                     );
-                  }
-                  // Routine existe et n'est pas expirée
-                  else if (routine != null) {
+                  } else if (routine != null) {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -325,7 +311,8 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
                               ),
                               const SizedBox(width: 8),
                               Chip(
-                                avatar: Icon(Icons.timer_sand_empty,
+                                // ***** CORRECTION APPLIQUÉE ICI *****
+                                avatar: Icon(Icons.hourglass_empty_outlined,
                                     size: 16,
                                     color: colorScheme.onSecondaryContainer
                                         .withOpacity(0.8)),
@@ -335,8 +322,7 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
                                             colorScheme.onSecondaryContainer)),
                                 backgroundColor: colorScheme.secondaryContainer,
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 4), // Un peu plus de padding
+                                    horizontal: 8, vertical: 4),
                               ),
                             ],
                           ),

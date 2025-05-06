@@ -92,7 +92,7 @@ class AppTheme {
       colorScheme: colorScheme,
       textTheme: textTheme, // Applique le TextTheme ajusté
       fontFamily: null,
-      scaffoldBackgroundColor: colorScheme.background,
+      scaffoldBackgroundColor: colorScheme.surface,
       appBarTheme: appBarTheme,
       elevatedButtonTheme:
           elevatedButtonTheme, // Applique le ElevatedButtonTheme mis à jour

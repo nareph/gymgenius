@@ -2,6 +2,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:gymgenius/screens/tabs/home_tab_screen.dart';
+import 'package:gymgenius/screens/tabs/profile_tab_screen.dart'; // Importez le nouvel onglet
 import 'package:gymgenius/screens/tabs/tracking_tab_screen.dart';
 
 class MainDashboardScreen extends StatefulWidget {
@@ -19,7 +20,8 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this); // 2 onglets
+    _tabController =
+        TabController(length: 3, vsync: this); // 3 onglets maintenant
   }
 
   @override
@@ -53,8 +55,6 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
     final User? user = _auth.currentUser;
     final colorScheme = Theme.of(context).colorScheme;
 
-    // Redirection si l'utilisateur n'est pas connecté
-    // Ceci est critique et devrait idéalement être géré par un AuthWrapper plus haut dans l'arbre des widgets
     if (user == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -80,19 +80,20 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
           labelColor: colorScheme.primary,
           unselectedLabelColor: colorScheme.onSurfaceVariant,
           tabs: const [
-            Tab(
-                icon: Icon(Icons.home_filled),
-                text: "Home"), // Icône remplie pour l'onglet actif
+            Tab(icon: Icon(Icons.home_filled), text: "Home"),
             Tab(icon: Icon(Icons.calendar_today_outlined), text: "Tracking"),
+            Tab(
+                icon: Icon(Icons.person_outline),
+                text: "Profile"), // Nouvel onglet
           ],
         ),
       ),
       body: TabBarView(
         controller: _tabController,
         children: [
-          HomeTabScreen(user: user), // Passez l'utilisateur à l'onglet Home
-          TrackingTabScreen(
-              user: user), // Passez l'utilisateur à l'onglet Tracking
+          HomeTabScreen(user: user),
+          TrackingTabScreen(user: user),
+          ProfileTabScreen(user: user), // Contenu du nouvel onglet
         ],
       ),
     );
