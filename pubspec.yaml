@@ -25,8 +25,9 @@ flutter:
   # Assurez-vous que l'indentation (deux espaces) est correcte.
   uses-material-design: true
 
-  # --- Décommentez et utilisez ces sections si vous ajoutez des assets ou des polices ---
-  # assets:
+  # Ajoutez cette section pour les images et les polices
+  assets:
+    - assets/gifs/
   #   - assets/images/ # Exemple : déclare tout un dossier d'images
   #   - assets/icons/ # Exemple : déclare un dossier d'icônes
   #   - assets/logo.png # Exemple : déclare un fichier spécifique

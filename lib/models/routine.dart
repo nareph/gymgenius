@@ -1,21 +1,14 @@
-// Exemple: lib/models/routine.dart
-
+// lib/models/routine.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-// Représente un exercice dans la routine
+// Définition du modèle pour un seul exercice dans une routine
 class RoutineExercise {
   final String name;
   final int sets;
-  final String
-      reps; // Garder en String pour flexibilité ("8-12", "AMRAP", "15")
-  final String
-      weightSuggestionKg; // Garder en String ("50kg", "Bodyweight", "Machine 5")
+  final String reps; // Peut être "8-10" ou "AMRAP" ou "60sec"
+  final String weightSuggestionKg;
   final int restBetweenSetsSeconds;
-  // --- Champs pour l'étape 2 ---
-  final String? description; // Description de l'exercice
-  final String? gifUrl; // URL du GIF illustratif
-  final List<String>?
-      targetMuscles; // Liste des muscles ciblés (e.g., ['chest', 'triceps'])
+  final String description;
 
   RoutineExercise({
     required this.name,
@@ -23,113 +16,134 @@ class RoutineExercise {
     required this.reps,
     required this.weightSuggestionKg,
     required this.restBetweenSetsSeconds,
-    this.description, // Optionnel pour l'instant
-    this.gifUrl, // Optionnel pour l'instant
-    this.targetMuscles, // Optionnel pour l'instant
+    required this.description,
   });
 
-  // Méthode pour convertir depuis une Map (ex: JSON parsé ou Firestore)
+  // Factory constructor pour créer un RoutineExercise à partir d'une Map (Firestore)
   factory RoutineExercise.fromMap(Map<String, dynamic> map) {
     return RoutineExercise(
-      name: map['name'] ?? 'Unknown Exercise',
-      sets: map['sets'] ?? 3,
-      reps: map['reps'] ?? '8-12',
-      weightSuggestionKg: map['weight_suggestion_kg']?.toString() ?? 'N/A',
-      restBetweenSetsSeconds: map['rest_between_sets_seconds'] ?? 60,
-      description: map['description'],
-      gifUrl: map['gifUrl'],
-      targetMuscles: map['targetMuscles'] != null
-          ? List<String>.from(map['targetMuscles'])
-          : null,
+      name: map['name'] as String? ?? 'Unknown Exercise',
+      sets: map['sets'] as int? ?? 0,
+      reps: map['reps'] as String? ?? 'N/A',
+      weightSuggestionKg: map['weightSuggestionKg'] as String? ?? 'N/A',
+      restBetweenSetsSeconds: map['restBetweenSetsSeconds'] as int? ?? 0,
+      description: map['description'] as String? ?? '',
     );
   }
 
-  // Méthode pour convertir en Map (utile pour sauvegarder dans Firestore)
+  // Méthode pour convertir RoutineExercise en Map (pour Firestore)
   Map<String, dynamic> toMap() {
     return {
       'name': name,
       'sets': sets,
       'reps': reps,
-      'weight_suggestion_kg': weightSuggestionKg,
-      'rest_between_sets_seconds': restBetweenSetsSeconds,
+      'weightSuggestionKg': weightSuggestionKg,
+      'restBetweenSetsSeconds': restBetweenSetsSeconds,
       'description': description,
-      'gifUrl': gifUrl,
-      'targetMuscles': targetMuscles,
     };
   }
 }
 
-// Représente l'ensemble de la routine hebdomadaire
+// Définition du modèle pour la routine hebdomadaire complète
 class WeeklyRoutine {
-  final String userId; // À qui appartient cette routine
-  final Timestamp generatedAt; // Quand elle a été générée
-  // Map où la clé est le jour (lowercase: "monday", "tuesday", etc.)
-  // et la valeur est soit une List<RoutineExercise>, soit null/String("Rest Day")
+  final String userId;
+  final String name; // Nom de la routine (e.g., "Static Sample Routine")
   final Map<String, List<RoutineExercise>?>
-      dailyWorkouts; // Utilise List? pour les jours de repos
+      dailyWorkouts; // e.g., 'monday': [RoutineExercise(...)], 'tuesday': null
+  final int durationInWeeks; // Durée prévue de la routine en semaines
+  final Timestamp?
+      createdAt; // Date et heure de génération de la routine, nullable au cas où elle vient d'une source sans ce champ initialement
 
   WeeklyRoutine({
     required this.userId,
-    required this.generatedAt,
+    required this.name,
     required this.dailyWorkouts,
+    required this.durationInWeeks,
+    this.createdAt, // Peut être null si non encore sauvegardé ou si vient d'une ancienne structure
   });
 
-  // Méthode pour convertir depuis un DocumentSnapshot de Firestore
+  // Factory constructor pour créer un WeeklyRoutine à partir d'un DocumentSnapshot Firestore
   factory WeeklyRoutine.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-    Map<String, List<RoutineExercise>?> parsedWorkouts = {};
+    Map<String, List<RoutineExercise>?> workouts = {};
 
-    // Itérer sur les jours possibles (ou les clés présentes dans data)
-    for (var day in [
-      'monday',
-      'tuesday',
-      'wednesday',
-      'thursday',
-      'friday',
-      'saturday',
-      'sunday'
-    ]) {
-      if (data.containsKey(day)) {
-        final dayData = data[day];
-        if (dayData is List) {
-          // C'est une liste d'exercices
-          parsedWorkouts[day] = dayData
-              .map((exerciseMap) =>
-                  RoutineExercise.fromMap(exerciseMap as Map<String, dynamic>))
+    // Parcourir tous les jours de la semaine définis dans notre constante
+    for (String dayKey in WeeklyRoutine.daysOfWeek) {
+      if (data.containsKey(dayKey)) {
+        final dayData = data[dayKey];
+        if (dayData != null && dayData is List) {
+          // Vérifie que les éléments de la liste sont bien des Map avant de caster
+          workouts[dayKey] = dayData
+              .whereType<
+                  Map<String, dynamic>>() // Filtre pour ne garder que les Map
+              .map((exData) => RoutineExercise.fromMap(exData))
               .toList();
+          if (workouts[dayKey]!.isEmpty && dayData.isNotEmpty) {
+            // Si après filtrage c'est vide mais la liste originale ne l'était pas,
+            // cela peut indiquer un problème de format de données dans Firestore pour ce jour.
+            print(
+                "Warning: Exercises for day '$dayKey' could not be parsed correctly. Original data: $dayData");
+            workouts[dayKey] =
+                null; // Traiter comme un jour de repos en cas d'échec de parsing partiel
+          } else if (workouts[dayKey]!.isEmpty) {
+            workouts[dayKey] = null; // Jour de repos si la liste est vide
+          }
         } else {
-          // C'est probablement "Rest Day" ou null, on le met à null
-          parsedWorkouts[day] = null;
+          workouts[dayKey] =
+              null; // Jour de repos (ex: explicitement null dans Firestore)
         }
       } else {
-        // Le jour n'est pas dans les données, on le met à null (repos)
-        parsedWorkouts[day] = null;
+        workouts[dayKey] =
+            null; // Jour non défini dans Firestore = jour de repos
       }
     }
 
     return WeeklyRoutine(
-      userId: data['userId'] ?? '',
-      generatedAt: data['generatedAt'] ?? Timestamp.now(),
-      dailyWorkouts: parsedWorkouts,
+      userId: data['userId'] as String? ?? '',
+      name: data['name'] as String? ?? 'Unnamed Routine',
+      dailyWorkouts: workouts,
+      durationInWeeks:
+          data['durationInWeeks'] as int? ?? 8, // Valeur par défaut
+      createdAt: data['createdAt'] as Timestamp?, // createdAt peut être null
     );
   }
 
-  // Méthode pour convertir en Map pour Firestore
+  // Méthode pour convertir WeeklyRoutine en Map (pour Firestore)
   Map<String, dynamic> toFirestore() {
-    // Convertit la map d'exercices en une map stockable
-    Map<String, dynamic> firestoreDailyWorkouts = {};
+    Map<String, dynamic> data = {
+      'userId': userId,
+      'name': name,
+      'durationInWeeks': durationInWeeks,
+      // 'createdAt' sera géré par FieldValue.serverTimestamp() lors de la sauvegarde initiale.
+      // Si createdAt a déjà une valeur (par ex. lors d'une mise à jour), on pourrait vouloir la préserver :
+      // if (createdAt != null) 'createdAt': createdAt,
+    };
+
+    // Ajoute les jours de la semaine et leurs exercices
     dailyWorkouts.forEach((day, exercises) {
-      if (exercises != null) {
-        firestoreDailyWorkouts[day] = exercises.map((e) => e.toMap()).toList();
+      if (exercises != null && exercises.isNotEmpty) {
+        data[day] = exercises.map((ex) => ex.toMap()).toList();
       } else {
-        firestoreDailyWorkouts[day] = "Rest Day"; // Ou null si vous préférez
+        // Pour les jours de repos, on peut soit omettre la clé, soit la mettre à null.
+        // Mettre à null est plus explicite.
+        data[day] = null;
       }
     });
 
-    return {
-      'userId': userId,
-      'generatedAt': generatedAt,
-      ...firestoreDailyWorkouts, // Ajoute directement les jours (monday: [...], tuesday: "Rest Day", ...)
-    };
+    return data;
   }
+
+  // Constante statique pour l'ordre des jours (déplacée ici pour la centralisation)
+  static const List<String> daysOfWeek = [
+    'monday',
+    'tuesday',
+    'wednesday',
+    'thursday',
+    'friday',
+    'saturday',
+    'sunday'
+  ];
 }
+
+// L'extension n'est plus nécessaire si `daysOfWeek` est une constante statique dans la classe.
+// Vous pouvez supprimer l'extension WeeklyRoutineDays si vous l'aviez ajoutée séparément.

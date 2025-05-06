@@ -2,40 +2,34 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-// N'est plus nécessaire si on utilise pushNamedAndRemoveUntil('/main_app')
-// import 'package:gymgenius/screens/main_dashboard_screen.dart';
+// --- IMPORTEZ LE FICHIER CONTENANT VOTRE ROUTINE STATIQUE ---
+// Cette importation n'est plus nécessaire ici, elle le sera dans le DashboardScreen
+// import 'package:gymgenius/data/static_routine.dart';
 
 class SignInScreen extends StatefulWidget {
   final Map<String, dynamic>? onboardingData;
-
-  const SignInScreen({
-    super.key,
-    this.onboardingData,
-  });
-
+  const SignInScreen({super.key, this.onboardingData});
   @override
   State<SignInScreen> createState() => _SignInScreenState();
 }
 
 class _SignInScreenState extends State<SignInScreen> {
-  final _formKey =
-      GlobalKey<FormState>(); // Ajout d'une clé de formulaire pour validation
+  final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
 
-  // --- Fonction d'inscription (_signUpWithEmail) ---
   Future<void> _signUpWithEmail() async {
-    // Valider le formulaire avant de continuer
+    // Valide le formulaire avant de continuer
     if (!(_formKey.currentState?.validate() ?? false)) {
-      return; // Arrête si le formulaire n'est pas valide
+      return;
     }
-
     setState(() {
       _isLoading = true;
     });
 
     try {
+      // Créer l'utilisateur Auth
       final credential =
           await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
@@ -44,41 +38,57 @@ class _SignInScreenState extends State<SignInScreen> {
       final user = credential.user;
 
       if (user != null) {
+        // Préparer les données du profil
         final profileData = {
           'email': user.email,
           'createdAt': FieldValue.serverTimestamp(),
-          ...?widget.onboardingData,
+          ...?widget.onboardingData, // Ajoute les données de l'onboarding
         };
+        final profileRef =
+            FirebaseFirestore.instance.collection('users').doc(user.uid);
 
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .set(profileData);
+        // Sauvegarder uniquement le profil utilisateur
+        // La routine sera gérée depuis le DashboardScreen
+        await profileRef.set(profileData);
 
+        // Rediriger si le widget est toujours monté
         if (mounted) {
-          // Utilise la route nommée définie dans main.dart
+          // Redirige vers '/main_app' qui contiendra le DashboardScreen
           Navigator.pushNamedAndRemoveUntil(
-            context,
-            '/main_app', // Route vers MainDashboardScreen
-            (Route<dynamic> route) => false,
-          );
+              context, '/main_app', (route) => false);
         }
       } else {
+        // Gérer le cas improbable où user est null
         if (mounted) {
           _showErrorSnackBar("Sign up failed. User data unavailable.", context);
         }
       }
     } on FirebaseAuthException catch (e) {
+      // Gérer les erreurs d'authentification
       if (mounted) {
-        _showErrorSnackBar(e.message ?? "Sign up error occurred.", context);
+        String errorMessage = "Sign up error occurred.";
+        if (e.code == 'email-already-in-use') {
+          errorMessage =
+              "This email is already registered. Please log in or use a different email.";
+        } else if (e.code == 'weak-password') {
+          errorMessage = "The password provided is too weak.";
+        } else if (e.code == 'invalid-email') {
+          errorMessage = "The email address is badly formatted.";
+        } else {
+          errorMessage = e.message ??
+              errorMessage; // Utilise le message Firebase si disponible
+        }
+        _showErrorSnackBar(errorMessage, context);
       }
     } catch (e) {
+      // Gérer les autres erreurs (Firestore, etc.)
       if (mounted) {
         print("Error saving profile or other: $e");
         _showErrorSnackBar(
             "An error occurred during sign up. Please try again.", context);
       }
     } finally {
+      // Assurer que l'indicateur de chargement s'arrête
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -89,6 +99,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
   // Helper pour afficher les SnackBar d'erreur avec le style du thème
   void _showErrorSnackBar(String message, BuildContext context) {
+    if (!context.mounted) return; // Vérifie si le widget est toujours là
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -98,11 +109,12 @@ class _SignInScreenState extends State<SignInScreen> {
           style: textTheme.bodyMedium?.copyWith(color: colorScheme.onError),
         ),
         backgroundColor: colorScheme.error,
+        duration: const Duration(seconds: 4),
       ),
     );
   }
 
-  // La fonction _formatOnboardingData reste inchangée (utile pour le debug)
+  // Fonction pour formater les données d'onboarding pour l'affichage debug
   String _formatOnboardingData(Map<String, dynamic> data) {
     final buffer = StringBuffer();
     data.forEach((key, value) {
@@ -120,6 +132,7 @@ class _SignInScreenState extends State<SignInScreen> {
     return buffer.toString();
   }
 
+  // Nettoie les contrôleurs
   @override
   void dispose() {
     _emailController.dispose();
@@ -127,6 +140,7 @@ class _SignInScreenState extends State<SignInScreen> {
     super.dispose();
   }
 
+  // Construit l'interface utilisateur
   @override
   Widget build(BuildContext context) {
     // Accès au thème
@@ -134,93 +148,72 @@ class _SignInScreenState extends State<SignInScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      // --- AppBar ---
-      // Style vient de AppBarTheme dans AppTheme
       appBar: AppBar(
-        // title: const Text("Create Your Account"), // Style déjà dans le thème
-        // Pas besoin de backgroundColor ou elevation
         leading: IconButton(
-          // Garde le bouton retour
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
-      // --- Body ---
-      // Fond vient de scaffoldBackgroundColor
-      // body: Container( ... decoration ... ), // <-- SUPPRIMÉ
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(
-              horizontal: 30.0, vertical: 20.0), // Padding ajusté
+          padding: const EdgeInsets.symmetric(horizontal: 30.0, vertical: 20.0),
           child: Form(
-            // Enveloppe la colonne dans un Form
-            key: _formKey, // Attache la clé
+            key: _formKey,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // --- Titre de l'Écran --- (Ajouté pour clarté)
                 Text(
                   "Create Your Account",
                   textAlign: TextAlign.center,
-                  style: textTheme
-                      .headlineMedium, // Utilise un style de titre du thème
+                  style: textTheme.headlineMedium,
                 ),
-                const SizedBox(height: 30), // Espace après le titre
-
-                // --- Affichage Debug (Optionnel) ---
+                const SizedBox(height: 30),
                 if (widget.onboardingData != null &&
                     widget.onboardingData!.isNotEmpty) ...[
-                  Text(
-                    "Your preferences will be saved:\n${_formatOnboardingData(widget.onboardingData!)}",
-                    // Utilise un style de texte petit/discret du thème
-                    style: textTheme.labelSmall?.copyWith(
-                        color: colorScheme.onSurface.withOpacity(0.6)),
-                    textAlign: TextAlign.left,
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    margin: const EdgeInsets.only(bottom: 20),
+                    decoration: BoxDecoration(
+                        color: colorScheme.surface.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(8)),
+                    child: Text(
+                      "Your preferences will be saved with your profile:\n${_formatOnboardingData(widget.onboardingData!)}",
+                      style: textTheme.labelSmall?.copyWith(
+                          color: colorScheme.onSurface.withOpacity(0.8),
+                          height: 1.4),
+                      textAlign: TextAlign.left,
+                    ),
                   ),
-                  const SizedBox(height: 25),
                 ],
-
-                // --- Champ Email ---
                 TextFormField(
-                  // Remplacé TextField par TextFormField pour la validation
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
-                  // style: const TextStyle(color: Colors.white), // <-- SUPPRIMÉ (vient du thème)
-                  // Utilise l'InputDecorationTheme, surcharge seulement labelText et icon
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: "Email",
-                    prefixIcon: const Icon(Icons.email_outlined),
-                    // Le reste (couleurs, bordures, etc.) vient du thème
+                    prefixIcon: Icon(Icons.email_outlined),
                   ),
-                  // Ajout de la validation
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
                       return 'Please enter your email';
                     }
-                    // Regex simple pour la validation d'email (peut être améliorée)
-                    if (!RegExp(r"^[a-zA-Z0-9.]+@[a-zA-Z0-9]+\.[a-zA-Z]+")
+                    if (!RegExp(
+                            r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+")
                         .hasMatch(value)) {
                       return 'Please enter a valid email address';
                     }
-                    return null; // Valide
+                    return null;
                   },
                   autovalidateMode: AutovalidateMode.onUserInteraction,
                 ),
                 const SizedBox(height: 15),
-
-                // --- Champ Mot de Passe ---
                 TextFormField(
-                  // Remplacé TextField par TextFormField
                   controller: _passwordController,
                   obscureText: true,
-                  // style: const TextStyle(color: Colors.white), // <-- SUPPRIMÉ
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: "Password",
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    // Le reste vient du thème
+                    prefixIcon: Icon(Icons.lock_outline),
                   ),
-                  // Ajout de la validation
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your password';
@@ -228,24 +221,17 @@ class _SignInScreenState extends State<SignInScreen> {
                     if (value.length < 6) {
                       return 'Password must be at least 6 characters long';
                     }
-                    return null; // Valide
+                    return null;
                   },
                   autovalidateMode: AutovalidateMode.onUserInteraction,
                 ),
-                const SizedBox(height: 35), // Espace augmenté
-
-                // --- Bouton Sign Up ---
+                const SizedBox(height: 35),
                 _isLoading
                     ? Center(
                         child: CircularProgressIndicator(
-                        // Utilise la couleur secondaire du thème
-                        color: colorScheme.secondary,
-                      ))
+                            color: colorScheme.secondary))
                     : ElevatedButton(
                         onPressed: _signUpWithEmail,
-                        // Le style vient automatiquement de ElevatedButtonThemeData
-                        // style: ElevatedButton.styleFrom(...), // <-- SUPPRIMÉ
-                        // Le texte utilise le style de ElevatedButtonThemeData
                         child: const Text("CREATE ACCOUNT"),
                       ),
               ],
