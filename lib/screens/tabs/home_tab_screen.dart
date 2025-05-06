@@ -4,7 +4,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:gymgenius/data/static_routine.dart';
 import 'package:gymgenius/models/routine.dart';
-// Importez le nouvel écran
 import 'package:gymgenius/screens/daily_workout_detail_screen.dart';
 
 class HomeTabScreen extends StatefulWidget {
@@ -80,26 +79,35 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
-  String _getWeeksRemainingText(WeeklyRoutine? routine) {
+  // Renvoie un tuple: (texte des semaines restantes, booléen si expiré)
+  (String, bool) _getRoutineStatus(WeeklyRoutine? routine) {
     if (routine == null ||
         routine.createdAt == null ||
         routine.durationInWeeks <= 0) {
-      return "Duration not set";
+      return (
+        "Duration not set",
+        false
+      ); // Non expiré par défaut si pas de données
     }
     final DateTime creationDate = routine.createdAt!.toDate();
     final DateTime endDate =
         creationDate.add(Duration(days: routine.durationInWeeks * 7));
-    final Duration difference = endDate.difference(DateTime.now());
 
-    if (difference.isNegative) {
-      return "Plan finished";
+    if (DateTime.now().isAfter(endDate)) {
+      return ("Plan finished", true); // Expiré
     }
+
+    final Duration difference = endDate.difference(DateTime.now());
     int weeksRemaining = (difference.inDays / 7).ceil();
+    // Assurer que les semaines restantes ne dépassent pas la durée totale ou ne soient négatives
     if (weeksRemaining > routine.durationInWeeks)
       weeksRemaining = routine.durationInWeeks;
     if (weeksRemaining < 0) weeksRemaining = 0;
 
-    return "$weeksRemaining week${weeksRemaining == 1 ? '' : 's'} remaining";
+    return (
+      "$weeksRemaining week${weeksRemaining == 1 ? '' : 's'} remaining",
+      false
+    ); // Non expiré
   }
 
   @override
@@ -160,25 +168,17 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
 
                   WeeklyRoutine? routine;
                   bool noRoutineExists = true;
-                  bool isRoutineExpired = false;
-                  String weeksRemainingText = "N/A";
+                  bool isRoutineExpired = false; // Initialisation
+                  String routineStatusText = "N/A";
 
                   if (snapshot.data != null && snapshot.data!.exists) {
                     noRoutineExists = false;
                     try {
                       routine = WeeklyRoutine.fromFirestore(snapshot.data!);
-                      weeksRemainingText = _getWeeksRemainingText(routine);
-                      if (routine.createdAt != null &&
-                          routine.durationInWeeks > 0) {
-                        final DateTime creationDate =
-                            routine.createdAt!.toDate();
-                        final DateTime endDate = creationDate
-                            .add(Duration(days: routine.durationInWeeks * 7));
-                        if (DateTime.now().isAfter(endDate)) {
-                          isRoutineExpired = true;
-                          weeksRemainingText = "Plan finished";
-                        }
-                      }
+                      final status = _getRoutineStatus(
+                          routine); // Utilise la nouvelle fonction
+                      routineStatusText = status.$1;
+                      isRoutineExpired = status.$2;
                     } catch (e) {
                       print(
                           "Error parsing routine data: ${snapshot.data!.data()} -> $e");
@@ -187,23 +187,50 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
                     }
                   }
 
+                  // --- AFFICHAGE BASÉ SUR L'ÉTAT DE LA ROUTINE ---
                   if (noRoutineExists || isRoutineExpired) {
+                    String title = isRoutineExpired
+                        ? "Routine Expired"
+                        : "No Active Routine";
+                    String message = isRoutineExpired
+                        ? "Your previous plan has finished after ${routine?.durationInWeeks ?? 0} weeks. Time for a new one!" // Affiche la durée si routine n'est pas null
+                        : "Let's generate your personalized AI fitness plan!";
+                    String buttonText = isRoutineExpired
+                        ? "Generate New Plan"
+                        : "Generate First Plan";
+                    IconData iconData = isRoutineExpired
+                        ? Icons.autorenew
+                        : Icons.sentiment_dissatisfied;
+
                     return Column(
                       children: [
                         if (isRoutineExpired && routine != null)
                           Padding(
                             padding: const EdgeInsets.only(bottom: 8.0),
                             child: Text(
-                              "Previous Plan: ${routine.name} (Finished)",
-                              style: textTheme.titleMedium,
+                              "Previous Plan: ${routine.name}",
+                              style: textTheme.titleMedium?.copyWith(
+                                  color: textTheme.bodySmall?.color
+                                      ?.withOpacity(0.7)),
                               textAlign: TextAlign.center,
                             ),
                           ),
                         Expanded(
                           child: Card(
-                              color: colorScheme.surface.withOpacity(0.8),
+                              elevation: isRoutineExpired
+                                  ? 4
+                                  : 2, // Plus d'emphase si expirée
+                              color: isRoutineExpired
+                                  ? colorScheme.errorContainer.withOpacity(
+                                      0.3) // Couleur d'avertissement léger
+                                  : colorScheme.surface.withOpacity(0.8),
                               shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(15.0)),
+                                borderRadius: BorderRadius.circular(15.0),
+                                side: isRoutineExpired
+                                    ? BorderSide(
+                                        color: colorScheme.error, width: 1.5)
+                                    : BorderSide.none,
+                              ),
                               child: Padding(
                                 padding: const EdgeInsets.symmetric(
                                     vertical: 20.0, horizontal: 16.0),
@@ -211,43 +238,63 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
                                   mainAxisSize: MainAxisSize.min,
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(
-                                        isRoutineExpired
-                                            ? Icons.autorenew
-                                            : Icons.sentiment_dissatisfied,
-                                        color: colorScheme.secondary,
+                                    Icon(iconData,
+                                        color: isRoutineExpired
+                                            ? colorScheme.error
+                                            : colorScheme.secondary,
                                         size: 40),
                                     const SizedBox(height: 10),
-                                    Text(
-                                        isRoutineExpired
-                                            ? "Routine Expired"
-                                            : "No Active Routine",
-                                        style: textTheme.titleLarge),
+                                    Text(title,
+                                        style: textTheme.titleLarge?.copyWith(
+                                          color: isRoutineExpired
+                                              ? colorScheme.onErrorContainer
+                                              : null,
+                                        )),
                                     const SizedBox(height: 5),
                                     Text(
-                                      isRoutineExpired
-                                          ? "Your previous plan has finished. Time for a new one!"
-                                          : "Let's generate your personalized AI fitness plan!",
-                                      style: textTheme.bodyMedium,
+                                      message,
+                                      style: textTheme.bodyMedium?.copyWith(
+                                        color: isRoutineExpired
+                                            ? colorScheme.onErrorContainer
+                                                .withOpacity(0.9)
+                                            : null,
+                                      ),
                                       textAlign: TextAlign.center,
                                     ),
                                     const SizedBox(height: 20),
-                                    ElevatedButton(
+                                    ElevatedButton.icon(
+                                      icon: Icon(_isGeneratingRoutine
+                                          ? Icons.hourglass_empty
+                                          : (isRoutineExpired
+                                              ? Icons.add_circle_outline
+                                              : Icons.auto_awesome)),
+                                      label: _isGeneratingRoutine
+                                          ? const SizedBox(
+                                              // Utilise le label pour l'indicateur pour garder la taille du bouton
+                                              height: 20,
+                                              width:
+                                                  90, // Approx. la largeur du texte
+                                              child: Center(
+                                                  child: SizedBox(
+                                                      width: 20,
+                                                      height: 20,
+                                                      child:
+                                                          CircularProgressIndicator(
+                                                              strokeWidth: 2,
+                                                              color: Colors
+                                                                  .white))))
+                                          : Text(buttonText),
                                       onPressed: _isGeneratingRoutine
                                           ? null
                                           : _generateRoutine,
-                                      child: _isGeneratingRoutine
-                                          ? SizedBox(
-                                              height: 20,
-                                              width: 20,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
-                                                color: colorScheme.onPrimary,
-                                              ),
+                                      style: isRoutineExpired
+                                          ? ElevatedButton.styleFrom(
+                                              backgroundColor:
+                                                  colorScheme.error,
+                                              foregroundColor:
+                                                  colorScheme.onError,
                                             )
-                                          : Text(isRoutineExpired
-                                              ? "Generate New Plan"
-                                              : "Generate First Plan"),
+                                          : null, // Style par défaut sinon
                                     )
                                   ],
                                 ),
@@ -255,7 +302,9 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
                         ),
                       ],
                     );
-                  } else if (routine != null) {
+                  }
+                  // Routine existe et n'est pas expirée
+                  else if (routine != null) {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -263,6 +312,7 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
                           padding: const EdgeInsets.only(bottom: 8.0),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               Expanded(
                                 child: Text(
@@ -275,13 +325,18 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
                               ),
                               const SizedBox(width: 8),
                               Chip(
-                                label: Text(weeksRemainingText,
+                                avatar: Icon(Icons.timer_sand_empty,
+                                    size: 16,
+                                    color: colorScheme.onSecondaryContainer
+                                        .withOpacity(0.8)),
+                                label: Text(routineStatusText,
                                     style: textTheme.labelMedium?.copyWith(
                                         color:
                                             colorScheme.onSecondaryContainer)),
                                 backgroundColor: colorScheme.secondaryContainer,
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 2),
+                                    horizontal: 8,
+                                    vertical: 4), // Un peu plus de padding
                               ),
                             ],
                           ),
@@ -338,7 +393,6 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
                                   onTap: isRestDay
                                       ? null
                                       : () {
-                                          // NAVIGATE HERE
                                           if (dayExercises != null &&
                                               dayExercises.isNotEmpty) {
                                             Navigator.push(
@@ -346,8 +400,7 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
                                               MaterialPageRoute(
                                                 builder: (_) =>
                                                     DailyWorkoutDetailScreen(
-                                                  dayTitle:
-                                                      "$dayTitle Workout", // Ex: "Monday Workout"
+                                                  dayTitle: "$dayTitle Workout",
                                                   exercises: dayExercises,
                                                 ),
                                               ),
