@@ -15,6 +15,7 @@ dependencies:
   page_indicator: ^0.4.1 # Pour les indicateurs de progression
   cloud_firestore: ^5.6.7
   intl: ^0.20.2
+  table_calendar: ^3.2.0
 
 dev_dependencies:
   flutter_test:
