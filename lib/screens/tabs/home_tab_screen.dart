@@ -2,11 +2,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:gymgenius/data/static_routine.dart'; // Pour createStaticWeeklyRoutine
+import 'package:gymgenius/data/static_routine.dart';
 import 'package:gymgenius/models/routine.dart';
+// Importez le nouvel écran
+import 'package:gymgenius/screens/daily_workout_detail_screen.dart';
 
 class HomeTabScreen extends StatefulWidget {
-  final User user; // Récupère l'utilisateur connecté
+  final User user;
   const HomeTabScreen({super.key, required this.user});
 
   @override
@@ -198,7 +200,6 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
                             ),
                           ),
                         Expanded(
-                          // Expanded (Contenant la Card)
                           child: Card(
                               color: colorScheme.surface.withOpacity(0.8),
                               shape: RoundedRectangleBorder(
@@ -250,12 +251,11 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
                                     )
                                   ],
                                 ),
-                              )), // Fin Card
-                        ), // FIN Expanded (Contenant la Card) <--- PARENTHÈSE CORRIGÉE/ASSURÉE
+                              )),
+                        ),
                       ],
                     );
                   } else if (routine != null) {
-                    // Routine existe et n'est pas expirée
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -338,10 +338,21 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
                                   onTap: isRestDay
                                       ? null
                                       : () {
-                                          print(
-                                              "Navigate to details for $dayTitle with ${dayExercises!.length} exercises");
-                                          // TODO: Naviguer vers l'écran de détail du jour
-                                          // Navigator.push(context, MaterialPageRoute(builder: (_) => DailyWorkoutScreen(day: dayTitle, exercises: dayExercises)));
+                                          // NAVIGATE HERE
+                                          if (dayExercises != null &&
+                                              dayExercises.isNotEmpty) {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (_) =>
+                                                    DailyWorkoutDetailScreen(
+                                                  dayTitle:
+                                                      "$dayTitle Workout", // Ex: "Monday Workout"
+                                                  exercises: dayExercises,
+                                                ),
+                                              ),
+                                            );
+                                          }
                                         },
                                 ),
                               );
