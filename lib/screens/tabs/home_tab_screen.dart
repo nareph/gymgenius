@@ -48,7 +48,7 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
 
       if (mounted) {
         _showSuccessSnackBar("New routine generated successfully!");
-        setState(() {});
+        setState(() {}); // Pour rafraîchir et afficher la nouvelle routine
       }
     } catch (e) {
       print("Error generating routine: $e");
@@ -83,7 +83,7 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
     if (routine == null ||
         routine.createdAt == null ||
         routine.durationInWeeks <= 0) {
-      return ("Duration not set", false);
+      return ("Duration not set", false); // Ou "No active plan"
     }
     final DateTime creationDate = routine.createdAt!.toDate();
     final DateTime endDate =
@@ -115,14 +115,17 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: 10.0),
-            child: Text(
-              "Welcome, ${widget.user.email?.split('@')[0] ?? 'Fitness Enthusiast'}!",
-              style: textTheme.headlineSmall,
-              textAlign: TextAlign.center,
-            ),
-          ),
+          // ---- MESSAGE DE BIENVENUE SUPPRIMÉ ----
+          // Padding(
+          //   padding: const EdgeInsets.only(bottom: 10.0),
+          //   child: Text(
+          //     "Welcome, ${widget.user.email?.split('@')[0] ?? 'Fitness Enthusiast'}!",
+          //     style: textTheme.headlineSmall,
+          //     textAlign: TextAlign.center,
+          //   ),
+          // ),
+          // ----------------------------------------
+
           if (_isGeneratingRoutine)
             Padding(
               padding: const EdgeInsets.only(bottom: 10.0, top: 5.0),
@@ -132,7 +135,8 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
             )
           else
             Padding(
-              padding: const EdgeInsets.only(bottom: 10.0, top: 5.0),
+              padding: const EdgeInsets.only(
+                  bottom: 10.0, top: 5.0), // Ajustez le 'top' si nécessaire
               child: Center(
                   child: Text("Current Plan",
                       style: textTheme.titleLarge
@@ -154,6 +158,7 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
                           style: textTheme.bodyMedium
                               ?.copyWith(color: colorScheme.error)));
                 } else if (snapshot.hasData || _isGeneratingRoutine) {
+                  // Si _isGeneratingRoutine est true, on veut montrer un état d'attente même si snapshot.data est null ou ancien.
                   if (_isGeneratingRoutine &&
                       snapshot.connectionState == ConnectionState.waiting) {
                     return Center(
@@ -162,12 +167,14 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
                   }
 
                   WeeklyRoutine? routine;
-                  bool noRoutineExists = true;
+                  bool noRoutineExists =
+                      true; // Par défaut, on considère qu'il n'y a pas de routine
                   bool isRoutineExpired = false;
                   String routineStatusText = "N/A";
 
                   if (snapshot.data != null && snapshot.data!.exists) {
-                    noRoutineExists = false;
+                    noRoutineExists =
+                        false; // Une routine existe dans Firestore
                     try {
                       routine = WeeklyRoutine.fromFirestore(snapshot.data!);
                       final status = _getRoutineStatus(routine);
@@ -176,12 +183,18 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
                     } catch (e) {
                       print(
                           "Error parsing routine data: ${snapshot.data!.data()} -> $e");
+                      // Erreur de parsing, considérer comme s'il n'y avait pas de routine valide
                       noRoutineExists = true;
                       routine = null;
+                      // Vous pourriez vouloir afficher un message d'erreur plus spécifique ici
                     }
                   }
 
-                  if (noRoutineExists || isRoutineExpired) {
+                  // Si on génère une routine, on ne veut pas montrer "No Active Routine" immédiatement
+                  // On attend que la génération finisse ou échoue.
+                  // Cette condition est pour l'état initial OU après qu'une routine a expiré.
+                  if ((noRoutineExists || isRoutineExpired) &&
+                      !_isGeneratingRoutine) {
                     String title = isRoutineExpired
                         ? "Routine Expired"
                         : "No Active Routine";
@@ -193,7 +206,8 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
                         : "Generate First Plan";
                     IconData iconData = isRoutineExpired
                         ? Icons.autorenew
-                        : Icons.sentiment_dissatisfied;
+                        : Icons
+                            .sentiment_dissatisfied; // Ou Icons.add_circle_outline
 
                     return Column(
                       children: [
@@ -236,6 +250,7 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
                                     const SizedBox(height: 10),
                                     Text(title,
                                         style: textTheme.titleLarge?.copyWith(
+                                          fontWeight: FontWeight.bold,
                                           color: isRoutineExpired
                                               ? colorScheme.onErrorContainer
                                               : null,
@@ -253,28 +268,32 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
                                     ),
                                     const SizedBox(height: 20),
                                     ElevatedButton.icon(
-                                      icon: Icon(_isGeneratingRoutine
-                                          ? Icons.hourglass_empty
-                                          : (isRoutineExpired
-                                              ? Icons.add_circle_outline
-                                              : Icons.auto_awesome)),
-                                      label: _isGeneratingRoutine
-                                          ? const SizedBox(
-                                              height: 20,
-                                              width: 90,
-                                              child: Center(
-                                                  child: SizedBox(
-                                                      width: 20,
-                                                      height: 20,
-                                                      child:
-                                                          CircularProgressIndicator(
-                                                              strokeWidth: 2,
-                                                              color: Colors
-                                                                  .white))))
-                                          : Text(buttonText),
-                                      onPressed: _isGeneratingRoutine
-                                          ? null
-                                          : _generateRoutine,
+                                      icon: Icon(
+                                          _isGeneratingRoutine // Devrait être false ici, mais on garde par sécurité
+                                              ? Icons.hourglass_empty
+                                              : (isRoutineExpired
+                                                  ? Icons.add_circle_outline
+                                                  : Icons.auto_awesome)),
+                                      label:
+                                          _isGeneratingRoutine // Devrait être false
+                                              ? const SizedBox(
+                                                  height: 20,
+                                                  width: 90,
+                                                  child: Center(
+                                                      child: SizedBox(
+                                                          width: 20,
+                                                          height: 20,
+                                                          child:
+                                                              CircularProgressIndicator(
+                                                                  strokeWidth:
+                                                                      2,
+                                                                  color: Colors
+                                                                      .white))))
+                                              : Text(buttonText),
+                                      onPressed:
+                                          _isGeneratingRoutine // Devrait être false
+                                              ? null
+                                              : _generateRoutine,
                                       style: isRoutineExpired
                                           ? ElevatedButton.styleFrom(
                                               backgroundColor:
@@ -290,7 +309,8 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
                         ),
                       ],
                     );
-                  } else if (routine != null) {
+                  } else if (routine != null && !_isGeneratingRoutine) {
+                    // Afficher la routine si elle existe et qu'on ne génère pas
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -311,7 +331,6 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
                               ),
                               const SizedBox(width: 8),
                               Chip(
-                                // ***** CORRECTION APPLIQUÉE ICI *****
                                 avatar: Icon(Icons.hourglass_empty_outlined,
                                     size: 16,
                                     color: colorScheme.onSecondaryContainer
@@ -400,14 +419,30 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
                         ),
                       ],
                     );
-                  } else {
+                  } else if (_isGeneratingRoutine) {
+                    // Si on est en train de générer, montrer un état d'attente spécifique
                     return Center(
-                        child: Text("Routine data is unavailable.",
+                        child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircularProgressIndicator(color: colorScheme.secondary),
+                        const SizedBox(height: 16),
+                        Text("Hold on, crafting your plan...",
+                            style: textTheme.titleMedium),
+                      ],
+                    ));
+                  } else {
+                    // Cas par défaut si aucune des conditions ci-dessus n'est remplie (devrait être rare)
+                    return Center(
+                        child: Text(
+                            "Routine data is unavailable or in an unexpected state.",
                             style: textTheme.bodyMedium));
                   }
                 } else {
+                  // snapshot n'a pas de données et n'est pas en attente (après l'attente initiale)
                   return Center(
-                      child: Text("No routine data found.",
+                      child: Text(
+                          "No routine data found. Try generating a new plan.",
                           style: textTheme.bodyMedium));
                 }
               },
