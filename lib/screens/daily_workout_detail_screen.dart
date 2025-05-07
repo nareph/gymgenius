@@ -1,193 +1,146 @@
 // lib/screens/daily_workout_detail_screen.dart
 import 'package:flutter/material.dart';
-import 'package:gymgenius/models/routine.dart'; // Pour RoutineExercise
-import 'package:gymgenius/screens/active_workout_session_screen.dart'; // Importer le nouvel écran
+import 'package:gymgenius/models/routine.dart'; // RoutineExercise
+import 'package:gymgenius/providers/workout_session_manager.dart';
+import 'package:gymgenius/screens/active_workout_session_screen.dart';
+import 'package:provider/provider.dart';
 
 class DailyWorkoutDetailScreen extends StatelessWidget {
-  final String dayTitle;
+  final String dayTitle; // ex: "Monday Workout"
   final List<RoutineExercise> exercises;
+  // final String? routineName; // Optionnel, pour passer au WorkoutSessionManager
 
   const DailyWorkoutDetailScreen({
     super.key,
     required this.dayTitle,
     required this.exercises,
+    // this.routineName,
   });
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final workoutManager =
+        Provider.of<WorkoutSessionManager>(context, listen: false);
 
     return Scaffold(
       appBar: AppBar(
         title: Text(dayTitle),
-        backgroundColor: colorScheme.surface,
-        elevation: 1,
+        backgroundColor: theme.colorScheme.surfaceContainerHighest,
       ),
-      body: exercises.isEmpty
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.event_busy_outlined,
-                        size: 60,
-                        color: colorScheme.onSurfaceVariant.withOpacity(0.5)),
-                    const SizedBox(height: 16),
-                    Text(
-                      "It's a Rest Day!",
-                      style: textTheme.headlineSmall
-                          ?.copyWith(color: colorScheme.onSurfaceVariant),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      "No exercises scheduled for $dayTitle.",
-                      style: textTheme.titleMedium?.copyWith(
-                          color: colorScheme.onSurfaceVariant.withOpacity(0.8)),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-            )
-          : Column(
-              // Envelopper dans une Column pour ajouter le bouton en bas
-              children: [
-                Expanded(
-                  // Pour que le ListView prenne l'espace disponible
-                  child: ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(
-                        16.0, 16.0, 16.0, 0), // Ajuster le padding
+      body: Column(
+        children: [
+          Expanded(
+            child: exercises.isEmpty
+                ? Center(
+                    child: Text(
+                    "No exercises scheduled for this day.",
+                    style: theme.textTheme.titleMedium,
+                  ))
+                : ListView.builder(
+                    padding: const EdgeInsets.all(8.0),
                     itemCount: exercises.length,
                     itemBuilder: (context, index) {
                       final exercise = exercises[index];
                       return Card(
-                        margin: const EdgeInsets.only(bottom: 16.0),
                         elevation: 2,
+                        margin: const EdgeInsets.symmetric(
+                            vertical: 6.0, horizontal: 8.0),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12.0),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                exercise.name,
-                                style: textTheme.titleLarge?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: colorScheme.primary,
-                                ),
-                              ),
-                              const SizedBox(height: 12.0),
-                              _buildDetailRow(
-                                context,
-                                icon: Icons.fitness_center,
-                                label: "Sets & Reps:",
-                                value:
-                                    "${exercise.sets} sets of ${exercise.reps}",
-                              ),
-                              const SizedBox(height: 8.0),
-                              _buildDetailRow(
-                                context,
-                                icon: Icons.scale,
-                                label: "Weight:",
-                                value: exercise.weightSuggestionKg.isNotEmpty &&
-                                        exercise.weightSuggestionKg != 'N/A'
-                                    ? exercise.weightSuggestionKg
-                                    : "Bodyweight / As appropriate",
-                              ),
-                              const SizedBox(height: 8.0),
-                              _buildDetailRow(
-                                context,
-                                icon: Icons.timer_outlined,
-                                label: "Rest:",
-                                value:
-                                    "${exercise.restBetweenSetsSeconds} seconds",
-                              ),
-                              const SizedBox(height: 12.0),
-                              if (exercise.description.isNotEmpty) ...[
-                                Text(
-                                  "Description:",
-                                  style: textTheme.titleSmall?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                    color: colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                                const SizedBox(height: 4.0),
-                                Text(
-                                  exercise.description,
-                                  style: textTheme.bodyMedium?.copyWith(
-                                    color:
-                                        colorScheme.onSurface.withOpacity(0.8),
-                                    height: 1.4,
-                                  ),
-                                ),
-                              ],
-                            ],
+                            borderRadius: BorderRadius.circular(10)),
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                              vertical: 12.0, horizontal: 16.0),
+                          leading: CircleAvatar(
+                            backgroundColor: theme.colorScheme.primaryContainer,
+                            child: Text(
+                              "${index + 1}",
+                              style: TextStyle(
+                                  color: theme.colorScheme.onPrimaryContainer,
+                                  fontWeight: FontWeight.bold),
+                            ),
                           ),
+                          title: Text(exercise.name,
+                              style: theme.textTheme.titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.w600)),
+                          subtitle: Text(
+                            "${exercise.sets} sets of ${exercise.reps}"
+                            "${exercise.weightSuggestionKg != 'N/A' && exercise.weightSuggestionKg.isNotEmpty ? ' @ ${exercise.weightSuggestionKg}' : ''}"
+                            "\nRest: ${exercise.restBetweenSetsSeconds}s",
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant),
+                          ),
+                          isThreeLine: true,
+                          // onTap: () {
+                          //   // Potentiellement afficher plus de détails sur l'exercice si cliqué
+                          // },
                         ),
                       );
                     },
                   ),
-                ),
-                // Bouton "Start Workout" en bas
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: ElevatedButton.icon(
-                    icon: const Icon(Icons.play_arrow_rounded),
-                    label: const Text("Start Workout"),
-                    style: ElevatedButton.styleFrom(
-                      minimumSize:
-                          const Size(double.infinity, 50), // Pleine largeur
-                      textStyle: textTheme.titleMedium
-                          ?.copyWith(fontWeight: FontWeight.bold),
-                      backgroundColor: colorScheme.primary,
-                      foregroundColor: colorScheme.onPrimary,
-                    ),
-                    onPressed: () {
-                      // TODO: Plus tard, initialiser le WorkoutSessionManager ici
-                      Navigator.push(
+          ),
+          if (exercises.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.play_circle_fill_rounded),
+                label: const Text("Start Workout"),
+                onPressed: () {
+                  if (workoutManager.isWorkoutActive) {
+                    // Gérer le cas où un workout est déjà actif
+                    showDialog(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                              title: const Text("Workout in Progress"),
+                              content: const Text(
+                                  "Another workout session is already active. Do you want to end it and start this new one?"),
+                              actions: [
+                                TextButton(
+                                    onPressed: () => Navigator.of(ctx).pop(),
+                                    child: const Text("Cancel")),
+                                TextButton(
+                                    onPressed: () {
+                                      Navigator.of(ctx).pop();
+                                      // Forcer le démarrage du nouveau workout.
+                                      // Le manager.endWorkout() est appelé implicitement par forceStartNewWorkout si une session était active.
+                                      // Les logs de l'ancienne session seront sauvegardés (ou pas, selon la logique de endWorkout).
+                                      workoutManager.forceStartNewWorkout(
+                                          exercises,
+                                          workoutName: dayTitle);
+                                      Navigator.pushReplacement(
+                                          context,
+                                          MaterialPageRoute(
+                                              builder: (_) =>
+                                                  const ActiveWorkoutSessionScreen()));
+                                    },
+                                    child: const Text("End & Start New")),
+                              ],
+                            ));
+                  } else {
+                    // Nom du workout = titre du jour (ex: "Monday Workout")
+                    // Le nom de la routine globale (ex: "Beginner Strength") pourrait être passé aussi si besoin.
+                    workoutManager.startWorkout(exercises,
+                        workoutName: dayTitle);
+                    Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => ActiveWorkoutSessionScreen(
-                            workoutTitle: dayTitle,
-                            exercises: exercises,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                            builder: (_) =>
+                                const ActiveWorkoutSessionScreen()));
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
+                  minimumSize: const Size(double.infinity, 50),
+                  textStyle: theme.textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
-              ],
+              ),
             ),
-    );
-  }
-
-  Widget _buildDetailRow(BuildContext context,
-      {required IconData icon, required String label, required String value}) {
-    final textTheme = Theme.of(context).textTheme;
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 20.0, color: colorScheme.secondary),
-        const SizedBox(width: 10.0),
-        Text(
-          label,
-          style: textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(width: 8.0),
-        Expanded(
-          child: Text(
-            value,
-            style: textTheme.bodyLarge
-                ?.copyWith(color: colorScheme.onSurface.withOpacity(0.9)),
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

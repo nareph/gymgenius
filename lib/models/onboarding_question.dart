@@ -16,7 +16,6 @@ class OnboardingQuestion {
   final String id;
   final String text;
   final List<AnswerOption> options; // Peut être vide pour numericInput
-  // final bool isMultipleChoice; // Remplacé par 'type'
   final QuestionType type; // Type de question/vue à utiliser
 
   const OnboardingQuestion({
@@ -28,6 +27,7 @@ class OnboardingQuestion {
 }
 
 // --- Mise à jour et ajout des questions ---
+// Cette liste est maintenant globale et sera importée dans ProfileTabScreen
 final List<OnboardingQuestion> defaultOnboardingQuestions = [
   // 1. Objectif
   OnboardingQuestion(
@@ -48,17 +48,16 @@ final List<OnboardingQuestion> defaultOnboardingQuestions = [
     options: [
       AnswerOption(value: "male", text: "Male"),
       AnswerOption(value: "female", text: "Female"),
-      // Ajoutez 'Prefer not to say' si souhaité
-      // AnswerOption(value: "prefer_not_say", text: "Prefer not to say"),
     ],
     type: QuestionType.singleChoice,
   ),
   // 3. Stats Physiques
   OnboardingQuestion(
-    id: "physical_stats",
-    text: "Tell us a bit about yourself", // Titre pour la page de stats
-    // Pas d'options directes ici, car ce sont des champs de saisie
-    type: QuestionType.numericInput,
+    id: "physical_stats", // Cet ID est utilisé pour le traitement spécial
+    text:
+        "Tell us a bit about yourself", // Titre général pour la section des stats
+    type: QuestionType
+        .numericInput, // Indique que c'est pour des saisies numériques (map imbriqué)
   ),
   // 4. Niveau d'Expérience
   OnboardingQuestion(
@@ -70,7 +69,7 @@ final List<OnboardingQuestion> defaultOnboardingQuestions = [
           value: "intermediate", text: "Intermediate (Consistent 6+ months)"),
       AnswerOption(value: "advanced", text: "Advanced (Years of experience)"),
     ],
-    type: QuestionType.singleChoice, // Préciser le type
+    type: QuestionType.singleChoice,
   ),
   // 5. Fréquence (Combien de fois)
   OnboardingQuestion(
@@ -81,7 +80,7 @@ final List<OnboardingQuestion> defaultOnboardingQuestions = [
       AnswerOption(value: "4-5", text: "4-5 days/week"),
       AnswerOption(value: "6-7", text: "6-7 days/week"),
     ],
-    type: QuestionType.singleChoice, // Préciser le type
+    type: QuestionType.singleChoice,
   ),
   // 6. Jours disponibles (Quand)
   OnboardingQuestion(
@@ -96,9 +95,8 @@ final List<OnboardingQuestion> defaultOnboardingQuestions = [
       AnswerOption(value: "sat", text: "Saturday"),
       AnswerOption(value: "sun", text: "Sunday"),
     ],
-    type: QuestionType.multipleChoice, // Préciser le type
+    type: QuestionType.multipleChoice,
   ),
-
   // 7. Équipement
   OnboardingQuestion(
     id: "equipment",
@@ -109,7 +107,7 @@ final List<OnboardingQuestion> defaultOnboardingQuestions = [
       AnswerOption(value: "basic_home", text: "Basic Home (Dumbbells, Bands)"),
       AnswerOption(value: "bodyweight", text: "Bodyweight Only"),
     ],
-    type: QuestionType.multipleChoice, // Préciser le type
+    type: QuestionType.multipleChoice,
   ),
   // 8. Zones Focus
   OnboardingQuestion(
@@ -122,7 +120,7 @@ final List<OnboardingQuestion> defaultOnboardingQuestions = [
       AnswerOption(value: "shoulders", text: "Shoulders"),
       AnswerOption(value: "arms", text: "Arms"),
       AnswerOption(value: "legs", text: "Legs"),
-      AnswerOption(value: "buttocks", text: "Buttocks / Glutes"), // Précisé
+      AnswerOption(value: "buttocks", text: "Buttocks / Glutes"),
     ],
     type: QuestionType.multipleChoice,
   ),

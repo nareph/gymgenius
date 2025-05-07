@@ -1,32 +1,9 @@
 // lib/screens/exercise_logging_screen.dart
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:gymgenius/models/routine.dart';
-
-class LoggableSet {
-  final int setNumber;
-  final String targetRepsInfo; // ex: "8-10" ou "12"
-  final String targetWeightSuggestion; // ex: "60kg" ou "Bodyweight"
-  TextEditingController repsController;
-  TextEditingController weightController;
-  bool isLogged;
-
-  LoggableSet({
-    required this.setNumber,
-    required this.targetRepsInfo,
-    required this.targetWeightSuggestion,
-    String initialReps = "",
-    String initialWeight = "",
-    this.isLogged = false,
-  })  : repsController = TextEditingController(text: initialReps),
-        weightController = TextEditingController(text: initialWeight);
-
-  void dispose() {
-    repsController.dispose();
-    weightController.dispose();
-  }
-}
+import 'package:gymgenius/providers/workout_session_manager.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 class ExerciseLoggingScreen extends StatefulWidget {
   final RoutineExercise exercise;
@@ -43,131 +20,144 @@ class ExerciseLoggingScreen extends StatefulWidget {
 }
 
 class _ExerciseLoggingScreenState extends State<ExerciseLoggingScreen> {
-  late List<LoggableSet> _loggableSets;
-  int _currentSetIndexToLog = 0;
-
-  Timer? _restTimer;
-  int _restTimeRemaining = 0;
-  bool _isResting = false;
+  late TextEditingController _repsController;
+  late TextEditingController _weightController;
+  bool _isPopping = false;
 
   @override
   void initState() {
     super.initState();
-    _initializeSets();
-  }
+    _repsController = TextEditingController();
+    _weightController = TextEditingController();
 
-  void _initializeSets() {
-    _loggableSets = List.generate(widget.exercise.sets, (index) {
-      // Essayer de parser le poids suggéré pour le pré-remplir numériquement si possible
-      String initialWeight = widget.exercise.weightSuggestionKg;
-      // Si weightSuggestionKg est "Bodyweight" ou vide, laisser le champ vide ou mettre "0"
-      // Si c'est "N/A", laisser vide.
-      if (widget.exercise.weightSuggestionKg.toLowerCase() == 'bodyweight' ||
-          widget.exercise.weightSuggestionKg == 'N/A' ||
-          widget.exercise.weightSuggestionKg.isEmpty) {
-        initialWeight = ""; // ou "0" si vous préférez un placeholder numérique
-      } else {
-        // Tenter d'extraire la partie numérique si c'est "60kg"
-        final RegExp weightRegex = RegExp(r'^\d+(\.\d+)?');
-        final match =
-            weightRegex.firstMatch(widget.exercise.weightSuggestionKg);
-        if (match != null) {
-          initialWeight = match.group(0)!;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      final manager =
+          Provider.of<WorkoutSessionManager>(context, listen: false);
+
+      if (manager.isWorkoutActive &&
+          manager.currentExercise?.id == widget.exercise.id &&
+          manager.currentLoggedExerciseData?.originalExercise.id ==
+              widget.exercise.id) {
+        if (!(manager.currentLoggedExerciseData?.isCompleted ?? false)) {
+          _initializeFieldsForCurrentSet(manager);
         }
+      } else if (mounted && !_isPopping && Navigator.canPop(context)) {
+        _isPopping = true;
+        Navigator.of(context).pop();
       }
-
-      // Pour les reps, prendre la première valeur si c'est une plage "8-10"
-      String initialReps = widget.exercise.reps;
-      if (widget.exercise.reps.contains('-')) {
-        initialReps = widget.exercise.reps.split('-').first.trim();
-      } else if (widget.exercise.reps.toLowerCase() == 'amrap' ||
-          widget.exercise.reps == 'N/A') {
-        initialReps = ""; // AMRAP ou N/A, laisser le champ vide
-      }
-
-      return LoggableSet(
-        setNumber: index + 1,
-        targetRepsInfo: widget.exercise.reps,
-        targetWeightSuggestion: widget.exercise.weightSuggestionKg,
-        initialReps: initialReps,
-        initialWeight: initialWeight,
-      );
     });
   }
 
-  void _logSet(int setIndex) {
-    if (setIndex >= _loggableSets.length || _loggableSets[setIndex].isLogged)
+  void _initializeFieldsForCurrentSet(WorkoutSessionManager manager) {
+    final RoutineExercise exerciseToLogFrom = manager.currentExercise!;
+    final LoggedExerciseData loggedData = manager.currentLoggedExerciseData!;
+    final int setIndexToLog = manager.currentSetIndexForLogging;
+
+    if (loggedData.isCompleted || setIndexToLog >= exerciseToLogFrom.sets) {
+      _repsController.text = "";
+      _weightController.text = "";
       return;
+    }
 
-    // TODO: Valider les entrées des controllers (s'assurer que ce sont des nombres si nécessaire)
-    // Pour l'instant, on les prend telles quelles.
+    String repsSuggestion = exerciseToLogFrom.reps.trim();
+    String initialRepsText = "";
+    final RegExp repsRangeRegex = RegExp(r'^(\d+)\s*-\s*\d+');
+    final RegExp singleRepRegex = RegExp(r'^(\d+)$');
 
-    setState(() {
-      _loggableSets[setIndex].isLogged = true;
-      // TODO: Ici, vous stockerez ces données dans votre WorkoutSessionManager
-      print("Set ${setIndex + 1} for ${widget.exercise.name} logged: "
-          "Reps: ${_loggableSets[setIndex].repsController.text}, "
-          "Weight: ${_loggableSets[setIndex].weightController.text}kg");
+    if (repsSuggestion.toLowerCase() == 'amrap' ||
+        repsSuggestion.toLowerCase() == 'to failure' ||
+        repsSuggestion == 'N/A') {
+      initialRepsText = "";
+    } else if (repsRangeRegex.hasMatch(repsSuggestion)) {
+      initialRepsText = repsRangeRegex.firstMatch(repsSuggestion)!.group(1)!;
+    } else if (singleRepRegex.hasMatch(repsSuggestion)) {
+      initialRepsText = singleRepRegex.firstMatch(repsSuggestion)!.group(1)!;
+    }
+    _repsController.text = initialRepsText;
 
-      // Trouver le prochain set non loggué
-      int nextSetToLog = -1;
-      for (int i = 0; i < _loggableSets.length; i++) {
-        if (!_loggableSets[i].isLogged) {
-          nextSetToLog = i;
-          break;
-        }
+    String weightSuggestion = exerciseToLogFrom.weightSuggestionKg.trim();
+    String initialWeightText = "";
+    if (weightSuggestion == 'N/A' || weightSuggestion.isEmpty) {
+      // Plus de logique Bodyweight/BW
+      initialWeightText = "";
+    } else {
+      // Essayer d'extraire un nombre, avec ou sans "kg" à la fin
+      final RegExp weightRegex = RegExp(r'^(\d+(\.\d+)?)\s*(kg)?$');
+      final match = weightRegex.firstMatch(weightSuggestion);
+      if (match != null) {
+        initialWeightText = match.group(1)!; // Prend le nombre
       }
-
-      if (nextSetToLog != -1) {
-        _currentSetIndexToLog = nextSetToLog;
-      } else {
-        _currentSetIndexToLog =
-            _loggableSets.length; // Tous les sets sont logués
-      }
-
-      if (_loggableSets.every((s) => s.isLogged)) {
-        _restTimer?.cancel(); // S'assurer que le timer de repos est arrêté
-        _isResting = false;
-        widget.onExerciseCompleted();
-        // Navigator.of(context).pop(); // Retourner automatiquement
-      } else if (widget.exercise.restBetweenSetsSeconds > 0 &&
-          setIndex < _loggableSets.length - 1) {
-        // Démarrer le timer de repos seulement si ce n'est pas le dernier set loggué
-        // et qu'il y a un temps de repos défini.
-        _startRestTimer(widget.exercise.restBetweenSetsSeconds);
-      }
-    });
+      // Si ce n'est pas N/A, vide, ou un nombre (avec optionnel kg), initialWeightText reste ""
+    }
+    _weightController.text = initialWeightText;
   }
 
-  void _startRestTimer(int durationInSeconds) {
-    _restTimer?.cancel();
-    setState(() {
-      _isResting = true;
-      _restTimeRemaining = durationInSeconds;
-    });
+  void _handleLogSet(WorkoutSessionManager manager) {
+    if (!mounted || _isPopping) return;
 
-    _restTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!mounted) {
-        timer.cancel();
+    final LoggedExerciseData? currentLogData =
+        manager.currentLoggedExerciseData;
+    if (manager.currentExercise == null ||
+        currentLogData == null ||
+        manager.currentExercise!.id != widget.exercise.id ||
+        currentLogData.originalExercise.id != widget.exercise.id) {
+      if (mounted && !_isPopping && Navigator.canPop(context)) {
+        _isPopping = true;
+        Navigator.of(context).pop();
+      }
+      return;
+    }
+
+    if (currentLogData.isCompleted) {
+      widget.onExerciseCompleted();
+      if (mounted && !_isPopping && Navigator.canPop(context)) {
+        _isPopping = true;
+        Navigator.of(context).pop();
+      }
+      return;
+    }
+
+    final String reps = _repsController.text.trim();
+    final String weightInput = _weightController.text.trim();
+    String weightToLog = "0"; // Par défaut si vide
+
+    if (reps.isEmpty || int.tryParse(reps) == null || int.parse(reps) <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text("Please enter a valid number of reps (> 0)."),
+          backgroundColor: Colors.red));
+      return;
+    }
+
+    if (weightInput.isNotEmpty) {
+      // Le poids doit être un nombre positif ou zéro
+      if (double.tryParse(weightInput) != null &&
+          double.parse(weightInput) >= 0) {
+        weightToLog = double.parse(weightInput)
+            .toString(); // Standardise le format numérique
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+                "Weight must be a valid number (e.g., 10 or 10.5) or empty for 0kg."),
+            backgroundColor: Colors.red));
         return;
       }
-      setState(() {
-        if (_restTimeRemaining > 0) {
-          _restTimeRemaining--;
-        } else {
-          _isResting = false;
-          timer.cancel();
-        }
-      });
-    });
+    }
+
+    manager.logSetForCurrentExercise(reps, weightToLog);
+
+    if (mounted &&
+        !(manager.currentLoggedExerciseData?.isCompleted ?? true) &&
+        !manager.isResting) {
+      _initializeFieldsForCurrentSet(manager);
+    }
   }
 
   @override
   void dispose() {
-    _restTimer?.cancel();
-    for (var logSet in _loggableSets) {
-      logSet.dispose();
-    }
+    _repsController.dispose();
+    _weightController.dispose();
     super.dispose();
   }
 
@@ -181,243 +171,331 @@ class _ExerciseLoggingScreenState extends State<ExerciseLoggingScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    bool allSetsManuallyLogged = _loggableSets.every((s) => s.isLogged);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.exercise.name),
-      ),
-      body: GestureDetector(
-        // Pour pouvoir cacher le clavier en tapant à côté
-        onTap: () => FocusScope.of(context).unfocus(),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              Card(
-                margin: const EdgeInsets.only(bottom: 15),
-                child: Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        "Target: ${widget.exercise.sets} sets of ${widget.exercise.reps}",
-                        style: theme.textTheme.titleMedium,
-                        textAlign: TextAlign.center,
-                      ),
-                      if (widget.exercise.weightSuggestionKg.isNotEmpty &&
-                          widget.exercise.weightSuggestionKg != 'N/A')
-                        Text(
-                          "Suggested Weight: ${widget.exercise.weightSuggestionKg}",
-                          style: theme.textTheme.bodyMedium,
-                          textAlign: TextAlign.center,
-                        ),
-                      if (widget.exercise.restBetweenSetsSeconds > 0)
-                        Text(
-                          "Rest: ${widget.exercise.restBetweenSetsSeconds} sec",
-                          style: theme.textTheme.bodyMedium,
-                          textAlign: TextAlign.center,
-                        ),
-                      if (widget.exercise.description.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        Text("Notes: ${widget.exercise.description}",
-                            style: theme.textTheme.bodySmall,
-                            textAlign: TextAlign.center),
-                      ]
-                    ],
-                  ),
+    return Consumer<WorkoutSessionManager>(
+      builder: (context, manager, child) {
+        final RoutineExercise? currentRoutineExFromManager =
+            manager.currentExercise;
+        final LoggedExerciseData? currentLoggedDataFromManager =
+            manager.currentLoggedExerciseData;
+
+        if (_isPopping) {
+          return Scaffold(
+              appBar: AppBar(title: Text(widget.exercise.name)),
+              body: const Center(child: CircularProgressIndicator()));
+        }
+
+        if (!manager.isWorkoutActive ||
+            currentRoutineExFromManager == null ||
+            currentLoggedDataFromManager == null ||
+            currentRoutineExFromManager.id != widget.exercise.id ||
+            currentLoggedDataFromManager.originalExercise.id !=
+                widget.exercise.id) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && Navigator.canPop(context) && !_isPopping) {
+              if (ModalRoute.of(context)?.isCurrent ?? false) {
+                _isPopping = true;
+                Navigator.pop(context);
+              }
+            }
+          });
+          return Scaffold(
+              appBar: AppBar(title: Text(widget.exercise.name)),
+              body: const Center(child: Text("Session updated, returning...")));
+        }
+
+        final RoutineExercise exerciseToDisplay = currentRoutineExFromManager;
+        final LoggedExerciseData loggedDataForThisExercise =
+            currentLoggedDataFromManager;
+
+        final int totalSetsInPlan = exerciseToDisplay.sets;
+        final bool isThisExerciseCompletedByManager =
+            loggedDataForThisExercise.isCompleted;
+        final int setBeingLoggedIndex = manager.currentSetIndexForLogging;
+
+        if (isThisExerciseCompletedByManager) {
+          return Scaffold(
+            appBar: AppBar(
+                title: Text(exerciseToDisplay.name),
+                automaticallyImplyLeading: false),
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.check_circle_outline,
+                        size: 80, color: Colors.green),
+                    const SizedBox(height: 24),
+                    Text("${exerciseToDisplay.name} Complete!",
+                        style: theme.textTheme.headlineMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.center),
+                    const SizedBox(height: 8),
+                    Text(
+                        "${loggedDataForThisExercise.loggedSets.length} / $totalSetsInPlan sets logged.",
+                        style: theme.textTheme.titleMedium
+                            ?.copyWith(color: theme.colorScheme.outline)),
+                    const SizedBox(height: 32),
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.arrow_forward_ios_rounded),
+                      label: const Text("Continue Workout"),
+                      onPressed: () {
+                        widget.onExerciseCompleted();
+                        if (mounted &&
+                            Navigator.canPop(context) &&
+                            !_isPopping) {
+                          _isPopping = true;
+                          Navigator.pop(context);
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 30, vertical: 15),
+                          textStyle: theme.textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.bold)),
+                    ),
+                  ],
                 ),
               ),
-              if (_isResting)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 10.0),
-                  child: Column(
-                    children: [
-                      Text("REST",
-                          style: theme.textTheme.titleLarge?.copyWith(
-                              color: colorScheme.primary,
-                              fontWeight: FontWeight.bold)),
-                      Text(
-                        _formatRestTime(_restTimeRemaining),
-                        style: theme.textTheme.displaySmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: colorScheme.primary),
-                      ),
-                      const SizedBox(height: 5),
-                      LinearProgressIndicator(
-                        value: widget.exercise.restBetweenSetsSeconds > 0
-                            ? _restTimeRemaining /
-                                widget.exercise.restBetweenSetsSeconds
-                            : 0,
-                        minHeight: 8,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      const SizedBox(height: 10),
-                      TextButton(
-                        onPressed: () {
-                          _restTimer?.cancel();
-                          setState(() {
-                            _isResting = false;
-                          });
-                        },
-                        child: const Text("Skip Rest"),
-                      ),
-                      const SizedBox(height: 5),
-                    ],
-                  ),
-                ),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: _loggableSets.length,
-                  itemBuilder: (context, index) {
-                    final setInfo = _loggableSets[index];
-                    bool canLogThisSet = index == _currentSetIndexToLog &&
-                        !_isResting &&
-                        !setInfo.isLogged;
-                    bool isFutureSet =
-                        index > _currentSetIndexToLog && !setInfo.isLogged;
+            ),
+          );
+        }
 
-                    return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 8.0),
-                      color: setInfo.isLogged
-                          ? Colors.green.withOpacity(0.1)
-                          : (canLogThisSet
-                              ? colorScheme.surfaceContainerHighest
-                              : colorScheme.surfaceContainer
-                                  .withOpacity(isFutureSet ? 0.7 : 1.0)),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          side: BorderSide(
-                            color: setInfo.isLogged
-                                ? Colors.green
-                                : (canLogThisSet
-                                    ? colorScheme.primary
-                                    : colorScheme.outline.withOpacity(0.3)),
-                            width:
-                                setInfo.isLogged || canLogThisSet ? 1.5 : 1.0,
-                          )),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12.0, vertical: 16.0),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            CircleAvatar(
-                              radius: 18,
-                              backgroundColor: setInfo.isLogged
-                                  ? Colors.green
-                                  : (canLogThisSet
-                                      ? colorScheme.primary
-                                      : colorScheme.secondaryContainer
-                                          .withOpacity(
-                                              isFutureSet ? 0.5 : 1.0)),
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(exerciseToDisplay.name),
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () {
+                if (mounted && Navigator.canPop(context) && !_isPopping) {
+                  _isPopping = true;
+                  Navigator.pop(context);
+                }
+              },
+            ),
+          ),
+          body: GestureDetector(
+            onTap: () => FocusScope.of(context).unfocus(),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Card(
+                    elevation: 2,
+                    margin: const EdgeInsets.only(bottom: 20),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            setBeingLoggedIndex < totalSetsInPlan
+                                ? "Set ${setBeingLoggedIndex + 1} of $totalSetsInPlan"
+                                : "All $totalSetsInPlan sets targeted",
+                            style: theme.textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: colorScheme.primary),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            "Target: ${exerciseToDisplay.reps} @ ${exerciseToDisplay.weightSuggestionKg}",
+                            style: theme.textTheme.titleMedium
+                                ?.copyWith(color: colorScheme.onSurfaceVariant),
+                            textAlign: TextAlign.center,
+                          ),
+                          if (exerciseToDisplay.restBetweenSetsSeconds > 0 &&
+                              loggedDataForThisExercise.loggedSets.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 6.0),
                               child: Text(
-                                "${setInfo.setNumber}",
-                                style: TextStyle(
+                                "(Rest after set: ${exerciseToDisplay.restBetweenSetsSeconds} sec)",
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.outline),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          if (exerciseToDisplay.description.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            Divider(
+                                color: colorScheme.outlineVariant
+                                    .withOpacity(0.5)),
+                            const SizedBox(height: 8),
+                            Text("Notes:",
+                                style: theme.textTheme.titleSmall
+                                    ?.copyWith(fontWeight: FontWeight.w600)),
+                            const SizedBox(height: 4),
+                            Text(exerciseToDisplay.description,
+                                style: theme.textTheme.bodyMedium,
+                                textAlign: TextAlign.start),
+                          ]
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (manager.isResting)
+                    Card(
+                      elevation: 2,
+                      margin: const EdgeInsets.symmetric(vertical: 10.0),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          children: [
+                            Text("REST",
+                                style: theme.textTheme.headlineSmall?.copyWith(
+                                    color: colorScheme.primary,
+                                    fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 8),
+                            Text(
+                              _formatRestTime(manager.restTimeRemainingSeconds),
+                              style: theme.textTheme.displayMedium?.copyWith(
                                   fontWeight: FontWeight.bold,
-                                  color: setInfo.isLogged || canLogThisSet
-                                      ? colorScheme.onPrimary
-                                      : colorScheme.onSecondaryContainer,
-                                ),
-                              ),
+                                  color: colorScheme.primary),
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              flex: 2,
-                              child: TextField(
-                                controller: setInfo.weightController,
-                                decoration: InputDecoration(
-                                  labelText: "Weight (kg)",
-                                  hintText: setInfo.targetWeightSuggestion
-                                      .replaceAll('kg',
-                                          ''), // Afficher la suggestion en hint
-                                  isDense: true,
-                                  border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8)),
-                                ),
-                                keyboardType:
-                                    const TextInputType.numberWithOptions(
-                                        decimal: true),
-                                enabled: canLogThisSet,
-                                style: TextStyle(
-                                    color: canLogThisSet
-                                        ? null
-                                        : theme.textTheme.bodySmall?.color
-                                            ?.withOpacity(0.6)),
+                            const SizedBox(height: 12),
+                            if (exerciseToDisplay.restBetweenSetsSeconds > 0)
+                              LinearProgressIndicator(
+                                value:
+                                    (exerciseToDisplay.restBetweenSetsSeconds >
+                                            0)
+                                        ? (manager.restTimeRemainingSeconds /
+                                            exerciseToDisplay
+                                                .restBetweenSetsSeconds)
+                                        : 0,
+                                minHeight: 10,
+                                borderRadius: BorderRadius.circular(5),
+                                backgroundColor: colorScheme.surfaceVariant,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                    colorScheme.primary),
                               ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              flex: 2,
-                              child: TextField(
-                                controller: setInfo.repsController,
-                                decoration: InputDecoration(
-                                  labelText: "Reps",
-                                  hintText: setInfo
-                                      .targetRepsInfo, // Afficher la suggestion en hint
-                                  isDense: true,
-                                  border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8)),
-                                ),
-                                keyboardType: TextInputType.number,
-                                enabled: canLogThisSet,
-                                style: TextStyle(
-                                    color: canLogThisSet
-                                        ? null
-                                        : theme.textTheme.bodySmall?.color
-                                            ?.withOpacity(0.6)),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            SizedBox(
-                              width: 40, // Espace pour l'icône
-                              child: setInfo.isLogged
-                                  ? const Icon(Icons.check_circle,
-                                      color: Colors.green, size: 30)
-                                  : (canLogThisSet
-                                      ? IconButton(
-                                          padding: EdgeInsets.zero,
-                                          icon: Icon(Icons.check_circle_outline,
-                                              color: colorScheme.primary),
-                                          iconSize: 30,
-                                          onPressed: () => _logSet(index),
-                                          tooltip: "Log Set",
-                                        )
-                                      : Icon(Icons.hourglass_empty_outlined,
-                                          color: colorScheme.onSurface
-                                              .withOpacity(0.3),
-                                          size: 28)),
+                            const SizedBox(height: 16),
+                            TextButton(
+                              onPressed: manager.skipRest,
+                              child: Text("Skip Rest",
+                                  style: TextStyle(
+                                      color: colorScheme.primary,
+                                      fontWeight: FontWeight.bold)),
                             ),
                           ],
                         ),
                       ),
-                    );
-                  },
-                ),
-              ),
-              if (allSetsManuallyLogged && !_isResting)
-                Padding(
-                  padding: const EdgeInsets.only(top: 16.0),
-                  child: ElevatedButton.icon(
-                    icon: const Icon(Icons.done_all),
-                    label: const Text("Next Exercise"),
-                    onPressed: () {
-                      // onExerciseCompleted est déjà appelé dans _logSet quand le dernier set est loggué.
-                      // Ce bouton est une confirmation visuelle pour l'utilisateur.
-                      Navigator.of(context).pop();
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size(double.infinity, 50),
                     ),
-                  ),
-                ),
-            ],
+                  if (!manager.isResting &&
+                      setBeingLoggedIndex < totalSetsInPlan) ...[
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: _weightController,
+                      decoration: InputDecoration(
+                        labelText: "Weight (kg)", // Modifié
+                        hintText: exerciseToDisplay.weightSuggestionKg
+                                        .replaceAll('kg', '')
+                                        .trim() ==
+                                    'N/A' ||
+                                exerciseToDisplay.weightSuggestionKg
+                                    .trim()
+                                    .isEmpty
+                            ? "e.g., 50.5" // Modifié
+                            : exerciseToDisplay.weightSuggestionKg
+                                .replaceAll('kg', '')
+                                .trim(),
+                        isDense: true,
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        prefixIcon: Icon(Icons.scale_outlined,
+                            color: colorScheme.primary),
+                      ),
+                      keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true), // Strictement numérique
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _repsController,
+                      decoration: InputDecoration(
+                        labelText: "Reps",
+                        hintText:
+                            exerciseToDisplay.reps.toLowerCase() == 'amrap'
+                                ? 'As Many As Possible'
+                                : exerciseToDisplay.reps,
+                        isDense: true,
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        prefixIcon: Icon(Icons.repeat_one_outlined,
+                            color: colorScheme.primary),
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.check_circle_outline),
+                      label: Text("Log Set ${setBeingLoggedIndex + 1}"),
+                      onPressed: () => _handleLogSet(manager),
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: colorScheme.primary,
+                          foregroundColor: colorScheme.onPrimary,
+                          minimumSize: const Size(double.infinity, 50),
+                          textStyle: theme.textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12))),
+                    ),
+                  ],
+                  if (loggedDataForThisExercise.loggedSets.isNotEmpty) ...[
+                    const SizedBox(height: 30),
+                    Text("Logged Sets:",
+                        style: theme.textTheme.titleLarge
+                            ?.copyWith(fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 8),
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: loggedDataForThisExercise.loggedSets.length,
+                      itemBuilder: (ctx, index) {
+                        final loggedSet =
+                            loggedDataForThisExercise.loggedSets[index];
+                        return Card(
+                          margin: const EdgeInsets.symmetric(vertical: 5.0),
+                          elevation: 1.5,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10)),
+                          child: ListTile(
+                            dense: false,
+                            leading: CircleAvatar(
+                                backgroundColor: colorScheme.secondaryContainer,
+                                radius: 18,
+                                child: Text("${loggedSet.setNumber}",
+                                    style: TextStyle(
+                                        fontSize: 13,
+                                        color: colorScheme.onSecondaryContainer,
+                                        fontWeight: FontWeight.bold))),
+                            title: Text(
+                              // Afficher "kg" seulement si ce n'est pas "0" (qui signifie vide/non applicable)
+                              "Reps: ${loggedSet.performedReps}, Weight: ${loggedSet.performedWeightKg}${loggedSet.performedWeightKg == "0" ? "" : "kg"}",
+                              style: theme.textTheme.bodyLarge
+                                  ?.copyWith(fontWeight: FontWeight.w500),
+                            ),
+                            trailing: Text(
+                                DateFormat.jm().format(loggedSet.loggedAt),
+                                style: theme.textTheme.bodySmall
+                                    ?.copyWith(color: colorScheme.outline)),
+                          ),
+                        );
+                      },
+                    ),
+                  ]
+                ],
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

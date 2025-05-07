@@ -1,150 +1,120 @@
 // lib/data/static_routine.dart
+import 'package:gymgenius/models/routine.dart'; // Pour RoutineExercise
+// import 'package:uuid/uuid.dart'; // uuid est déjà global dans routine.dart si vous le gardez là
 
-// Pas besoin d'importer Timestamp ici car il n'est plus défini directement
-// import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:gymgenius/models/routine.dart'; // Assurez-vous que le chemin est correct
+// var uuid = Uuid(); // Inutile si déjà global dans routine.dart
 
-// Définition des données statiques en utilisant le modèle RoutineExercise
-// Cette structure de données reste la même que celle que vous aviez.
-final Map<String, List<RoutineExercise>?> staticSampleRoutineData = {
-  "monday": [
-    RoutineExercise(
-        name: "Bench Press",
-        sets: 3,
-        reps: "8-10",
-        weightSuggestionKg: "60kg",
-        restBetweenSetsSeconds: 90,
-        description:
-            "Lie flat on a bench, lower the barbell to your chest, and push it back up."),
-    RoutineExercise(
-        name: "Overhead Press",
-        sets: 3,
-        reps: "8-10",
-        weightSuggestionKg: "40kg",
-        restBetweenSetsSeconds: 75,
-        description: "Stand tall, press the barbell straight up overhead."),
-    RoutineExercise(
-        name: "Barbell Rows",
-        sets: 3,
-        reps: "10-12",
-        weightSuggestionKg: "50kg",
-        restBetweenSetsSeconds: 75,
-        description:
-            "Bend over with a straight back, pull the barbell towards your lower chest."),
-    RoutineExercise(
-        name: "Squats",
-        sets: 4,
-        reps: "8-10",
-        weightSuggestionKg: "80kg",
-        restBetweenSetsSeconds: 100,
-        description:
-            "Keep your back straight, lower your hips as if sitting in a chair."),
-    RoutineExercise(
-        name: "Plank",
-        sets: 3,
-        reps: "60sec",
-        weightSuggestionKg: "Bodyweight",
-        restBetweenSetsSeconds: 60,
-        description:
-            "Hold a straight line from head to heels, engaging your core."),
-  ],
-  "tuesday": null, // Repos
-  "wednesday": [
-    RoutineExercise(
-        name: "Deadlifts",
-        sets: 1,
-        reps: "5",
-        weightSuggestionKg: "100kg",
-        restBetweenSetsSeconds: 120,
-        description:
-            "Keep back straight, lift the bar by extending hips and knees."),
-    RoutineExercise(
-        name: "Pull-ups/Lat Pulldowns",
-        sets: 3,
-        reps: "AMRAP/10-12",
-        weightSuggestionKg: "Bodyweight/Machine",
-        restBetweenSetsSeconds: 90,
-        description:
-            "Pull your body up (pull-up) or pull the bar down (lat pulldown)."),
-    RoutineExercise(
-        name: "Dumbbell Bench Press",
-        sets: 3,
-        reps: "10-12",
-        weightSuggestionKg: "20kg each",
-        restBetweenSetsSeconds: 75,
-        description: "Lie on bench, lower dumbbells, press up."),
-    RoutineExercise(
-        name: "Leg Press",
-        sets: 3,
-        reps: "12-15",
-        weightSuggestionKg: "120kg",
-        restBetweenSetsSeconds: 75,
-        description:
-            "Sit in the machine, push the platform away with your feet."),
-    RoutineExercise(
-        name: "Bicep Curls",
-        sets: 3,
-        reps: "10-12",
-        weightSuggestionKg: "12kg",
-        restBetweenSetsSeconds: 60,
-        description:
-            "Curl the weight up towards your shoulders, keeping elbows stable."),
-  ],
-  "thursday": null, // Repos
-  "friday": [
-    RoutineExercise(
-        name: "Squats",
-        sets: 4,
-        reps: "10-12",
-        weightSuggestionKg: "75kg",
-        restBetweenSetsSeconds: 90,
-        description: "Keep your back straight, lower your hips."),
-    RoutineExercise(
-        name: "Incline Dumbbell Press",
-        sets: 3,
-        reps: "10-12",
-        weightSuggestionKg: "18kg each",
-        restBetweenSetsSeconds: 75,
-        description: "Lie on an incline bench, press dumbbells up."),
-    RoutineExercise(
-        name: "Romanian Deadlifts",
-        sets: 3,
-        reps: "10-12",
-        weightSuggestionKg: "60kg",
-        restBetweenSetsSeconds: 75,
-        description:
-            "Hinge at the hips, keeping legs mostly straight, lower the bar."),
-    RoutineExercise(
-        name: "Lateral Raises",
-        sets: 3,
-        reps: "12-15",
-        weightSuggestionKg: "8kg",
-        restBetweenSetsSeconds: 60,
-        description:
-            "Raise dumbbells out to the sides until parallel to the floor."),
-    RoutineExercise(
-        name: "Tricep Pushdowns",
-        sets: 3,
-        reps: "12-15",
-        weightSuggestionKg: "Machine Setting 4",
-        restBetweenSetsSeconds: 60,
-        description: "Use a cable machine, push the bar/rope down."),
-  ],
-  "saturday": null, // Repos
-  "sunday": null, // Repos
-};
+// L'IA retourne maintenant un Map avec les parties qu'elle génère
+Map<String, dynamic> createStaticAiGeneratedParts({
+  required String userId,
+  required Map<String, dynamic> onboardingData,
+  Map<String, dynamic>?
+      previousRoutineData, // L'ancienne routine complète (en Map)
+}) {
+  // Logique pour utiliser onboardingData et previousRoutineData pour varier la routine
+  // Par exemple, si l'ancienne routine était "Beginner", la nouvelle pourrait être "Intermediate"
+  bool makeIntermediate = previousRoutineData != null &&
+      (previousRoutineData['name'] as String? ?? '')
+          .toLowerCase()
+          .contains("beginner");
 
-// Fonction pour créer l'objet WeeklyRoutine à partir des données statiques.
-// Notez que 'createdAt' n'est pas défini ici. Il sera ajouté par
-// FieldValue.serverTimestamp() lors de la sauvegarde dans Firestore.
-WeeklyRoutine createStaticWeeklyRoutine(String userId) {
-  return WeeklyRoutine(
-    userId: userId,
-    name:
-        "Starter Strength Plan", // Vous pouvez changer le nom ici si vous le souhaitez
-    durationInWeeks: 8, // Durée par défaut pour cette routine statique
-    // createdAt est omis, car il sera géré par FieldValue.serverTimestamp()
-    // lors de la sauvegarde initiale dans Firestore.
-    dailyWorkouts: staticSampleRoutineData,
-  );
+  String routineName =
+      makeIntermediate ? "Intermediate Strength Focus" : "Beginner Full Body";
+  int duration = 4; // L'IA pourrait aussi déterminer cela
+
+  // Construire les dailyWorkouts comme Map<String, List<Map<String, dynamic>>>
+  // Chaque RoutineExercise est converti en Map via .toMap()
+  Map<String, List<Map<String, dynamic>>> dailyWorkouts = {
+    'monday': [
+      RoutineExercise(
+              name: makeIntermediate ? "Barbell Squats" : "Goblet Squats",
+              sets: 3,
+              reps: makeIntermediate ? "5-8" : "8-12",
+              weightSuggestionKg: makeIntermediate ? "Moderate" : "Light")
+          .toMap(),
+      RoutineExercise(
+              name: makeIntermediate ? "Bench Press" : "Push-ups",
+              sets: 3,
+              reps: makeIntermediate ? "5-8" : "AMRAP")
+          .toMap(),
+      RoutineExercise(
+              name: makeIntermediate ? "Barbell Rows" : "Dumbbell Rows",
+              sets: 3,
+              reps: makeIntermediate ? "5-8" : "10-15 per side")
+          .toMap(),
+    ],
+    'tuesday': [], // Rest day
+    'wednesday': [
+      RoutineExercise(
+              name: makeIntermediate
+                  ? "Overhead Press"
+                  : "Dumbbell Shoulder Press",
+              sets: 3,
+              reps: makeIntermediate ? "6-10" : "10-15")
+          .toMap(),
+      RoutineExercise(
+              name: makeIntermediate ? "Pull-ups / Assisted" : "Lat Pulldowns",
+              sets: 3,
+              reps: makeIntermediate ? "AMRAP" : "8-12")
+          .toMap(),
+      RoutineExercise(name: "Plank", sets: 3, reps: "30-60s hold").toMap(),
+    ],
+    'thursday': [], // Rest day
+    'friday': [
+      RoutineExercise(
+              name:
+                  makeIntermediate ? "Romanian Deadlifts" : "Bodyweight Lunges",
+              sets: 3,
+              reps: makeIntermediate ? "8-12" : "10-15 per leg")
+          .toMap(),
+      RoutineExercise(
+              name: makeIntermediate
+                  ? "Incline Dumbbell Press"
+                  : "Dumbbell Bench Press (if available)",
+              sets: 3,
+              reps: "8-12")
+          .toMap(),
+      RoutineExercise(name: "Bicep Curls", sets: 3, reps: "10-15").toMap(),
+      RoutineExercise(name: "Tricep Extensions", sets: 3, reps: "10-15")
+          .toMap(),
+    ],
+    'saturday': [], // Optional: Light activity or full rest
+    'sunday': [], // Rest day
+  };
+
+  return {
+    'name': routineName,
+    'durationInWeeks': duration,
+    'dailyWorkouts':
+        dailyWorkouts, // Déjà une Map<String, List<Map<String, dynamic>>>
+  };
 }
+
+
+// L'ancienne fonction createStaticWeeklyRoutine n'est plus directement utilisée par HomeTabScreen
+// mais peut être conservée pour des tests ou d'autres usages si elle construit un objet WeeklyRoutine.
+// WeeklyRoutine createStaticWeeklyRoutine(String userId, {Map<String, dynamic>? onboardingData}) {
+//   final aiParts = createStaticAiGeneratedParts(userId: userId, onboardingData: onboardingData ?? {});
+//   final now = Timestamp.now();
+//   final duration = aiParts['durationInWeeks'] as int;
+
+//   Map<String, List<RoutineExercise>> parsedWorkouts = {};
+//    if (aiParts['dailyWorkouts'] is Map) {
+//     (aiParts['dailyWorkouts'] as Map).forEach((day, exercisesDynamic) {
+//       if (exercisesDynamic is List) {
+//         parsedWorkouts[day as String] = exercisesDynamic
+//             .map((exMap) => RoutineExercise.fromMap(exMap as Map<String, dynamic>)) // fromMap ici
+//             .toList();
+//       }
+//     });
+//   }
+
+//   return WeeklyRoutine(
+//     id: uuid.v4(), // Génère un ID pour cette instance
+//     name: aiParts['name'] as String,
+//     dailyWorkouts: parsedWorkouts,
+//     durationInWeeks: duration,
+//     generatedAt: now,
+//     expiresAt: Timestamp.fromDate(now.toDate().add(Duration(days: duration * 7))),
+//   );
+// }

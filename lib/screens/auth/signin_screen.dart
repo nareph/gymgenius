@@ -2,13 +2,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-// --- IMPORTEZ LE FICHIER CONTENANT VOTRE ROUTINE STATIQUE ---
-// Cette importation n'est plus nécessaire ici, elle le sera dans le DashboardScreen
-// import 'package:gymgenius/data/static_routine.dart';
+// L'import de static_routine n'est pas nécessaire ici
 
 class SignInScreen extends StatefulWidget {
-  final Map<String, dynamic>? onboardingData;
+  final Map<String, dynamic>?
+      onboardingData; // Reçu de l'écran d'onboarding précédent
   const SignInScreen({super.key, this.onboardingData});
+
   @override
   State<SignInScreen> createState() => _SignInScreenState();
 }
@@ -20,16 +20,12 @@ class _SignInScreenState extends State<SignInScreen> {
   bool _isLoading = false;
 
   Future<void> _signUpWithEmail() async {
-    // Valide le formulaire avant de continuer
     if (!(_formKey.currentState?.validate() ?? false)) {
       return;
     }
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
-      // Créer l'utilisateur Auth
       final credential =
           await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
@@ -38,101 +34,100 @@ class _SignInScreenState extends State<SignInScreen> {
       final user = credential.user;
 
       if (user != null) {
-        // Préparer les données du profil
-        final profileData = {
+        // Préparer les données pour le document utilisateur
+        // Les onboardingData sont stockées sous une clé 'onboardingData'
+        final Map<String, dynamic> userProfileData = {
           'email': user.email,
+          'uid': user.uid, // Utile d'avoir l'UID dans le document aussi
           'createdAt': FieldValue.serverTimestamp(),
-          ...?widget.onboardingData, // Ajoute les données de l'onboarding
+          'displayName':
+              user.email?.split('@')[0] ?? 'New User', // Un nom par défaut
+          // Stocker les données d'onboarding dans un champ map dédié
+          // Utiliser le spread operator sur un map créé conditionnellement
+          if (widget.onboardingData != null &&
+              widget.onboardingData!.isNotEmpty) ...{
+            'onboardingData': widget.onboardingData
+          } else ...{
+            'onboardingData': {}
+          }, // Toujours un map vide si pas de données
         };
-        final profileRef =
-            FirebaseFirestore.instance.collection('users').doc(user.uid);
 
-        // Sauvegarder uniquement le profil utilisateur
-        // La routine sera gérée depuis le DashboardScreen
-        await profileRef.set(profileData);
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .set(userProfileData);
 
-        // Rediriger si le widget est toujours monté
         if (mounted) {
-          // Redirige vers '/main_app' qui contiendra le DashboardScreen
           Navigator.pushNamedAndRemoveUntil(
               context, '/main_app', (route) => false);
         }
       } else {
-        // Gérer le cas improbable où user est null
-        if (mounted) {
-          _showErrorSnackBar("Sign up failed. User data unavailable.", context);
-        }
+        if (mounted)
+          _showErrorSnackBar("Sign up failed. User data unavailable.");
       }
     } on FirebaseAuthException catch (e) {
-      // Gérer les erreurs d'authentification
       if (mounted) {
-        String errorMessage = "Sign up error occurred.";
+        String errorMessage = "An error occurred during sign up.";
         if (e.code == 'email-already-in-use') {
-          errorMessage =
-              "This email is already registered. Please log in or use a different email.";
+          errorMessage = "This email is already registered. Please log in.";
         } else if (e.code == 'weak-password') {
           errorMessage = "The password provided is too weak.";
         } else if (e.code == 'invalid-email') {
-          errorMessage = "The email address is badly formatted.";
+          errorMessage = "The email address is not valid.";
         } else {
-          errorMessage = e.message ??
-              errorMessage; // Utilise le message Firebase si disponible
+          errorMessage = e.message ?? errorMessage;
         }
-        _showErrorSnackBar(errorMessage, context);
+        _showErrorSnackBar(errorMessage);
       }
-    } catch (e) {
-      // Gérer les autres erreurs (Firestore, etc.)
-      if (mounted) {
-        print("Error saving profile or other: $e");
-        _showErrorSnackBar(
-            "An error occurred during sign up. Please try again.", context);
-      }
+    } catch (e, s) {
+      print("Sign up error: $e\n$s");
+      if (mounted)
+        _showErrorSnackBar("An unexpected error occurred. Please try again.");
     } finally {
-      // Assurer que l'indicateur de chargement s'arrête
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  // Helper pour afficher les SnackBar d'erreur avec le style du thème
-  void _showErrorSnackBar(String message, BuildContext context) {
-    if (!context.mounted) return; // Vérifie si le widget est toujours là
+  void _showErrorSnackBar(String message) {
+    if (!mounted) return;
     final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          message,
-          style: textTheme.bodyMedium?.copyWith(color: colorScheme.onError),
-        ),
+        content: Text(message, style: TextStyle(color: colorScheme.onError)),
         backgroundColor: colorScheme.error,
-        duration: const Duration(seconds: 4),
       ),
     );
   }
 
-  // Fonction pour formater les données d'onboarding pour l'affichage debug
-  String _formatOnboardingData(Map<String, dynamic> data) {
+  String _formatOnboardingDataForDisplay(Map<String, dynamic> data) {
+    // ... (votre fonction de formatage est bonne)
     final buffer = StringBuffer();
     data.forEach((key, value) {
+      // Vous voudrez peut-être utiliser les 'text' des OnboardingQuestion ici pour un affichage plus convivial
+      String displayKey = key
+          .replaceAll('_', ' ')
+          .split(' ')
+          .map((e) => e[0].toUpperCase() + e.substring(1))
+          .join(' ');
       if (value is Map) {
-        buffer.writeln("- $key:");
+        buffer.writeln("- $displayKey:");
         (value).forEach((subKey, subValue) {
-          buffer.writeln("  - $subKey: $subValue");
+          String displaySubKey = subKey
+              .replaceAll('_', ' ')
+              .split(' ')
+              .map((e) => e[0].toUpperCase() + e.substring(1))
+              .join(' ');
+          buffer.writeln("  - $displaySubKey: $subValue");
         });
       } else if (value is List) {
-        buffer.writeln("- $key: ${value.join(', ')}");
+        buffer.writeln("- $displayKey: ${value.join(', ')}");
       } else {
-        buffer.writeln("- $key: $value");
+        buffer.writeln("- $displayKey: $value");
       }
     });
     return buffer.toString();
   }
 
-  // Nettoie les contrôleurs
   @override
   void dispose() {
     _emailController.dispose();
@@ -140,10 +135,8 @@ class _SignInScreenState extends State<SignInScreen> {
     super.dispose();
   }
 
-  // Construit l'interface utilisateur
   @override
   Widget build(BuildContext context) {
-    // Accès au thème
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
 
@@ -153,6 +146,7 @@ class _SignInScreenState extends State<SignInScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
         ),
+        // title: Text("Create Account"), // Optionnel
       ),
       body: Center(
         child: SingleChildScrollView(
@@ -164,44 +158,64 @@ class _SignInScreenState extends State<SignInScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  "Create Your Account",
+                  "Final Step: Create Account",
                   textAlign: TextAlign.center,
-                  style: textTheme.headlineMedium,
+                  style: textTheme.headlineMedium
+                      ?.copyWith(fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 30),
+                const SizedBox(height: 10),
+                Text(
+                  "Your preferences will be saved with your new account.",
+                  textAlign: TextAlign.center,
+                  style: textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 25),
                 if (widget.onboardingData != null &&
                     widget.onboardingData!.isNotEmpty) ...[
                   Container(
-                    padding: const EdgeInsets.all(12),
-                    margin: const EdgeInsets.only(bottom: 20),
-                    decoration: BoxDecoration(
-                        color: colorScheme.surface.withOpacity(0.5),
-                        borderRadius: BorderRadius.circular(8)),
-                    child: Text(
-                      "Your preferences will be saved with your profile:\n${_formatOnboardingData(widget.onboardingData!)}",
-                      style: textTheme.labelSmall?.copyWith(
-                          color: colorScheme.onSurface.withOpacity(0.8),
-                          height: 1.4),
-                      textAlign: TextAlign.left,
-                    ),
-                  ),
+                      padding: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.only(bottom: 20),
+                      decoration: BoxDecoration(
+                          color: colorScheme
+                              .surfaceContainerLowest, // Un fond subtil
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                              color:
+                                  colorScheme.outlineVariant.withOpacity(0.5))),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Summary of Your Preferences:",
+                            style: textTheme.titleSmall
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _formatOnboardingDataForDisplay(
+                                widget.onboardingData!),
+                            style: textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                                height: 1.5),
+                          ),
+                        ],
+                      )),
                 ],
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: "Email",
-                    prefixIcon: Icon(Icons.email_outlined),
+                  decoration: InputDecoration(
+                    labelText: "Email Address",
+                    prefixIcon:
+                        Icon(Icons.email_outlined, color: colorScheme.primary),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                   validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
+                    if (value == null || value.trim().isEmpty)
                       return 'Please enter your email';
-                    }
-                    if (!RegExp(
-                            r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+")
-                        .hasMatch(value)) {
-                      return 'Please enter a valid email address';
-                    }
+                    if (!RegExp(r"^[a-zA-Z0-9.]+@[a-zA-Z0-9]+\.[a-zA-Z]+")
+                        .hasMatch(value)) return 'Enter a valid email address';
                     return null;
                   },
                   autovalidateMode: AutovalidateMode.onUserInteraction,
@@ -210,17 +224,18 @@ class _SignInScreenState extends State<SignInScreen> {
                 TextFormField(
                   controller: _passwordController,
                   obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: "Password",
-                    prefixIcon: Icon(Icons.lock_outline),
+                  decoration: InputDecoration(
+                    labelText: "Password (min. 6 characters)",
+                    prefixIcon:
+                        Icon(Icons.lock_outline, color: colorScheme.primary),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
+                    if (value == null || value.isEmpty)
                       return 'Please enter your password';
-                    }
-                    if (value.length < 6) {
-                      return 'Password must be at least 6 characters long';
-                    }
+                    if (value.length < 6)
+                      return 'Password must be at least 6 characters';
                     return null;
                   },
                   autovalidateMode: AutovalidateMode.onUserInteraction,
@@ -229,10 +244,14 @@ class _SignInScreenState extends State<SignInScreen> {
                 _isLoading
                     ? Center(
                         child: CircularProgressIndicator(
-                            color: colorScheme.secondary))
+                            color: colorScheme.primary))
                     : ElevatedButton(
                         onPressed: _signUpWithEmail,
-                        child: const Text("CREATE ACCOUNT"),
+                        style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 15),
+                            textStyle: textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.bold)),
+                        child: const Text("CREATE ACCOUNT & GET STARTED"),
                       ),
               ],
             ),

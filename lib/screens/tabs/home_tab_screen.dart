@@ -2,13 +2,26 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:gymgenius/data/static_routine.dart';
-import 'package:gymgenius/models/routine.dart';
+import 'package:gymgenius/data/static_routine.dart'; // Votre service AI simulé
+import 'package:gymgenius/models/routine.dart'; // WeeklyRoutine et RoutineExercise
 import 'package:gymgenius/screens/daily_workout_detail_screen.dart';
+import 'package:uuid/uuid.dart';
+
+var uuid = Uuid();
+
+// Définir la constante ici ou l'importer d'un fichier de constantes partagé
+const int kProfileTabIndex = 2; // Supposant Home(0), Tracking(1), Profile(2)
+// AJUSTEZ CET INDEX SI VOTRE ORDRE D'ONGLETS EST DIFFÉRENT
 
 class HomeTabScreen extends StatefulWidget {
   final User user;
-  const HomeTabScreen({super.key, required this.user});
+  final Function(int) onNavigateToTab;
+
+  const HomeTabScreen({
+    super.key,
+    required this.user,
+    required this.onNavigateToTab,
+  });
 
   @override
   State<HomeTabScreen> createState() => _HomeTabScreenState();
@@ -17,13 +30,33 @@ class HomeTabScreen extends StatefulWidget {
 class _HomeTabScreenState extends State<HomeTabScreen> {
   bool _isGeneratingRoutine = false;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  Stream<DocumentSnapshot<Map<String, dynamic>>>? _userDocStream;
 
-  Future<WeeklyRoutine> _callAiRoutineService(
-      String userId, Map<String, dynamic> onboardingData) async {
-    print(
-        "Simulating AI routine generation with static data for user: $userId");
+  @override
+  void initState() {
+    super.initState();
+    _userDocStream = _firestore
+        .collection('users')
+        .doc(widget.user.uid)
+        .snapshots()
+        .cast<DocumentSnapshot<Map<String, dynamic>>>();
+  }
+
+  Future<Map<String, dynamic>> _callAiRoutineService({
+    required String userId,
+    required Map<String, dynamic> onboardingData,
+    Map<String, dynamic>? previousRoutineData,
+  }) async {
+    print("HTS: Simulating AI routine generation for user: $userId");
+    if (previousRoutineData != null) {
+      print(
+          "HTS: Using previous routine context: Name: ${previousRoutineData['name']}, ID: ${previousRoutineData['id']}");
+    }
     await Future.delayed(const Duration(seconds: 2));
-    return createStaticWeeklyRoutine(userId);
+    return createStaticAiGeneratedParts(
+        userId: userId,
+        onboardingData: onboardingData,
+        previousRoutineData: previousRoutineData);
   }
 
   Future<void> _generateRoutine() async {
@@ -31,28 +64,61 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
     setState(() => _isGeneratingRoutine = true);
 
     try {
-      DocumentSnapshot userDoc =
+      DocumentSnapshot<Map<String, dynamic>> userDoc =
           await _firestore.collection('users').doc(widget.user.uid).get();
-      Map<String, dynamic> onboardingData =
-          userDoc.exists && userDoc.data() != null
-              ? userDoc.data() as Map<String, dynamic>
-              : {};
 
-      final WeeklyRoutine newRoutine =
-          await _callAiRoutineService(widget.user.uid, onboardingData);
+      Map<String, dynamic> onboardingData = {};
+      Map<String, dynamic>? oldRoutineData;
 
-      await _firestore.collection('routines').doc(widget.user.uid).set({
-        ...newRoutine.toFirestore(),
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+      if (userDoc.exists && userDoc.data() != null) {
+        final data = userDoc.data()!;
+        onboardingData =
+            (data['onboardingData'] as Map<String, dynamic>?) ?? {};
+        oldRoutineData = (data['currentRoutine'] as Map<String, dynamic>?);
+      }
+
+      if (onboardingData.isEmpty) {
+        _showErrorSnackBar(
+            "Please complete your preferences in your profile before generating a plan.");
+        widget.onNavigateToTab(kProfileTabIndex);
+        if (mounted) setState(() => _isGeneratingRoutine = false);
+        return;
+      }
+
+      final Map<String, dynamic> aiGeneratedParts = await _callAiRoutineService(
+        userId: widget.user.uid,
+        onboardingData: onboardingData,
+        previousRoutineData: oldRoutineData,
+      );
+
+      final String newRoutineId = uuid.v4();
+      final DateTime now = DateTime.now();
+      final int durationInWeeks =
+          aiGeneratedParts['durationInWeeks'] as int? ?? 4;
+      final DateTime expiresAt = now.add(Duration(days: durationInWeeks * 7));
+
+      final Map<String, dynamic> newCurrentRoutine = {
+        'id': newRoutineId,
+        'name': aiGeneratedParts['name'] as String? ?? 'AI Generated Routine',
+        'dailyWorkouts': aiGeneratedParts['dailyWorkouts'] ?? {},
+        'durationInWeeks': durationInWeeks,
+        'generatedAt': Timestamp.fromDate(now),
+        'expiresAt': Timestamp.fromDate(expiresAt),
+        'onboardingSnapshot': onboardingData,
+      };
+
+      await _firestore.collection('users').doc(widget.user.uid).set(
+        {'currentRoutine': newCurrentRoutine},
+        SetOptions(merge: true),
+      );
 
       if (mounted) {
         _showSuccessSnackBar("New routine generated successfully!");
-        setState(() {}); // Pour rafraîchir et afficher la nouvelle routine
       }
-    } catch (e) {
-      print("Error generating routine: $e");
-      if (mounted) _showErrorSnackBar("Failed to generate routine. Error: $e");
+    } catch (e, s) {
+      print("HTS: Error generating routine: $e\n$s");
+      if (mounted)
+        _showErrorSnackBar("Failed to generate routine. Please check logs.");
     } finally {
       if (mounted) setState(() => _isGeneratingRoutine = false);
     }
@@ -60,48 +126,59 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
 
   void _showErrorSnackBar(String message) {
     if (!mounted) return;
-    final snackBar = SnackBar(
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(message,
           style: TextStyle(color: Theme.of(context).colorScheme.onError)),
       backgroundColor: Theme.of(context).colorScheme.error,
-    );
-    ScaffoldMessenger.of(context).showSnackBar(snackBar);
+      duration: const Duration(seconds: 4),
+    ));
   }
 
   void _showSuccessSnackBar(String message) {
     if (!mounted) return;
-    final snackBar = SnackBar(
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(message,
           style: TextStyle(
               color: Theme.of(context).colorScheme.onSecondaryContainer)),
       backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
-    );
-    ScaffoldMessenger.of(context).showSnackBar(snackBar);
+      duration: const Duration(seconds: 3),
+    ));
   }
 
-  (String, bool) _getRoutineStatus(WeeklyRoutine? routine) {
-    if (routine == null ||
-        routine.createdAt == null ||
-        routine.durationInWeeks <= 0) {
-      return ("Duration not set", false); // Ou "No active plan"
-    }
-    final DateTime creationDate = routine.createdAt!.toDate();
-    final DateTime endDate =
-        creationDate.add(Duration(days: routine.durationInWeeks * 7));
-
-    if (DateTime.now().isAfter(endDate)) {
-      return ("Plan finished", true);
+  ({String statusText, bool isExpired, bool isValid}) _getRoutineStatus(
+      Map<String, dynamic>? routineData) {
+    if (routineData == null || routineData.isEmpty) {
+      return (statusText: "No Active Plan", isExpired: true, isValid: false);
     }
 
-    final Duration difference = endDate.difference(DateTime.now());
+    final Timestamp? generatedAtTs = routineData['generatedAt'] as Timestamp?;
+    final Timestamp? expiresAtTs = routineData['expiresAt'] as Timestamp?;
+    final int durationInWeeks = routineData['durationInWeeks'] as int? ?? 0;
+    final String routineName = routineData['name'] as String? ?? '';
+
+    if (generatedAtTs == null ||
+        expiresAtTs == null ||
+        durationInWeeks <= 0 ||
+        routineName.isEmpty) {
+      return (statusText: "Invalid Plan Data", isExpired: true, isValid: false);
+    }
+
+    final DateTime expiresAtDate = expiresAtTs.toDate();
+
+    if (DateTime.now().isAfter(expiresAtDate)) {
+      return (statusText: "Plan Finished", isExpired: true, isValid: true);
+    }
+
+    final Duration difference = expiresAtDate.difference(DateTime.now());
     int weeksRemaining = (difference.inDays / 7).ceil();
-    if (weeksRemaining > routine.durationInWeeks)
-      weeksRemaining = routine.durationInWeeks;
     if (weeksRemaining < 0) weeksRemaining = 0;
+    if (weeksRemaining > durationInWeeks) weeksRemaining = durationInWeeks;
 
     return (
-      "$weeksRemaining week${weeksRemaining == 1 ? '' : 's'} remaining",
-      false
+      statusText:
+          "$weeksRemaining week${weeksRemaining == 1 ? '' : 's'} remaining",
+      isExpired: false,
+      isValid: true
     );
   }
 
@@ -115,341 +192,336 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // ---- MESSAGE DE BIENVENUE SUPPRIMÉ ----
-          // Padding(
-          //   padding: const EdgeInsets.only(bottom: 10.0),
-          //   child: Text(
-          //     "Welcome, ${widget.user.email?.split('@')[0] ?? 'Fitness Enthusiast'}!",
-          //     style: textTheme.headlineSmall,
-          //     textAlign: TextAlign.center,
-          //   ),
-          // ),
-          // ----------------------------------------
-
-          if (_isGeneratingRoutine)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10.0, top: 5.0),
-              child: Center(
-                  child: Text("Generating Your Plan...",
-                      style: textTheme.titleMedium)),
-            )
-          else
-            Padding(
-              padding: const EdgeInsets.only(
-                  bottom: 10.0, top: 5.0), // Ajustez le 'top' si nécessaire
-              child: Center(
-                  child: Text("Current Plan",
-                      style: textTheme.titleLarge
-                          ?.copyWith(fontWeight: FontWeight.bold))),
-            ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10.0, top: 5.0),
+            child: Center(
+                child: Text(
+              _isGeneratingRoutine ? "Generating Your Plan..." : "Current Plan",
+              style: _isGeneratingRoutine
+                  ? textTheme.titleMedium
+                  : textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            )),
+          ),
           Expanded(
-            child: FutureBuilder<DocumentSnapshot>(
-              future:
-                  _firestore.collection('routines').doc(widget.user.uid).get(),
-              builder: (context, AsyncSnapshot<DocumentSnapshot> snapshot) {
+            child: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+              stream: _userDocStream,
+              builder: (context,
+                  AsyncSnapshot<DocumentSnapshot<Map<String, dynamic>>>
+                      snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting &&
                     !_isGeneratingRoutine) {
                   return Center(
                       child: CircularProgressIndicator(
                           color: colorScheme.secondary));
-                } else if (snapshot.hasError) {
+                }
+                if (snapshot.hasError) {
+                  print(
+                      "HTS: Error in UserDoc StreamBuilder: ${snapshot.error}");
                   return Center(
-                      child: Text("Error loading routine. Please try again.",
+                      child: Text("Error loading user data.",
                           style: textTheme.bodyMedium
                               ?.copyWith(color: colorScheme.error)));
-                } else if (snapshot.hasData || _isGeneratingRoutine) {
-                  // Si _isGeneratingRoutine est true, on veut montrer un état d'attente même si snapshot.data est null ou ancien.
-                  if (_isGeneratingRoutine &&
-                      snapshot.connectionState == ConnectionState.waiting) {
-                    return Center(
-                        child: Text("Just a moment...",
-                            style: textTheme.titleMedium));
-                  }
+                }
 
-                  WeeklyRoutine? routine;
-                  bool noRoutineExists =
-                      true; // Par défaut, on considère qu'il n'y a pas de routine
-                  bool isRoutineExpired = false;
-                  String routineStatusText = "N/A";
+                final Map<String, dynamic>? userData = snapshot.data?.data();
 
-                  if (snapshot.data != null && snapshot.data!.exists) {
-                    noRoutineExists =
-                        false; // Une routine existe dans Firestore
-                    try {
-                      routine = WeeklyRoutine.fromFirestore(snapshot.data!);
-                      final status = _getRoutineStatus(routine);
-                      routineStatusText = status.$1;
-                      isRoutineExpired = status.$2;
-                    } catch (e) {
-                      print(
-                          "Error parsing routine data: ${snapshot.data!.data()} -> $e");
-                      // Erreur de parsing, considérer comme s'il n'y avait pas de routine valide
-                      noRoutineExists = true;
-                      routine = null;
-                      // Vous pourriez vouloir afficher un message d'erreur plus spécifique ici
-                    }
-                  }
+                if (!snapshot.hasData ||
+                    !snapshot.data!.exists ||
+                    userData == null) {
+                  return _buildOnboardingPromptUI(
+                      context,
+                      "Welcome!",
+                      "Let's get your first fitness plan by setting up your preferences.",
+                      "Setup Preferences");
+                }
 
-                  // Si on génère une routine, on ne veut pas montrer "No Active Routine" immédiatement
-                  // On attend que la génération finisse ou échoue.
-                  // Cette condition est pour l'état initial OU après qu'une routine a expiré.
-                  if ((noRoutineExists || isRoutineExpired) &&
-                      !_isGeneratingRoutine) {
-                    String title = isRoutineExpired
-                        ? "Routine Expired"
-                        : "No Active Routine";
-                    String message = isRoutineExpired
-                        ? "Your previous plan has finished after ${routine?.durationInWeeks ?? 0} weeks. Time for a new one!"
-                        : "Let's generate your personalized AI fitness plan!";
-                    String buttonText = isRoutineExpired
-                        ? "Generate New Plan"
-                        : "Generate First Plan";
-                    IconData iconData = isRoutineExpired
-                        ? Icons.autorenew
-                        : Icons
-                            .sentiment_dissatisfied; // Ou Icons.add_circle_outline
+                final Map<String, dynamic>? onboardingData =
+                    userData['onboardingData'] as Map<String, dynamic>?;
+                if (onboardingData == null || onboardingData.isEmpty) {
+                  return _buildOnboardingPromptUI(
+                      context,
+                      "Set Your Preferences",
+                      "We need your fitness goals and preferences to create the best plan for you.",
+                      "Update Profile Preferences");
+                }
 
-                    return Column(
-                      children: [
-                        if (isRoutineExpired && routine != null)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 8.0),
-                            child: Text(
-                              "Previous Plan: ${routine.name}",
-                              style: textTheme.titleMedium?.copyWith(
-                                  color: textTheme.bodySmall?.color
-                                      ?.withOpacity(0.7)),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        Expanded(
-                          child: Card(
-                              elevation: isRoutineExpired ? 4 : 2,
-                              color: isRoutineExpired
-                                  ? colorScheme.errorContainer.withOpacity(0.3)
-                                  : colorScheme.surface.withOpacity(0.8),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(15.0),
-                                side: isRoutineExpired
-                                    ? BorderSide(
-                                        color: colorScheme.error, width: 1.5)
-                                    : BorderSide.none,
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    vertical: 20.0, horizontal: 16.0),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(iconData,
-                                        color: isRoutineExpired
-                                            ? colorScheme.error
-                                            : colorScheme.secondary,
-                                        size: 40),
-                                    const SizedBox(height: 10),
-                                    Text(title,
-                                        style: textTheme.titleLarge?.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                          color: isRoutineExpired
-                                              ? colorScheme.onErrorContainer
-                                              : null,
-                                        )),
-                                    const SizedBox(height: 5),
-                                    Text(
-                                      message,
-                                      style: textTheme.bodyMedium?.copyWith(
-                                        color: isRoutineExpired
-                                            ? colorScheme.onErrorContainer
-                                                .withOpacity(0.9)
-                                            : null,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                    const SizedBox(height: 20),
-                                    ElevatedButton.icon(
-                                      icon: Icon(
-                                          _isGeneratingRoutine // Devrait être false ici, mais on garde par sécurité
-                                              ? Icons.hourglass_empty
-                                              : (isRoutineExpired
-                                                  ? Icons.add_circle_outline
-                                                  : Icons.auto_awesome)),
-                                      label:
-                                          _isGeneratingRoutine // Devrait être false
-                                              ? const SizedBox(
-                                                  height: 20,
-                                                  width: 90,
-                                                  child: Center(
-                                                      child: SizedBox(
-                                                          width: 20,
-                                                          height: 20,
-                                                          child:
-                                                              CircularProgressIndicator(
-                                                                  strokeWidth:
-                                                                      2,
-                                                                  color: Colors
-                                                                      .white))))
-                                              : Text(buttonText),
-                                      onPressed:
-                                          _isGeneratingRoutine // Devrait être false
-                                              ? null
-                                              : _generateRoutine,
-                                      style: isRoutineExpired
-                                          ? ElevatedButton.styleFrom(
-                                              backgroundColor:
-                                                  colorScheme.error,
-                                              foregroundColor:
-                                                  colorScheme.onError,
-                                            )
-                                          : null,
-                                    )
-                                  ],
-                                ),
-                              )),
-                        ),
-                      ],
-                    );
-                  } else if (routine != null && !_isGeneratingRoutine) {
-                    // Afficher la routine si elle existe et qu'on ne génère pas
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 8.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  routine.name,
-                                  style: textTheme.titleMedium
-                                      ?.copyWith(fontWeight: FontWeight.w600),
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 1,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Chip(
-                                avatar: Icon(Icons.hourglass_empty_outlined,
-                                    size: 16,
-                                    color: colorScheme.onSecondaryContainer
-                                        .withOpacity(0.8)),
-                                label: Text(routineStatusText,
-                                    style: textTheme.labelMedium?.copyWith(
-                                        color:
-                                            colorScheme.onSecondaryContainer)),
-                                backgroundColor: colorScheme.secondaryContainer,
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 4),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Expanded(
-                          child: ListView.builder(
-                            itemCount: WeeklyRoutine.daysOfWeek.length,
-                            itemBuilder: (context, index) {
-                              final day = WeeklyRoutine.daysOfWeek[index];
-                              final List<RoutineExercise>? dayExercises =
-                                  routine!.dailyWorkouts[day];
-                              final isRestDay =
-                                  dayExercises == null || dayExercises.isEmpty;
-                              final dayTitle =
-                                  day[0].toUpperCase() + day.substring(1);
+                Map<String, dynamic>? currentRoutineData =
+                    userData['currentRoutine'] as Map<String, dynamic>?;
+                final routineStatusInfo = _getRoutineStatus(currentRoutineData);
 
-                              return Card(
-                                margin:
-                                    const EdgeInsets.symmetric(vertical: 6.0),
-                                color: colorScheme.surfaceContainerHighest
-                                    .withOpacity(isRestDay ? 0.7 : 1.0),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12.0)),
-                                child: ListTile(
-                                  contentPadding: const EdgeInsets.symmetric(
-                                      vertical: 8.0, horizontal: 16.0),
-                                  leading: Icon(
-                                    isRestDay
-                                        ? Icons.bedtime_outlined
-                                        : Icons.fitness_center,
-                                    color: isRestDay
-                                        ? colorScheme.onSurfaceVariant
-                                            .withOpacity(0.6)
-                                        : colorScheme.secondary,
-                                    size: 28,
-                                  ),
-                                  title: Text(dayTitle,
-                                      style: textTheme.titleMedium?.copyWith(
-                                          fontWeight: FontWeight.bold)),
-                                  subtitle: Text(
-                                    isRestDay
-                                        ? "Rest Day"
-                                        : "${dayExercises!.length} ${dayExercises.length == 1 ? 'exercise' : 'exercises'}",
-                                    style: textTheme.bodyMedium?.copyWith(
-                                        color: colorScheme.onSurfaceVariant
-                                            .withOpacity(0.8)),
-                                  ),
-                                  trailing: isRestDay
-                                      ? null
-                                      : Icon(Icons.arrow_forward_ios,
-                                          size: 16,
-                                          color: colorScheme.onSurfaceVariant
-                                              .withOpacity(0.6)),
-                                  onTap: isRestDay
-                                      ? null
-                                      : () {
-                                          if (dayExercises != null &&
-                                              dayExercises.isNotEmpty) {
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (_) =>
-                                                    DailyWorkoutDetailScreen(
-                                                  dayTitle: "$dayTitle Workout",
-                                                  exercises: dayExercises,
-                                                ),
-                                              ),
-                                            );
-                                          }
-                                        },
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    );
-                  } else if (_isGeneratingRoutine) {
-                    // Si on est en train de générer, montrer un état d'attente spécifique
-                    return Center(
-                        child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircularProgressIndicator(color: colorScheme.secondary),
-                        const SizedBox(height: 16),
-                        Text("Hold on, crafting your plan...",
-                            style: textTheme.titleMedium),
-                      ],
-                    ));
-                  } else {
-                    // Cas par défaut si aucune des conditions ci-dessus n'est remplie (devrait être rare)
-                    return Center(
-                        child: Text(
-                            "Routine data is unavailable or in an unexpected state.",
-                            style: textTheme.bodyMedium));
-                  }
+                final bool showGenerateFirstOrNewUI =
+                    !routineStatusInfo.isValid || routineStatusInfo.isExpired;
+
+                if (_isGeneratingRoutine) {
+                  return _buildGeneratingUI(context);
+                }
+
+                if (showGenerateFirstOrNewUI) {
+                  bool hadValidPreviousAndExpired =
+                      currentRoutineData != null &&
+                          routineStatusInfo.isValid &&
+                          routineStatusInfo.isExpired;
+                  return _buildNoOrExpiredRoutineUI(
+                      context, currentRoutineData, hadValidPreviousAndExpired);
                 } else {
-                  // snapshot n'a pas de données et n'est pas en attente (après l'attente initiale)
-                  return Center(
-                      child: Text(
-                          "No routine data found. Try generating a new plan.",
-                          style: textTheme.bodyMedium));
+                  final WeeklyRoutine activeRoutine =
+                      WeeklyRoutine.fromMap(currentRoutineData!);
+                  return _buildActiveRoutineUI(
+                      context, activeRoutine, routineStatusInfo.statusText);
                 }
               },
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildGeneratingUI(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme; // Accès au thème
+    return Center(
+        child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        CircularProgressIndicator(
+            color: Theme.of(context).colorScheme.secondary),
+        const SizedBox(height: 16),
+        Text("Hold on, crafting your plan...", style: textTheme.titleMedium),
+      ],
+    ));
+  }
+
+  Widget _buildOnboardingPromptUI(
+      BuildContext context, String title, String message, String buttonText) {
+    final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.settings_input_component_outlined,
+                size: 60, color: colorScheme.primary),
+            const SizedBox(height: 16),
+            Text(title,
+                style: textTheme.headlineMedium
+                    ?.copyWith(fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center),
+            const SizedBox(height: 12),
+            Text(message,
+                style: textTheme.bodyLarge, textAlign: TextAlign.center),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              icon: _isGeneratingRoutine
+                  ? SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Theme.of(context).colorScheme.onPrimary))
+                  : const Icon(Icons.settings_outlined),
+              label: Text(_isGeneratingRoutine ? "Please wait..." : buttonText),
+              onPressed: _isGeneratingRoutine
+                  ? null
+                  : () => widget.onNavigateToTab(kProfileTabIndex),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: colorScheme.primary,
+                  foregroundColor: colorScheme.onPrimary,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  textStyle: textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold)), // Appliquer fontWeight ici
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoOrExpiredRoutineUI(BuildContext context,
+      Map<String, dynamic>? oldRoutineData, bool hadValidPreviousAndExpired) {
+    final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    final String? previousRoutineName =
+        (oldRoutineData != null && hadValidPreviousAndExpired)
+            ? (oldRoutineData['name'] as String? ?? 'Unnamed')
+            : null;
+
+    String title =
+        hadValidPreviousAndExpired ? "Routine Expired" : "No Active Routine";
+    String message = hadValidPreviousAndExpired
+        ? "Your previous plan (${previousRoutineName ?? 'Unnamed'}) has finished. Time for a new one!"
+        : "Let's generate your personalized AI fitness plan!";
+    String buttonText =
+        hadValidPreviousAndExpired ? "Generate New Plan" : "Get First Plan";
+    IconData iconData = hadValidPreviousAndExpired
+        ? Icons.autorenew_outlined
+        : Icons.add_circle_outline;
+
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        if (hadValidPreviousAndExpired && previousRoutineName != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12.0),
+            child: Text("Previous: $previousRoutineName",
+                style: textTheme.titleSmall?.copyWith(
+                    fontStyle: FontStyle.italic,
+                    color: textTheme.bodySmall?.color?.withOpacity(0.7))),
+          ),
+        Card(
+            elevation: 2,
+            color: colorScheme
+                .surfaceContainer, // Utiliser une couleur de surface appropriée
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15.0)),
+            child: Padding(
+              padding:
+                  const EdgeInsets.symmetric(vertical: 24.0, horizontal: 16.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(iconData, color: colorScheme.primary, size: 48),
+                  const SizedBox(height: 12),
+                  Text(title,
+                      style: textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Text(message,
+                      style: textTheme.bodyLarge, textAlign: TextAlign.center),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    icon: _isGeneratingRoutine
+                        ? SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Theme.of(context).colorScheme.onPrimary))
+                        : const Icon(Icons.auto_awesome),
+                    label: Text(
+                        _isGeneratingRoutine ? "Generating..." : buttonText),
+                    onPressed: _isGeneratingRoutine ? null : _generateRoutine,
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: colorScheme.primary,
+                        foregroundColor: colorScheme.onPrimary,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 12),
+                        textStyle: textTheme.titleMedium?.copyWith(
+                            fontWeight:
+                                FontWeight.bold)), // Appliquer fontWeight ici
+                  )
+                ],
+              ),
+            )),
+      ],
+    );
+  }
+
+  Widget _buildActiveRoutineUI(BuildContext context,
+      WeeklyRoutine activeRoutine, String routineStatusText) {
+    final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Text(
+                  activeRoutine.name,
+                  style: textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w600),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Chip(
+                avatar: Icon(Icons.timer_outlined,
+                    size: 16,
+                    color: colorScheme.onSecondaryContainer.withOpacity(0.8)),
+                label: Text(routineStatusText,
+                    style: textTheme.labelMedium
+                        ?.copyWith(color: colorScheme.onSecondaryContainer)),
+                backgroundColor: colorScheme.secondaryContainer,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8.0, vertical: 2.0),
+                labelPadding: const EdgeInsets.only(left: 4.0),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: ListView.builder(
+            itemCount: WeeklyRoutine.daysOfWeek.length,
+            itemBuilder: (context, index) {
+              final dayKey = WeeklyRoutine.daysOfWeek[index];
+              final List<RoutineExercise>? dayExercises =
+                  activeRoutine.dailyWorkouts[dayKey];
+              final isRestDay = dayExercises == null || dayExercises.isEmpty;
+              final dayTitle = dayKey[0].toUpperCase() + dayKey.substring(1);
+
+              return Card(
+                margin: const EdgeInsets.symmetric(vertical: 5.0),
+                elevation: 1,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.0)),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                      vertical: 10.0, horizontal: 16.0),
+                  leading: Icon(
+                    isRestDay
+                        ? Icons.bedtime_outlined
+                        : Icons.fitness_center_outlined,
+                    color: isRestDay
+                        ? colorScheme.onSurfaceVariant.withOpacity(0.7)
+                        : colorScheme.primary,
+                    size: 28,
+                  ),
+                  title: Text(dayTitle,
+                      style: textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.bold)),
+                  subtitle: Text(
+                    isRestDay
+                        ? "Rest Day"
+                        : "${dayExercises!.length} exercise${dayExercises.length == 1 ? '' : 's'}",
+                    style: textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant.withOpacity(0.9)),
+                  ),
+                  trailing: isRestDay
+                      ? null
+                      : Icon(Icons.arrow_forward_ios,
+                          size: 16,
+                          color: colorScheme.onSurfaceVariant.withOpacity(0.7)),
+                  onTap: isRestDay
+                      ? null
+                      : () {
+                          if (dayExercises != null && dayExercises.isNotEmpty) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => DailyWorkoutDetailScreen(
+                                  dayTitle: "$dayTitle Workout",
+                                  exercises: dayExercises,
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                ),
+              );
+            },
+          ),
+        ),
+        // LE BOUTON "Generate New Plan Now" A ÉTÉ SUPPRIMÉ D'ICI
+        // pour respecter la philosophie de ne pas permettre la génération manuelle
+        // si un plan est déjà actif et non expiré.
+      ],
     );
   }
 }
