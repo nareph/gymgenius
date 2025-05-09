@@ -1,1 +1,60 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"gymgenius-1332f","appId":"1:100863523566:android:bb322c80c20d0ccd57d1ff","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"gymgenius-1332f","configurations":{"android":"1:100863523566:android:bb322c80c20d0ccd57d1ff","ios":"1:100863523566:ios:c005755257f68f8c57d1ff","macos":"1:100863523566:ios:c005755257f68f8c57d1ff","web":"1:100863523566:web:2c3dc3d93594764e57d1ff","windows":"1:100863523566:web:d16fdf5f8605bc9357d1ff"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "gymgenius-1332f",
+          "appId": "1:100863523566:android:bb322c80c20d0ccd57d1ff",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "gymgenius-1332f",
+          "configurations": {
+            "android": "1:100863523566:android:bb322c80c20d0ccd57d1ff",
+            "ios": "1:100863523566:ios:c005755257f68f8c57d1ff",
+            "macos": "1:100863523566:ios:c005755257f68f8c57d1ff",
+            "web": "1:100863523566:web:2c3dc3d93594764e57d1ff",
+            "windows": "1:100863523566:web:d16fdf5f8605bc9357d1ff"
+          }
+        }
+      }
+    }
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ],
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run lint",
+        "npm --prefix \"$RESOURCE_DIR\" run build"
+      ]
+    }
+  ],
+  "emulators": {
+    "auth": {
+      "host": "0.0.0.0",
+      "port": 9099
+    },
+    "functions": {
+      "host": "0.0.0.0",
+      "port": 5001
+    },
+    "firestore": {
+      "host": "0.0.0.0",
+      "port": 8080
+    },
+    "ui": {
+      "enabled": true
+    },
+    "singleProjectMode": true
+  }
+}

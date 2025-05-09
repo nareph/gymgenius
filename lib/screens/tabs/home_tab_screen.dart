@@ -1,17 +1,19 @@
 // lib/screens/tabs/home_tab_screen.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart'; // <-- AJOUTER L'IMPORT
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:gymgenius/data/static_routine.dart'; // Votre service AI simulé
-import 'package:gymgenius/models/routine.dart'; // WeeklyRoutine et RoutineExercise
+// Supprimer l'import de la routine statique
+// import 'package:gymgenius/data/static_routine.dart';
+import 'package:gymgenius/models/routine.dart';
 import 'package:gymgenius/screens/daily_workout_detail_screen.dart';
 import 'package:uuid/uuid.dart';
 
 var uuid = Uuid();
 
-// Définir la constante ici ou l'importer d'un fichier de constantes partagé
+// Constante pour l'index du profil (ajustez si nécessaire)
 const int kProfileTabIndex = 2; // Supposant Home(0), Tracking(1), Profile(2)
-// AJUSTEZ CET INDEX SI VOTRE ORDRE D'ONGLETS EST DIFFÉRENT
+// Si 4 onglets et Profile est le dernier -> 3
 
 class HomeTabScreen extends StatefulWidget {
   final User user;
@@ -31,6 +33,9 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
   bool _isGeneratingRoutine = false;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   Stream<DocumentSnapshot<Map<String, dynamic>>>? _userDocStream;
+  // Instance de Firebase Functions
+  // AJUSTER LA RÉGION si nécessaire (ex: 'europe-west1')
+  final FirebaseFunctions _functions = FirebaseFunctions.instance;
 
   @override
   void initState() {
@@ -40,23 +45,68 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
         .doc(widget.user.uid)
         .snapshots()
         .cast<DocumentSnapshot<Map<String, dynamic>>>();
+
+    // La configuration de l'émulateur pour Functions se fait maintenant dans main.dart
   }
 
+  // APPELLE MAINTENANT LA CLOUD FUNCTION
   Future<Map<String, dynamic>> _callAiRoutineService({
-    required String userId,
+    required String
+        userId, // Toujours utile pour le logging ou contexte futur dans CF
     required Map<String, dynamic> onboardingData,
     Map<String, dynamic>? previousRoutineData,
   }) async {
-    print("HTS: Simulating AI routine generation for user: $userId");
-    if (previousRoutineData != null) {
-      print(
-          "HTS: Using previous routine context: Name: ${previousRoutineData['name']}, ID: ${previousRoutineData['id']}");
+    print("HTS: Calling Cloud Function 'generateAiRoutine'");
+
+    final Map<String, dynamic> payload = {
+      'onboardingData': onboardingData,
+      if (previousRoutineData != null)
+        'previousRoutineData': previousRoutineData,
+    };
+
+    final HttpsCallable callable =
+        _functions.httpsCallable('generateAiRoutine');
+
+    try {
+      final HttpsCallableResult result =
+          await callable.call<Map<String, dynamic>>(payload);
+      print("HTS: Received data from Cloud Function: ${result.data}");
+      if (result.data == null) {
+        throw Exception("Cloud function returned null data.");
+      }
+      // Ajouter une validation basique des clés attendues
+      if (result.data['name'] == null ||
+          result.data['durationInWeeks'] == null ||
+          result.data['dailyWorkouts'] == null) {
+        throw Exception(
+            "Cloud function returned incomplete data structure. Missing name, duration, or workouts.");
+      }
+      return result.data;
+    } on FirebaseFunctionsException catch (e) {
+      print("HTS: FirebaseFunctionsException: ${e.code} - ${e.message}");
+      // Retourner une erreur plus conviviale si possible
+      String friendlyMessage =
+          "Failed to generate routine: ${e.message ?? e.code}";
+      if (e.code == 'aborted') {
+        // Code utilisé si la fonction l'a lancé (ex: prompt bloqué)
+        friendlyMessage = "Routine generation failed: ${e.message}";
+      } else if (e.code == 'internal') {
+        friendlyMessage =
+            "An internal error occurred during routine generation. Please try again later.";
+      } else if (e.code == 'invalid-argument') {
+        friendlyMessage =
+            "Invalid data sent for routine generation. Please check your profile.";
+      } else if (e.code == 'unauthenticated') {
+        friendlyMessage =
+            "Authentication error. Please sign out and sign in again.";
+      }
+      throw Exception(
+          friendlyMessage); // Propager l'erreur pour _generateRoutine
+    } catch (e) {
+      print("HTS: Generic error calling Cloud Function: $e");
+      throw Exception(
+          "An unexpected error occurred while contacting the AI service.");
     }
-    await Future.delayed(const Duration(seconds: 2));
-    return createStaticAiGeneratedParts(
-        userId: userId,
-        onboardingData: onboardingData,
-        previousRoutineData: previousRoutineData);
   }
 
   Future<void> _generateRoutine() async {
@@ -81,44 +131,52 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
         _showErrorSnackBar(
             "Please complete your preferences in your profile before generating a plan.");
         widget.onNavigateToTab(kProfileTabIndex);
-        if (mounted) setState(() => _isGeneratingRoutine = false);
-        return;
+        // Ne pas mettre return ici si on veut quand même stopper le loader
+      } else {
+        // Continuer seulement si onboardingData est présent
+        // APPEL À LA CLOUD FUNCTION
+        final Map<String, dynamic> aiGeneratedParts =
+            await _callAiRoutineService(
+          userId: widget.user.uid,
+          onboardingData: onboardingData,
+          previousRoutineData: oldRoutineData,
+        );
+
+        // Construire le nouvel objet pour Firestore
+        final String newRoutineId = uuid.v4();
+        final DateTime now = DateTime.now();
+        final int durationInWeeks =
+            aiGeneratedParts['durationInWeeks'] as int? ?? 4;
+        final DateTime expiresAt = now.add(Duration(days: durationInWeeks * 7));
+
+        // Assurez-vous que dailyWorkouts est bien traité (peut nécessiter une conversion si l'IA retourne des objets et non des maps)
+        // Ici, on suppose que la fonction cloud retourne déjà la structure correcte Map<String, List<Map<String, dynamic>>>
+        final Map<String, dynamic> newCurrentRoutine = {
+          'id': newRoutineId,
+          'name': aiGeneratedParts['name'] as String? ?? 'AI Generated Routine',
+          'dailyWorkouts': aiGeneratedParts['dailyWorkouts'] ??
+              {}, // Vient directement de la fonction cloud
+          'durationInWeeks': durationInWeeks,
+          'generatedAt': Timestamp.fromDate(now),
+          'expiresAt': Timestamp.fromDate(expiresAt),
+          'onboardingSnapshot': onboardingData,
+        };
+
+        // Sauvegarder dans Firestore
+        await _firestore.collection('users').doc(widget.user.uid).set(
+          {'currentRoutine': newCurrentRoutine},
+          SetOptions(merge: true),
+        );
+
+        if (mounted) {
+          _showSuccessSnackBar("New routine generated successfully!");
+        }
       }
-
-      final Map<String, dynamic> aiGeneratedParts = await _callAiRoutineService(
-        userId: widget.user.uid,
-        onboardingData: onboardingData,
-        previousRoutineData: oldRoutineData,
-      );
-
-      final String newRoutineId = uuid.v4();
-      final DateTime now = DateTime.now();
-      final int durationInWeeks =
-          aiGeneratedParts['durationInWeeks'] as int? ?? 4;
-      final DateTime expiresAt = now.add(Duration(days: durationInWeeks * 7));
-
-      final Map<String, dynamic> newCurrentRoutine = {
-        'id': newRoutineId,
-        'name': aiGeneratedParts['name'] as String? ?? 'AI Generated Routine',
-        'dailyWorkouts': aiGeneratedParts['dailyWorkouts'] ?? {},
-        'durationInWeeks': durationInWeeks,
-        'generatedAt': Timestamp.fromDate(now),
-        'expiresAt': Timestamp.fromDate(expiresAt),
-        'onboardingSnapshot': onboardingData,
-      };
-
-      await _firestore.collection('users').doc(widget.user.uid).set(
-        {'currentRoutine': newCurrentRoutine},
-        SetOptions(merge: true),
-      );
-
-      if (mounted) {
-        _showSuccessSnackBar("New routine generated successfully!");
-      }
-    } catch (e, s) {
-      print("HTS: Error generating routine: $e\n$s");
+    } catch (e) {
+      // Attrape les erreurs (Firestore, _callAiRoutineService, etc.)
+      print("HTS: Error during routine generation process: $e");
       if (mounted)
-        _showErrorSnackBar("Failed to generate routine. Please check logs.");
+        _showErrorSnackBar(e.toString()); // Afficher l'erreur propagée
     } finally {
       if (mounted) setState(() => _isGeneratingRoutine = false);
     }
@@ -126,8 +184,11 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
 
   void _showErrorSnackBar(String message) {
     if (!mounted) return;
+    // Enlever potentiellement "Exception: " du message
+    final displayMessage =
+        message.startsWith("Exception: ") ? message.substring(11) : message;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(message,
+      content: Text(displayMessage,
           style: TextStyle(color: Theme.of(context).colorScheme.onError)),
       backgroundColor: Theme.of(context).colorScheme.error,
       duration: const Duration(seconds: 4),
@@ -150,7 +211,6 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
     if (routineData == null || routineData.isEmpty) {
       return (statusText: "No Active Plan", isExpired: true, isValid: false);
     }
-
     final Timestamp? generatedAtTs = routineData['generatedAt'] as Timestamp?;
     final Timestamp? expiresAtTs = routineData['expiresAt'] as Timestamp?;
     final int durationInWeeks = routineData['durationInWeeks'] as int? ?? 0;
@@ -162,18 +222,14 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
         routineName.isEmpty) {
       return (statusText: "Invalid Plan Data", isExpired: true, isValid: false);
     }
-
     final DateTime expiresAtDate = expiresAtTs.toDate();
-
     if (DateTime.now().isAfter(expiresAtDate)) {
       return (statusText: "Plan Finished", isExpired: true, isValid: true);
     }
-
     final Duration difference = expiresAtDate.difference(DateTime.now());
     int weeksRemaining = (difference.inDays / 7).ceil();
     if (weeksRemaining < 0) weeksRemaining = 0;
     if (weeksRemaining > durationInWeeks) weeksRemaining = durationInWeeks;
-
     return (
       statusText:
           "$weeksRemaining week${weeksRemaining == 1 ? '' : 's'} remaining",
@@ -264,10 +320,21 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
                   return _buildNoOrExpiredRoutineUI(
                       context, currentRoutineData, hadValidPreviousAndExpired);
                 } else {
-                  final WeeklyRoutine activeRoutine =
-                      WeeklyRoutine.fromMap(currentRoutineData!);
-                  return _buildActiveRoutineUI(
-                      context, activeRoutine, routineStatusInfo.statusText);
+                  // Assumer que fromMap gère les données correctement
+                  try {
+                    final WeeklyRoutine activeRoutine =
+                        WeeklyRoutine.fromMap(currentRoutineData!);
+                    return _buildActiveRoutineUI(
+                        context, activeRoutine, routineStatusInfo.statusText);
+                  } catch (e) {
+                    print(
+                        "HTS: Error converting Firestore Map to WeeklyRoutine: $e");
+                    // Si la conversion échoue, afficher comme si la routine était invalide
+                    return _buildNoOrExpiredRoutineUI(
+                        context,
+                        currentRoutineData,
+                        false); // Considérer comme "pas de routine valide"
+                  }
                 }
               },
             ),
@@ -278,7 +345,7 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
   }
 
   Widget _buildGeneratingUI(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme; // Accès au thème
+    final textTheme = Theme.of(context).textTheme;
     return Center(
         child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -324,14 +391,15 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
               label: Text(_isGeneratingRoutine ? "Please wait..." : buttonText),
               onPressed: _isGeneratingRoutine
                   ? null
-                  : () => widget.onNavigateToTab(kProfileTabIndex),
+                  : () => widget.onNavigateToTab(
+                      kProfileTabIndex), // Utilisation de la constante
               style: ElevatedButton.styleFrom(
                   backgroundColor: colorScheme.primary,
                   foregroundColor: colorScheme.onPrimary,
                   padding:
                       const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  textStyle: textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold)), // Appliquer fontWeight ici
+                  textStyle: textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -373,8 +441,7 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
           ),
         Card(
             elevation: 2,
-            color: colorScheme
-                .surfaceContainer, // Utiliser une couleur de surface appropriée
+            color: colorScheme.surfaceContainer,
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(15.0)),
             child: Padding(
@@ -403,15 +470,16 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
                         : const Icon(Icons.auto_awesome),
                     label: Text(
                         _isGeneratingRoutine ? "Generating..." : buttonText),
-                    onPressed: _isGeneratingRoutine ? null : _generateRoutine,
+                    onPressed: _isGeneratingRoutine
+                        ? null
+                        : _generateRoutine, // Appelle la fonction qui appelle la CF
                     style: ElevatedButton.styleFrom(
                         backgroundColor: colorScheme.primary,
                         foregroundColor: colorScheme.onPrimary,
                         padding: const EdgeInsets.symmetric(
                             horizontal: 24, vertical: 12),
-                        textStyle: textTheme.titleMedium?.copyWith(
-                            fontWeight:
-                                FontWeight.bold)), // Appliquer fontWeight ici
+                        textStyle: textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold)),
                   )
                 ],
               ),
@@ -501,13 +569,14 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
                   onTap: isRestDay
                       ? null
                       : () {
-                          if (dayExercises != null && dayExercises.isNotEmpty) {
+                          if (dayExercises.isNotEmpty) {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (_) => DailyWorkoutDetailScreen(
                                   dayTitle: "$dayTitle Workout",
-                                  exercises: dayExercises,
+                                  exercises:
+                                      dayExercises, // Passe la liste d'objets RoutineExercise
                                 ),
                               ),
                             );
@@ -518,9 +587,7 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
             },
           ),
         ),
-        // LE BOUTON "Generate New Plan Now" A ÉTÉ SUPPRIMÉ D'ICI
-        // pour respecter la philosophie de ne pas permettre la génération manuelle
-        // si un plan est déjà actif et non expiré.
+        // Pas de bouton pour générer manuellement si une routine est active
       ],
     );
   }
