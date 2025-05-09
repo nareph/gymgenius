@@ -10,14 +10,14 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _formKey = GlobalKey<FormState>(); // Clé pour le formulaire
+  final _formKey = GlobalKey<FormState>(); // Key for the form
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _isLoading = false; // Pour l'indicateur de chargement
+  bool _isLoading = false; // For the loading indicator
 
-  // --- Fonction de connexion ---
+  // --- Login Function ---
   Future<void> _loginWithEmail() async {
-    // Valide le formulaire
+    // Validate the form
     if (!(_formKey.currentState?.validate() ?? false)) {
       return;
     }
@@ -31,37 +31,41 @@ class _LoginScreenState extends State<LoginScreen> {
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
-      // Redirection vers l'écran principal après succès
+      // Redirect to the main app screen upon successful login
       if (mounted) {
+        // '/main_app' should be the route name for your main dashboard or home screen
         Navigator.pushNamedAndRemoveUntil(
           context,
-          '/main_app', // Route vers MainDashboardScreen
-          (Route<dynamic> route) => false,
+          '/main_app',
+          (Route<dynamic> route) => false, // Removes all previous routes
         );
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
-        // Afficher l'erreur spécifique de Firebase Auth
+        // Display specific Firebase Auth error messages
         String errorMessage =
-            "Login failed. Please check your credentials."; // Message par défaut
+            "Login failed. Please check your credentials."; // Default message
         if (e.code == 'user-not-found' ||
             e.code == 'wrong-password' ||
             e.code == 'invalid-credential') {
+          // 'invalid-credential' is a common newer code
           errorMessage = "Invalid email or password. Please try again.";
         } else if (e.code == 'invalid-email') {
           errorMessage = "The email address is badly formatted.";
-        } else {
-          errorMessage = e.message ??
-              errorMessage; // Utilise le message Firebase si disponible
+        } else if (e.code == 'too-many-requests') {
+          errorMessage = "Too many login attempts. Please try again later.";
         }
-        _showErrorSnackBar(errorMessage, context);
+        // else {
+        //   errorMessage = e.message ?? errorMessage; // Use Firebase message if available and more specific
+        // }
+        // It's often better to show generic messages for security for common auth errors.
+        _showErrorSnackBar(errorMessage);
       }
     } catch (e) {
-      // Attrape d'autres erreurs potentielles
+      // Catch other potential errors
       if (mounted) {
-        print("Login error: $e");
-        _showErrorSnackBar(
-            "An unexpected error occurred. Please try again.", context);
+        print("Login error: $e"); // Log for debugging
+        _showErrorSnackBar("An unexpected error occurred. Please try again.");
       }
     } finally {
       if (mounted) {
@@ -72,12 +76,13 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // Helper pour afficher les SnackBar d'erreur avec le style du thème
-  void _showErrorSnackBar(String message, BuildContext context) {
-    // Vérifie si le widget est toujours monté
-    if (!context.mounted) return;
+  // Helper to show error SnackBars using the theme's styling
+  void _showErrorSnackBar(String message) {
+    // Check if the widget is still mounted before showing SnackBar
+    if (!mounted) return;
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -85,7 +90,9 @@ class _LoginScreenState extends State<LoginScreen> {
           style: textTheme.bodyMedium?.copyWith(color: colorScheme.onError),
         ),
         backgroundColor: colorScheme.error,
-        duration: const Duration(seconds: 3), // Durée d'affichage
+        duration: const Duration(seconds: 3), // Display duration
+        behavior:
+            SnackBarBehavior.floating, // Optional: for a floating SnackBar
       ),
     );
   }
@@ -99,62 +106,65 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Accès au thème
+    // Access theme properties
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
-    // final inputTheme = Theme.of(context).inputDecorationTheme; // Pas explicitement nécessaire ici
+    // final inputTheme = Theme.of(context).inputDecorationTheme; // Not explicitly needed here if using global theme
 
     return Scaffold(
       // --- AppBar ---
-      // Style vient de AppBarTheme dans AppTheme
+      // Style comes from AppBarTheme in AppTheme
+      // The back button is automatically added by default during push navigation.
       appBar: AppBar(
-          // title: const Text("Login"), // Style du thème
-          // Le bouton retour est ajouté automatiquement par défaut lors de la navigation push
+          // title: const Text("Login"), // Title would be styled by AppBarTheme
           ),
       // --- Body ---
-      // Fond vient de scaffoldBackgroundColor
+      // Background color comes from scaffoldBackgroundColor in theme
       body: Center(
-        // Centre verticalement si peu de contenu
+        // Vertically centers content if it's small
         child: SingleChildScrollView(
-          // Permet le défilement
+          // Allows scrolling for smaller screens
           padding: const EdgeInsets.symmetric(horizontal: 30.0, vertical: 20.0),
           child: Form(
-            // Enveloppe dans un Form
             key: _formKey,
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center, // Centre la colonne
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisAlignment: MainAxisAlignment
+                  .center, // Centers the column vertically on the screen
+              crossAxisAlignment:
+                  CrossAxisAlignment.stretch, // Stretches children horizontally
               children: [
-                // --- Titre de l'Écran ---
+                // --- Screen Title ---
                 Text(
-                  "Welcome Back!", // Titre
+                  "Welcome Back!", // Title
                   textAlign: TextAlign.center,
-                  style: textTheme.headlineMedium,
+                  style:
+                      textTheme.headlineMedium, // Uses theme's headlineMedium
                 ),
                 Text(
-                  "Log in to your account", // Sous-titre
+                  "Log in to your account", // Subtitle
                   textAlign: TextAlign.center,
                   style: textTheme.bodyLarge
                       ?.copyWith(color: colorScheme.onSurface.withOpacity(0.7)),
                 ),
-                const SizedBox(height: 40), // Espace augmenté
+                const SizedBox(height: 40), // Increased spacing
 
-                // --- Champ Email ---
+                // --- Email Field ---
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
-                  // Style texte hérité
+                  // Text style inherited from theme
                   decoration: const InputDecoration(
-                    // Utilise InputDecorationTheme
+                    // Uses InputDecorationTheme from global theme
                     labelText: "Email",
                     prefixIcon: Icon(Icons.email_outlined),
                   ),
                   validator: (value) {
-                    // Validation
                     if (value == null || value.trim().isEmpty) {
                       return 'Please enter your email';
                     }
-                    if (!RegExp(r"^[a-zA-Z0-9.]+@[a-zA-Z0-9]+\.[a-zA-Z]+")
+                    // Basic email validation regex
+                    if (!RegExp(
+                            r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9]+\.[a-zA-Z]+")
                         .hasMatch(value)) {
                       return 'Please enter a valid email address';
                     }
@@ -164,18 +174,17 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 15),
 
-                // --- Champ Mot de Passe ---
+                // --- Password Field ---
                 TextFormField(
                   controller: _passwordController,
-                  obscureText: true,
-                  // Style texte hérité
+                  obscureText: true, // Hides password input
+                  // Text style inherited from theme
                   decoration: const InputDecoration(
-                    // Utilise InputDecorationTheme
+                    // Uses InputDecorationTheme from global theme
                     labelText: "Password",
                     prefixIcon: Icon(Icons.lock_outline),
                   ),
                   validator: (value) {
-                    // Validation
                     if (value == null || value.isEmpty) {
                       return 'Please enter your password';
                     }
@@ -185,20 +194,46 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 35),
 
-                // --- Bouton Login ---
+                // --- Login Button ---
                 _isLoading
                     ? Center(
                         child: CircularProgressIndicator(
-                            color: colorScheme.secondary))
+                          color: colorScheme
+                              .secondary, // Use secondary color for loading
+                        ),
+                      )
                     : ElevatedButton(
                         onPressed: _loginWithEmail,
-                        // Style vient de ElevatedButtonThemeData
-                        child: const Text("LOG IN"), // Texte en majuscules ?
+                        // Style comes from ElevatedButtonThemeData in global theme
+                        child: const Text(
+                            "LOG IN"), // Conventionally uppercase for buttons
                       ),
-                // Optionnel: Bouton "Forgot Password?"
-                // TextButton(
-                //   onPressed: () { /* Implémenter la logique mot de passe oublié */ },
-                //   child: Text("Forgot Password?"),
+
+                // Optional: "Forgot Password?" button
+                // Align(
+                //   alignment: Alignment.centerRight,
+                //   child: TextButton(
+                //     onPressed: () {
+                //       // TODO: Implement forgot password logic
+                //       // e.g., Navigator.pushNamed(context, '/forgot_password');
+                //     },
+                //     child: Text("Forgot Password?"),
+                //   ),
+                // ),
+
+                // Optional: Navigate to Sign Up Screen
+                // Row(
+                //   mainAxisAlignment: MainAxisAlignment.center,
+                //   children: [
+                //     Text("Don't have an account?", style: textTheme.bodyMedium),
+                //     TextButton(
+                //       onPressed: () {
+                //         // TODO: Navigate to your sign-up screen
+                //         // e.g., Navigator.pushNamed(context, '/signup');
+                //       },
+                //       child: Text("Sign Up"),
+                //     ),
+                //   ],
                 // ),
               ],
             ),

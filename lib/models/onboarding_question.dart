@@ -3,33 +3,33 @@
 enum QuestionType {
   singleChoice,
   multipleChoice,
-  numericInput // Nouveau type pour les stats
+  numericInput // New type for stats
 }
 
 class AnswerOption {
-  final String value;
-  final String text;
+  final String value; // The value to be stored/sent to backend
+  final String text; // The text displayed to the user
   const AnswerOption({required this.value, required this.text});
 }
 
 class OnboardingQuestion {
-  final String id;
-  final String text;
-  final List<AnswerOption> options; // Peut être vide pour numericInput
-  final QuestionType type; // Type de question/vue à utiliser
+  final String id; // Unique identifier for the question
+  final String text; // The question text displayed to the user
+  final List<AnswerOption> options; // Can be empty for numericInput
+  final QuestionType type; // Type of question/view to use
 
   const OnboardingQuestion({
     required this.id,
     required this.text,
-    this.options = const [], // Par défaut liste vide
+    this.options = const [], // Defaults to an empty list
     required this.type,
   });
 }
 
-// --- Mise à jour et ajout des questions ---
-// Cette liste est maintenant globale et sera importée dans ProfileTabScreen
+// --- Updated and added questions ---
+// This list is global and intended to be imported where needed, e.g., in ProfileTabScreen.
 final List<OnboardingQuestion> defaultOnboardingQuestions = [
-  // 1. Objectif
+  // 1. Goal
   OnboardingQuestion(
     id: "goal",
     text: "What is your primary fitness goal?",
@@ -41,25 +41,25 @@ final List<OnboardingQuestion> defaultOnboardingQuestions = [
     ],
     type: QuestionType.singleChoice,
   ),
-  // 2. Genre
+  // 2. Gender
   OnboardingQuestion(
     id: "gender",
     text: "What's your gender?",
     options: [
       AnswerOption(value: "male", text: "Male"),
       AnswerOption(value: "female", text: "Female"),
+      // Consider adding "Prefer not to say" or "Other" if relevant for your app
     ],
     type: QuestionType.singleChoice,
   ),
-  // 3. Stats Physiques
+  // 3. Physical Stats
   OnboardingQuestion(
-    id: "physical_stats", // Cet ID est utilisé pour le traitement spécial
-    text:
-        "Tell us a bit about yourself", // Titre général pour la section des stats
+    id: "physical_stats", // This ID is used for special handling of numeric inputs
+    text: "Tell us a bit about yourself", // General title for the stats section
     type: QuestionType
-        .numericInput, // Indique que c'est pour des saisies numériques (map imbriqué)
+        .numericInput, // Indicates this is for numeric inputs (likely handled as a nested map in data)
   ),
-  // 4. Niveau d'Expérience
+  // 4. Experience Level
   OnboardingQuestion(
     id: "experience",
     text: "What is your current fitness level?",
@@ -71,7 +71,7 @@ final List<OnboardingQuestion> defaultOnboardingQuestions = [
     ],
     type: QuestionType.singleChoice,
   ),
-  // 5. Fréquence (Combien de fois)
+  // 5. Frequency (How many times)
   OnboardingQuestion(
     id: "frequency",
     text: "How often can you train per week?",
@@ -82,7 +82,7 @@ final List<OnboardingQuestion> defaultOnboardingQuestions = [
     ],
     type: QuestionType.singleChoice,
   ),
-  // 6. Jours disponibles (Quand)
+  // 6. Available Days (When)
   OnboardingQuestion(
     id: "workout_days",
     text: "When can you exercise? (Select preferred days)",
@@ -97,7 +97,7 @@ final List<OnboardingQuestion> defaultOnboardingQuestions = [
     ],
     type: QuestionType.multipleChoice,
   ),
-  // 7. Équipement
+  // 7. Equipment
   OnboardingQuestion(
     id: "equipment",
     text: "What equipment do you have access to? (Select all that apply)",
@@ -109,7 +109,7 @@ final List<OnboardingQuestion> defaultOnboardingQuestions = [
     ],
     type: QuestionType.multipleChoice,
   ),
-  // 8. Zones Focus
+  // 8. Focus Areas
   OnboardingQuestion(
     id: "focus_areas",
     text: "Any specific body parts you want to focus on? (Optional)",

@@ -1,4 +1,3 @@
-
 {
   "compilerOptions": {
     "module": "commonjs",
@@ -7,9 +6,11 @@
     "outDir": "lib",
     "sourceMap": true,
     "strict": true,
-    "target": "es2017", // ou "es2020", "es2021"
-    "esModuleInterop": true, // Important pour certains imports
-    "resolveJsonModule": true // Si vous importez des fichiers JSON
+    "target": "es2021", // Ou une version ES plus récente supportée par votre Node.js engine
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "moduleResolution": "node", // Important pour la résolution des modules
+    "skipLibCheck": true // Peut aider à contourner certains problèmes de types de dépendances
   },
   "compileOnSave": true,
   "include": [

@@ -1,34 +1,45 @@
+// lib/bloc/onboarding_bloc.dart
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:flutter/foundation.dart'; // Pour debugPrint
+import 'package:flutter/foundation.dart'; // For debugPrint
 
 part 'onboarding_event.dart';
 part 'onboarding_state.dart';
 
 class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
   OnboardingBloc() : super(const OnboardingState()) {
-    // Utilise le constructeur const
-    // Gère la mise à jour d'une réponse
+    // Uses const constructor for initial state
+
+    // Handles updating an answer for a specific question
     on<UpdateAnswer>((event, emit) {
-      // Crée une nouvelle map basée sur l'état actuel
+      // Create a new map based on the current state's answers (immutability)
       final newAnswers = Map<String, dynamic>.from(state.answers);
-      // Met à jour ou ajoute la réponse pour la question donnée
+
+      // Update or add the answer for the given questionId
       newAnswers[event.questionId] = event.answerValue;
 
-      // Émet le nouvel état avec les réponses mises à jour
+      // Emit the new state with the updated answers
+      // Status remains 'initial' or 'inProgress' as onboarding is not yet complete
       emit(state.copyWith(
-          answers: newAnswers, status: OnboardingStatus.initial));
+        answers: newAnswers,
+        // status: OnboardingStatus.initial // Or OnboardingStatus.inProgress if you have such a state
+        // Keeping it initial seems fine as per original logic.
+      ));
       debugPrint(
-          "Bloc State Updated: ${state.copyWith(answers: newAnswers).answers}"); // Debug
+          "OnboardingBloc State Updated - Answers: ${state.copyWith(answers: newAnswers).answers}"); // Debug log
     });
 
-    // Gère la fin de l'onboarding (Skip ou dernière question)
+    // Handles the completion of the onboarding process (e.g., user skips or answers the last question)
     on<CompleteOnboarding>((event, emit) {
       debugPrint(
-          "Onboarding Completion Requested. Final Answers: ${state.answers}");
-      // Émet simplement un état indiquant que c'est terminé
-      // La navigation sera gérée par le BlocListener dans l'UI
+          "OnboardingBloc: CompleteOnboarding event received. Final Answers: ${state.answers}");
+
+      // Emit a state indicating that the onboarding process is complete.
+      // Navigation will typically be handled by a BlocListener in the UI layer
+      // listening for this status change.
       emit(state.copyWith(status: OnboardingStatus.complete));
+      debugPrint(
+          "OnboardingBloc State Updated - Status: ${state.copyWith(status: OnboardingStatus.complete).status}"); // Debug log
     });
   }
 }

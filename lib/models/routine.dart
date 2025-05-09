@@ -2,13 +2,18 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
 
+// Instance of Uuid for generating unique IDs.
+// Consider making it a top-level private final variable (e.g., final _uuid = Uuid();)
+// or instantiating Uuid() directly where needed if preferred.
 var uuid = Uuid();
 
 class RoutineExercise {
-  final String id; // ID unique de l'exercice DANS la routine
+  final String
+      id; // Unique ID for the exercise WITHIN this specific routine instance
   final String name;
   final int sets;
-  final String reps;
+  final String
+      reps; // Can be a range (e.g., "8-12") or specific (e.g., "AMRAP")
   final String weightSuggestionKg;
   final int restBetweenSetsSeconds;
   final String description;
@@ -18,14 +23,16 @@ class RoutineExercise {
     required this.name,
     required this.sets,
     required this.reps,
-    this.weightSuggestionKg = 'N/A',
-    this.restBetweenSetsSeconds = 60,
-    this.description = '',
-  }) : id = id ?? uuid.v4(); // Génère un ID si non fourni
+    this.weightSuggestionKg = 'N/A', // Default value if not provided
+    this.restBetweenSetsSeconds = 60, // Default value if not provided
+    this.description = '', // Default value if not provided
+  }) : id = id ?? uuid.v4(); // Generates an ID if one is not provided
 
+  // Factory constructor to create a RoutineExercise from a map (e.g., from Firestore)
   factory RoutineExercise.fromMap(Map<String, dynamic> map) {
     return RoutineExercise(
-      id: map['id'] as String? ?? uuid.v4(), // Assurer un ID
+      id: map['id'] as String? ??
+          uuid.v4(), // Ensures an ID exists, generates if null
       name: map['name'] as String? ?? 'Unknown Exercise',
       sets: map['sets'] as int? ?? 3,
       reps: map['reps'] as String? ?? '8-12',
@@ -35,6 +42,7 @@ class RoutineExercise {
     );
   }
 
+  // Converts the RoutineExercise object to a map, suitable for Firestore
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -47,13 +55,12 @@ class RoutineExercise {
     };
   }
 
-  // Pour la comparaison d'objets si vous en avez besoin (Provider, Set, etc.)
+  // Override for object comparison, useful in collections, state management (e.g., Provider, Set)
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     return other is RoutineExercise &&
-        other.id ==
-            id && // Comparaison principale par ID si disponible et unique
+        other.id == id && // Primary comparison by ID if it's reliably unique
         other.name == name &&
         other.sets == sets &&
         other.reps == reps &&
@@ -64,8 +71,9 @@ class RoutineExercise {
 
   @override
   int get hashCode {
-    return id
-            .hashCode ^ // Utiliser l'ID pour le hashcode est souvent suffisant si l'ID est unique
+    // Using the ID for the hashcode is often sufficient if the ID is unique and immutable.
+    // Combining with other fields if ID might not be unique initially or for more distribution.
+    return id.hashCode ^
         name.hashCode ^
         sets.hashCode ^
         reps.hashCode ^
@@ -76,13 +84,16 @@ class RoutineExercise {
 }
 
 class WeeklyRoutine {
-  final String id; // ID unique de cette instance de routine
+  final String id; // Unique ID for this specific routine instance
   final String name;
-  final Map<String, List<RoutineExercise>> dailyWorkouts;
+  final Map<String, List<RoutineExercise>>
+      dailyWorkouts; // Key: day (e.g., "monday"), Value: list of exercises
   final int durationInWeeks;
-  final Timestamp generatedAt; // Timestamp de Firestore
-  final Timestamp expiresAt; // Timestamp de Firestore
-  // final Map<String, dynamic>? onboardingSnapshot; // Optionnel pour l'audit
+  final Timestamp
+      generatedAt; // Firestore Timestamp: when the routine was generated
+  final Timestamp
+      expiresAt; // Firestore Timestamp: when the routine is considered ended or needs refresh
+  // final Map<String, dynamic>? onboardingSnapshot; // Optional: snapshot of onboarding data for audit/reference (currently commented out)
 
   WeeklyRoutine({
     required this.id,
@@ -94,12 +105,13 @@ class WeeklyRoutine {
     // this.onboardingSnapshot,
   });
 
-  // Utilisé pour convertir le Map de Firestore en objet WeeklyRoutine
+  // Factory constructor to create a WeeklyRoutine from a map (e.g., from Firestore)
   factory WeeklyRoutine.fromMap(Map<String, dynamic> map) {
     Map<String, List<RoutineExercise>> parsedWorkouts = {};
     if (map['dailyWorkouts'] is Map) {
       (map['dailyWorkouts'] as Map).forEach((day, exercisesDynamic) {
         if (exercisesDynamic is List) {
+          // Ensure day is a String, though keys in Firestore maps are always Strings
           parsedWorkouts[day as String] = exercisesDynamic
               .map((exJson) =>
                   RoutineExercise.fromMap(exJson as Map<String, dynamic>))
@@ -107,23 +119,28 @@ class WeeklyRoutine {
         }
       });
     }
+
+    int duration =
+        map['durationInWeeks'] as int? ?? 4; // Default duration if null
+
     return WeeklyRoutine(
-      id: map['id'] as String? ?? uuid.v4(), // Assurer un ID
+      id: map['id'] as String? ??
+          uuid.v4(), // Ensures an ID exists, generates if null
       name: map['name'] as String? ?? 'Unnamed Routine',
       dailyWorkouts: parsedWorkouts,
-      durationInWeeks: map['durationInWeeks'] as int? ?? 4,
-      generatedAt:
-          map['generatedAt'] as Timestamp? ?? Timestamp.now(), // Fallback
+      durationInWeeks: duration,
+      generatedAt: map['generatedAt'] as Timestamp? ??
+          Timestamp.now(), // Fallback to current time
       expiresAt: map['expiresAt'] as Timestamp? ??
-          Timestamp.fromDate(DateTime.now().add(Duration(
-              days: (map['durationInWeeks'] as int? ?? 4) * 7))), // Fallback
+          Timestamp.fromDate(DateTime.now()
+              .add(Duration(days: duration * 7))), // Fallback calculation
       // onboardingSnapshot: map['onboardingSnapshot'] as Map<String, dynamic>?,
     );
   }
 
-  // Méthode pour convertir l'objet WeeklyRoutine en Map pour Firestore
-  // N'est pas directement utilisée si on construit le Map manuellement dans HomeTabScreen
-  // mais peut être utile ailleurs.
+  // Method to convert the WeeklyRoutine object to a map, suitable for storing in Firestore.
+  // This might not be directly used if constructing the map manually for saving,
+  // but it's a good utility to have.
   Map<String, dynamic> toMapForFirestore() {
     return {
       'id': id,
@@ -134,11 +151,11 @@ class WeeklyRoutine {
       'durationInWeeks': durationInWeeks,
       'generatedAt': generatedAt,
       'expiresAt': expiresAt,
-      // 'onboardingSnapshot': onboardingSnapshot,
+      // 'onboardingSnapshot': onboardingSnapshot, // Include if re-enabled
     };
   }
 
-  // Noms des jours pour itération, etc.
+  // Static list of day names, useful for iteration or ordered display.
   static const List<String> daysOfWeek = [
     'monday',
     'tuesday',
@@ -149,9 +166,9 @@ class WeeklyRoutine {
     'sunday'
   ];
 
-  // Pour l'affichage dans TrackingTabScreen, createdAt et expiresAt sont importants
-  // Ces champs sont lus depuis Firestore (où ils sont des Timestamps)
-  // et convertis en DateTime dans la logique de l'UI.
-  // Le constructeur fromFirestore n'est plus nécessaire si on utilise fromMap directement
-  // avec les données du document utilisateur.
+  // Note on Timestamps:
+  // Fields like 'generatedAt' and 'expiresAt' are stored as Timestamps in Firestore.
+  // When fetched, they are received as Timestamp objects.
+  // In the UI layer, these Timestamps will typically be converted to DateTime objects
+  // for display or other date-time manipulations (e.g., using timestamp.toDate()).
 }

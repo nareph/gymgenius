@@ -1,18 +1,17 @@
 // lib/data/static_routine.dart
-import 'package:gymgenius/models/routine.dart'; // Pour RoutineExercise
-// import 'package:uuid/uuid.dart'; // uuid est déjà global dans routine.dart si vous le gardez là
+import 'package:gymgenius/models/routine.dart'; // For RoutineExercise
+// import 'package:cloud_firestore/cloud_firestore.dart'; // For Timestamp, if used in the commented out function
+// import 'package:uuid/uuid.dart'; // For Uuid, if used in the commented out function
 
-// var uuid = Uuid(); // Inutile si déjà global dans routine.dart
-
-// L'IA retourne maintenant un Map avec les parties qu'elle génère
+// The AI now returns a Map with the parts it generates.
 Map<String, dynamic> createStaticAiGeneratedParts({
   required String userId,
   required Map<String, dynamic> onboardingData,
   Map<String, dynamic>?
-      previousRoutineData, // L'ancienne routine complète (en Map)
+      previousRoutineData, // The complete old routine (as a Map)
 }) {
-  // Logique pour utiliser onboardingData et previousRoutineData pour varier la routine
-  // Par exemple, si l'ancienne routine était "Beginner", la nouvelle pourrait être "Intermediate"
+  // Logic to use onboardingData and previousRoutineData to vary the routine.
+  // For example, if the old routine was "Beginner", the new one could be "Intermediate".
   bool makeIntermediate = previousRoutineData != null &&
       (previousRoutineData['name'] as String? ?? '')
           .toLowerCase()
@@ -20,10 +19,8 @@ Map<String, dynamic> createStaticAiGeneratedParts({
 
   String routineName =
       makeIntermediate ? "Intermediate Strength Focus" : "Beginner Full Body";
-  int duration = 4; // L'IA pourrait aussi déterminer cela
+  int duration = 4; // The AI could also determine this.
 
-  // Construire les dailyWorkouts comme Map<String, List<Map<String, dynamic>>>
-  // Chaque RoutineExercise est converti en Map via .toMap()
   Map<String, List<Map<String, dynamic>>> dailyWorkouts = {
     'monday': [
       RoutineExercise(
@@ -85,36 +82,40 @@ Map<String, dynamic> createStaticAiGeneratedParts({
   return {
     'name': routineName,
     'durationInWeeks': duration,
-    'dailyWorkouts':
-        dailyWorkouts, // Déjà une Map<String, List<Map<String, dynamic>>>
+    'dailyWorkouts': dailyWorkouts,
   };
 }
 
 
-// L'ancienne fonction createStaticWeeklyRoutine n'est plus directement utilisée par HomeTabScreen
-// mais peut être conservée pour des tests ou d'autres usages si elle construit un objet WeeklyRoutine.
+// The old createStaticWeeklyRoutine function is no longer directly used by HomeTabScreen
+// but can be kept for testing or other uses if it constructs a WeeklyRoutine object.
+// If you intend to use this function, ensure 'Timestamp' from 'cloud_firestore' and 'Uuid' are correctly imported and initialized.
+// For example:
+// final _uuid = Uuid(); // Needs to be initialized
+//
 // WeeklyRoutine createStaticWeeklyRoutine(String userId, {Map<String, dynamic>? onboardingData}) {
 //   final aiParts = createStaticAiGeneratedParts(userId: userId, onboardingData: onboardingData ?? {});
-//   final now = Timestamp.now();
+//   final now = Timestamp.now(); // Requires cloud_firestore import
 //   final duration = aiParts['durationInWeeks'] as int;
+//   // final _uuid = Uuid(); // Initialize Uuid if not global or already initialized
 
 //   Map<String, List<RoutineExercise>> parsedWorkouts = {};
 //    if (aiParts['dailyWorkouts'] is Map) {
 //     (aiParts['dailyWorkouts'] as Map).forEach((day, exercisesDynamic) {
 //       if (exercisesDynamic is List) {
 //         parsedWorkouts[day as String] = exercisesDynamic
-//             .map((exMap) => RoutineExercise.fromMap(exMap as Map<String, dynamic>)) // fromMap ici
+//             .map((exMap) => RoutineExercise.fromMap(exMap as Map<String, dynamic>)) // fromMap here
 //             .toList();
 //       }
 //     });
 //   }
 
 //   return WeeklyRoutine(
-//     id: uuid.v4(), // Génère un ID pour cette instance
+//     id: _uuid.v4(), // Generates an ID for this instance; ensure _uuid is initialized
 //     name: aiParts['name'] as String,
 //     dailyWorkouts: parsedWorkouts,
 //     durationInWeeks: duration,
 //     generatedAt: now,
-//     expiresAt: Timestamp.fromDate(now.toDate().add(Duration(days: duration * 7))),
+//     expiresAt: Timestamp.fromDate(now.toDate().add(Duration(days: duration * 7))), // Requires cloud_firestore import
 //   );
 // }
