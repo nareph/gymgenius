@@ -17,71 +17,47 @@ class HomeScreen extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      // --- Optional Gradient Background ---
-      // If you prefer a solid background, comment out or remove the Container and its decoration.
-      // The Scaffold will then use `colorScheme.background` from your theme.
       body: Container(
-        // Using a simple surface color from the theme for the background.
-        // If you want a gradient, define it here. For a solid color,
-        // setting `Scaffold(backgroundColor: colorScheme.surface)` is often simpler.
         decoration: BoxDecoration(
           color:
               colorScheme.surface, // Using a solid surface color from the theme
-          // Example gradient (if desired):
-          // gradient: LinearGradient(
-          //   colors: [
-          //     colorScheme.surfaceVariant, // A slightly different surface color
-          //     colorScheme.surface,       // Main surface color
-          //   ],
-          //   begin: Alignment.topLeft,
-          //   end: Alignment.bottomRight,
-          // ),
         ),
         child: Center(
           child: Padding(
-            padding: EdgeInsets.symmetric(
-                horizontal: screenWidth * 0.08), // Adjusted horizontal padding
+            padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.08),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch, // Stretch buttons
               children: [
-                // --- Application Title ---
+                // --- Application Title / Logo Area ---
+                // Consider replacing this with an Image.asset('path/to/logo.png') if you have a logo
                 Text(
                   "GYMGENIUS",
                   textAlign: TextAlign.center,
-                  // Uses 'displayLarge' text style.
-                  // The color is implicitly derived from 'textTheme', which typically uses 'onSurface' or 'onBackground'.
-                  // If you needed to force a color, it would be here:
-                  // style: textTheme.displayLarge?.copyWith(color: colorScheme.onSurface),
                   style: textTheme.displayLarge?.copyWith(
-                    fontWeight: FontWeight.bold, // Make title bolder
-                    color:
-                        colorScheme.primary, // Use primary color for emphasis
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.primary,
                   ),
                 ),
-                SizedBox(height: screenHeight * 0.015), // Reduced spacing
+                SizedBox(height: screenHeight * 0.015),
 
                 // --- Tagline ---
                 Text(
                   "Your AI-Powered Fitness Coach",
                   textAlign: TextAlign.center,
-                  // Uses 'headlineSmall'. Adjust opacity of onSurface if needed.
                   style: textTheme.headlineSmall?.copyWith(
-                    color: colorScheme.onSurface
-                        .withOpacity(0.8), // Slightly less prominent than title
+                    color: colorScheme.onSurface.withOpacity(0.8),
                   ),
                 ),
-                SizedBox(
-                    height:
-                        screenHeight * 0.12), // Increased spacing before button
+                SizedBox(height: screenHeight * 0.12),
 
                 // --- Main "Get Started" Button ---
                 ElevatedButton(
                   onPressed: () {
+                    // Current flow: HomeScreen -> OnboardingScreen -> SignUpScreen
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        // Provide OnboardingBloc to the OnboardingScreen and its descendants
                         builder: (_) => BlocProvider(
                           create: (blocContext) => OnboardingBloc(),
                           child: const OnboardingScreen(),
@@ -89,16 +65,12 @@ class HomeScreen extends StatelessWidget {
                       ),
                     );
                   },
-                  // Style comes from ElevatedButtonThemeData in AppTheme
-                  // Ensure the theme provides adequate padding and text style.
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 16), // Make button taller
+                    padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
-                  child: const Text(
-                      "GET STARTED"), // Text typically styled by ElevatedButtonTheme
+                  child: const Text("GET STARTED"),
                 ),
-                SizedBox(height: screenHeight * 0.03), // Adjusted spacing
+                SizedBox(height: screenHeight * 0.03),
 
                 // --- Secondary "Login" Link ---
                 Row(
@@ -106,21 +78,16 @@ class HomeScreen extends StatelessWidget {
                   children: [
                     Text(
                       "Already have an account? ",
-                      // Uses 'bodyMedium'. Adjust opacity of onSurface.
                       style: textTheme.bodyMedium?.copyWith(
                         color: colorScheme.onSurface.withOpacity(0.75),
                       ),
                     ),
                     TextButton(
-                      onPressed: () => Navigator.pushNamed(context,
-                          '/login'), // Assuming '/login' route is defined
-                      // Style comes from TextButtonThemeData in AppTheme
+                      onPressed: () => Navigator.pushNamed(context, '/login'),
                       child: Text(
                         "Log In",
                         style: textTheme.bodyMedium?.copyWith(
-                          // Match text style
-                          color:
-                              colorScheme.primary, // Use primary color for link
+                          color: colorScheme.primary,
                           fontWeight: FontWeight.bold,
                         ),
                       ),

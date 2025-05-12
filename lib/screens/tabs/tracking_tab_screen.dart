@@ -1,4 +1,6 @@
 // lib/screens/tabs/tracking_tab_screen.dart
+import 'dart:async'; // Import for StreamSubscription
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -24,11 +26,14 @@ class _TrackingTabScreenState extends State<TrackingTabScreen> {
   // Stream to listen for changes in the user's document (which contains the current routine)
   Stream<DocumentSnapshot<Map<String, dynamic>>>?
       _userDocStreamForPlannedRoutine;
+  StreamSubscription? _userDocSubscription; // To store user doc subscription
 
   // Stores dates on which workouts were completed, loaded from workout_logs
   Set<DateTime> _completedWorkoutDates = {};
   // Stream to listen for workout logs
   Stream<QuerySnapshot<Map<String, dynamic>>>? _workoutLogsStream;
+  StreamSubscription?
+      _workoutLogsSubscription; // To store workout logs subscription
   // Stores the raw log data for the _selectedDay
   List<Map<String, dynamic>> _selectedDayRawLogs = [];
 
@@ -64,9 +69,20 @@ class _TrackingTabScreenState extends State<TrackingTabScreen> {
     }
   }
 
+  @override
+  void dispose() {
+    print("TrackingTabScreen: Disposing and cancelling listeners.");
+    _userDocSubscription?.cancel(); // Cancel user doc listener
+    _workoutLogsSubscription?.cancel(); // Cancel workout logs listener
+    super.dispose(); // IMPORTANT: Call super.dispose() last
+  }
+
   // Listens to the user document stream to update planned workout events on the calendar.
   void _loadPlannedRoutineEvents() {
-    _userDocStreamForPlannedRoutine?.listen((userDocSnapshot) {
+    _userDocSubscription
+        ?.cancel(); // Cancel previous one if method is ever called again
+    _userDocSubscription =
+        _userDocStreamForPlannedRoutine?.listen((userDocSnapshot) {
       if (!mounted) return; // Check if the widget is still in the tree
 
       if (userDocSnapshot.exists && userDocSnapshot.data() != null) {
@@ -84,13 +100,21 @@ class _TrackingTabScreenState extends State<TrackingTabScreen> {
             if (mounted) setState(() => _plannedEvents = {});
           }
         } else {
-          if (mounted)
-            setState(() => _plannedEvents = {}); // No current routine
+          if (mounted) {
+            setState(() => _plannedEvents = {});
+          } // No current routine
         }
       } else {
-        if (mounted)
-          setState(() =>
-              _plannedEvents = {}); // User document doesn't exist or no data
+        if (mounted) {
+          setState(() => _plannedEvents = {});
+        } // User document doesn't exist or no data
+      }
+    }, onError: (error, stackTrace) {
+      // Added onError handler
+      print(
+          "TrackingTabScreen: Error in _userDocStreamForPlannedRoutine listener: $error\n$stackTrace");
+      if (mounted) {
+        setState(() => _plannedEvents = {}); // Clear planned events on error
       }
     });
   }
@@ -100,9 +124,9 @@ class _TrackingTabScreenState extends State<TrackingTabScreen> {
     final Map<DateTime, List<String>> newPlannedEvents = {};
     final Timestamp? createdAtTs = routine.generatedAt;
     if (createdAtTs == null || routine.durationInWeeks <= 0) {
-      if (mounted)
-        setState(() =>
-            _plannedEvents = newPlannedEvents); // No start date or duration
+      if (mounted) {
+        setState(() => _plannedEvents = newPlannedEvents);
+      } // No start date or duration
       return;
     }
 
@@ -137,7 +161,9 @@ class _TrackingTabScreenState extends State<TrackingTabScreen> {
   // Listens to the workout logs stream to update completed workout dates on the calendar
   // and refresh logs for the selected day if it's affected.
   void _listenToWorkoutLogsAndUpdateCalendar() {
-    _workoutLogsStream?.listen((logSnapshot) {
+    _workoutLogsSubscription
+        ?.cancel(); // Cancel previous one if method is ever called again
+    _workoutLogsSubscription = _workoutLogsStream?.listen((logSnapshot) {
       // logSnapshot is QuerySnapshot<Map<String, dynamic>>
       if (!mounted) return;
 
@@ -186,6 +212,16 @@ class _TrackingTabScreenState extends State<TrackingTabScreen> {
             // If the selected day no longer has completed workouts (e.g., data deleted), clear its logs
             _selectedDayRawLogs = [];
           }
+        });
+      }
+    }, onError: (error, stackTrace) {
+      // Added onError handler
+      print(
+          "TrackingTabScreen: Error in _workoutLogsStream listener: $error\n$stackTrace");
+      if (mounted) {
+        setState(() {
+          _completedWorkoutDates = {}; // Clear completed dates on error
+          _selectedDayRawLogs = []; // Clear logs for selected day
         });
       }
     });
@@ -312,15 +348,17 @@ class _TrackingTabScreenState extends State<TrackingTabScreen> {
               selectedTextStyle: TextStyle(
                   color: colorScheme.onPrimary, fontWeight: FontWeight.bold),
               todayDecoration: BoxDecoration(
-                color: colorScheme.primaryContainer.withOpacity(0.7),
+                color: colorScheme.primaryContainer
+                    .withAlpha((255 * 0.7).round()), // FIXED
                 shape: BoxShape.circle,
               ),
               todayTextStyle: TextStyle(
                   color: colorScheme.onPrimaryContainer,
                   fontWeight: FontWeight.bold),
               outsideDaysVisible: false, // Hide days outside the current month
-              weekendTextStyle:
-                  TextStyle(color: colorScheme.onSurface.withOpacity(0.7)),
+              weekendTextStyle: TextStyle(
+                  color: colorScheme.onSurface
+                      .withAlpha((255 * 0.7).round())), // FIXED
               defaultTextStyle: TextStyle(color: colorScheme.onSurface),
             ),
             headerStyle: HeaderStyle(
@@ -344,7 +382,8 @@ class _TrackingTabScreenState extends State<TrackingTabScreen> {
           Divider(
               height: 1,
               thickness: 0.5,
-              color: colorScheme.outlineVariant.withOpacity(0.5)),
+              color: colorScheme.outlineVariant
+                  .withAlpha((255 * 0.5).round())), // FIXED
           Expanded(
             child: _buildSelectedDayInfo(context, textTheme, colorScheme),
           ),
@@ -481,9 +520,9 @@ class _TrackingTabScreenState extends State<TrackingTabScreen> {
                                       exData['loggedSets'] as List<dynamic>? ??
                                           [];
 
-                                  if (loggedSetsDynamic.isEmpty)
-                                    return const SizedBox
-                                        .shrink(); // Don't show if no sets logged
+                                  if (loggedSetsDynamic.isEmpty) {
+                                    return const SizedBox.shrink();
+                                  } // Don't show if no sets logged
 
                                   return Padding(
                                     padding: const EdgeInsets.symmetric(
@@ -554,7 +593,8 @@ class _TrackingTabScreenState extends State<TrackingTabScreen> {
             Row(
               children: [
                 Icon(Icons.bed_outlined,
-                    color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+                    color: colorScheme.onSurfaceVariant
+                        .withAlpha((255 * 0.7).round()), // FIXED
                     size: 26), // Changed icon
                 const SizedBox(width: 8),
                 Text("Rest Day",

@@ -1,16 +1,22 @@
 // lib/screens/onboarding/onboarding_screen.dart
+import 'package:cloud_firestore/cloud_firestore.dart'; // For saving partial data
+import 'package:firebase_auth/firebase_auth.dart'; // For checking current user
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gymgenius/models/onboarding_question.dart'; // Uses the centralized model
-import 'package:gymgenius/screens/auth/signin_screen.dart'; // Imports the Sign In screen
+import 'package:gymgenius/screens/auth/sign_up_screen.dart'; // Imports the Sign UP screen
 import 'package:gymgenius/screens/onboarding/bloc/onboarding_bloc.dart';
 import 'package:gymgenius/screens/onboarding/views/question_view.dart'; // Uses the renamed view
 import 'package:gymgenius/screens/onboarding/views/stats_input_view.dart'; // Imports the new stats view
-// Consider using a package like smooth_page_indicator for a more polished page indicator,
-// or keep the simple dots as implemented.
 
 class OnboardingScreen extends StatefulWidget {
-  const OnboardingScreen({super.key});
+  // Flag to indicate if this screen is shown after login to complete profile
+  final bool isPostLoginCompletion;
+
+  const OnboardingScreen({
+    super.key,
+    this.isPostLoginCompletion = false, // Default assumes pre-signup flow
+  });
 
   @override
   State<OnboardingScreen> createState() => _OnboardingScreenState();
@@ -45,80 +51,146 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     super.dispose();
   }
 
-  // Triggers the completion of the onboarding process via the BLoC
-  void _triggerCompletion() {
-    // Removed context as it's available via `this.context`
-    context.read<OnboardingBloc>().add(CompleteOnboarding());
+  /// Handles the action when the user 'Skips' or completes the last question.
+  /// Determines the correct navigation based on the context (pre-signup vs post-login).
+  void _triggerCompletionOrSkip() {
+    final bloc = context.read<OnboardingBloc>();
+    // Get the answers collected so far from the BLoC state
+    final Map<String, dynamic> currentAnswers = bloc.state.answers;
+
+    if (widget.isPostLoginCompletion) {
+      // --- CONTEXT: Logged-in user completing profile ---
+      print(
+          "OnboardingScreen: Skipping/Completing post-login. Saving data (if any) and navigating to /main_app.");
+
+      // Save any answers collected, even if skipping
+      _savePartialOnboardingData(currentAnswers);
+
+      // Navigate directly to the main application dashboard
+      // Use pushNamedAndRemoveUntil to clear the onboarding screen from the stack
+      if (mounted) {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/main_app', // Route for MainDashboardScreen
+          (Route<dynamic> route) => false, // Remove all previous routes
+        );
+      }
+    } else {
+      // --- CONTEXT: New user before sign-up ---
+      print(
+          "OnboardingScreen: Skipping/Completing pre-signup. Triggering BLoC to navigate to SignUp.");
+
+      // Trigger the BLoC event. The BlocListener will handle navigation to SignUpScreen.
+      // The BLoC state already holds the answers.
+      bloc.add(CompleteOnboarding());
+    }
   }
 
-  // Moves to the next page in the PageView or triggers completion if on the last page
+  /// Saves the collected onboarding answers to Firestore for the current user.
+  /// Used primarily when a logged-in user skips or finishes completing their profile.
+  Future<void> _savePartialOnboardingData(Map<String, dynamic> answers) async {
+    // Ensure we only attempt this if the user is logged in (context isPostLoginCompletion is true)
+    if (!widget.isPostLoginCompletion) return;
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      print("Error: _savePartialOnboardingData called but user is null.");
+      return; // Should not happen in this context, but safety check
+    }
+    if (answers.isEmpty) {
+      print("Info: _savePartialOnboardingData called but no answers to save.");
+      return; // Nothing to save
+    }
+
+    try {
+      print("Saving onboarding data for logged-in user ${user.uid}: $answers");
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set(
+        {'onboardingData': answers},
+        SetOptions(
+            merge: true), // Use merge to avoid overwriting other user data
+      );
+      print("Onboarding data saved successfully for user ${user.uid}.");
+    } catch (e) {
+      print("Error saving onboarding data for user ${user.uid}: $e");
+      // Optionally show an error message to the user
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'Could not save profile preferences. Please try again later.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Moves to the next page in the PageView or triggers the completion/skip logic if on the last page.
   void _nextPage() {
     final isLastPage = _currentPage == _questions.length - 1;
     if (!isLastPage) {
       _pageController.nextPage(
-        duration: const Duration(milliseconds: 350), // Animation duration
-        curve: Curves.easeOutCubic, // Animation curve
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeOutCubic,
       );
     } else {
-      _triggerCompletion(); // Trigger completion on the last page
+      // On the last page, completing it is the same as skipping or finishing
+      _triggerCompletionOrSkip();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // The BlocProvider is typically provided when navigating TO this screen,
-    // so no need to wrap another one here if it's already an ancestor.
-
-    // Access theme for indicator colors and text styles
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
       // --- AppBar ---
-      // Styling (backgroundColor, titleTextStyle, iconTheme, elevation)
-      // comes automatically from AppBarTheme in AppTheme.
       appBar: AppBar(
-        // Title style is taken from AppBarTheme.titleTextStyle
-        title: const Text("Your Fitness Profile"), // Or "Complete Your Profile"
-        // --- Skip Button ---
+        // Adjust title based on the context
+        title: Text(widget.isPostLoginCompletion
+            ? "Complete Your Profile"
+            : "Your Fitness Profile"),
+        automaticallyImplyLeading: widget
+            .isPostLoginCompletion, // Show back button only if completing profile later
         actions: [
-          // Simplified version without explicit Builder, using the build context directly.
           Padding(
-            padding: const EdgeInsets.only(
-                right: 8.0), // Add some padding for aesthetics
+            padding: const EdgeInsets.only(right: 8.0),
             child: TextButton(
-              onPressed:
-                  _triggerCompletion, // Calls the method to complete onboarding
-              // Style comes from TextButtonThemeData.
-              // To use a different color (e.g., less vibrant), override here:
+              // Use the unified handler for skip/completion
+              onPressed: _triggerCompletionOrSkip,
               style: TextButton.styleFrom(
-                foregroundColor: colorScheme.onSurface
-                    .withOpacity(0.8), // Less vibrant than primary
-                textStyle: textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.w600), // Adjusted text style
-              ).merge(Theme.of(context)
-                  .textButtonTheme
-                  .style), // Merge with theme for consistency
+                foregroundColor: colorScheme.onSurface.withOpacity(0.8),
+                textStyle:
+                    textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+              ).merge(Theme.of(context).textButtonTheme.style),
               child: const Text("SKIP"),
             ),
           ),
         ],
       ),
-      // The Scaffold's background color is defined by scaffoldBackgroundColor in AppTheme.
-
-      // --- Body with BlocListener for navigation ---
+      // --- Body with BlocListener ---
       body: BlocListener<OnboardingBloc, OnboardingState>(
+        // This listener now ONLY handles navigation for the PRE-SIGNUP flow
         listener: (context, state) {
-          // Navigate to SignInScreen when onboarding is complete
-          if (state.status == OnboardingStatus.complete) {
+          // Navigate to SignUpScreen ONLY if it's NOT the post-login completion flow
+          // AND the onboarding status is complete in the BLoC.
+          if (!widget.isPostLoginCompletion &&
+              state.status == OnboardingStatus.complete) {
+            print("BlocListener: Navigating to SignUpScreen (New user flow).");
             Navigator.pushReplacement(
-              // Use pushReplacement to prevent going back to onboarding
+              // Use pushReplacement to prevent back navigation
               context,
               MaterialPageRoute(
-                // Pass the collected onboarding answers to the SignInScreen
-                builder: (_) => SignInScreen(onboardingData: state.answers),
+                // Pass collected answers to SignUpScreen
+                builder: (_) => SignUpScreen(onboardingData: state.answers),
               ),
             );
+          } else if (widget.isPostLoginCompletion &&
+              state.status == OnboardingStatus.complete) {
+            // For post-login flow, navigation is handled directly in _triggerCompletionOrSkip
+            print(
+                "BlocListener: State complete, but navigation handled by _triggerCompletionOrSkip (Post-login flow). No navigation needed here.");
           }
         },
         child: Column(
@@ -138,17 +210,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     case QuestionType.multipleChoice:
                       return QuestionView(
                         question: currentQuestion,
+                        // Pass the unified next page handler
                         onNext: _nextPage,
                       );
                     case QuestionType.numericInput:
-                      // This view is specifically for questions with id "physical_stats"
-                      // or any other question of type numericInput.
                       return StatsInputView(
                         question: currentQuestion,
+                        // Pass the unified next page handler
                         onNext: _nextPage,
                       );
-                    // default: // Should not happen if all question types are handled
-                    //   return const Center(child: Text("Unknown question type"));
                   }
                 },
               ),
@@ -156,13 +226,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
             // --- Page Indicator ---
             Padding(
-              padding: const EdgeInsets.only(
-                  bottom: 35.0, top: 20.0), // Adjusted padding
+              padding: const EdgeInsets.only(bottom: 35.0, top: 20.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(
                   _questions.length,
-                  // Uses the helper function _buildDot which now uses theme colors
                   (index) => _buildDotIndicator(index, context),
                 ),
               ),
@@ -175,18 +243,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   // --- Helper Widget for the Page Indicator Dot (uses AppTheme) ---
   Widget _buildDotIndicator(int index, BuildContext context) {
-    // Access theme colors
     final colorScheme = Theme.of(context).colorScheme;
-
     return AnimatedContainer(
-      duration: const Duration(
-          milliseconds: 250), // Animation duration for dot transition
-      margin: const EdgeInsets.symmetric(horizontal: 4.0), // Adjusted margin
+      duration: const Duration(milliseconds: 250),
+      margin: const EdgeInsets.symmetric(horizontal: 4.0),
       height: 10, // Dot height
       width: _currentPage == index ? 28 : 10, // Active dot is wider
       decoration: BoxDecoration(
-        // Use secondary color (or primary) for the active dot
-        // and a muted color (or surface+opacity) for inactive ones.
         color: _currentPage == index
             ? colorScheme.primary // Theme's primary color for active dot
             : colorScheme.onSurface
