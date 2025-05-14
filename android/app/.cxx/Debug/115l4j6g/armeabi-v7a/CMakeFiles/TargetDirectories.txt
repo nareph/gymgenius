@@ -1,2 +1,0 @@
-/home/iotaorigin-dev-nareph/gymgenius/android/app/.cxx/Debug/115l4j6g/armeabi-v7a/CMakeFiles/edit_cache.dir
-/home/iotaorigin-dev-nareph/gymgenius/android/app/.cxx/Debug/115l4j6g/armeabi-v7a/CMakeFiles/rebuild_cache.dir

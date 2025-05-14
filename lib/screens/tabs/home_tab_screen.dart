@@ -1,676 +1,675 @@
 // lib/screens/tabs/home_tab_screen.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_functions/cloud_functions.dart'; // Import for Firebase Functions
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-// Static routine import is no longer needed as we call a Cloud Function.
-// import 'package:gymgenius/data/static_routine.dart';
+import 'package:gymgenius/models/onboarding.dart';
 import 'package:gymgenius/models/routine.dart';
-import 'package:gymgenius/screens/daily_workout_detail_screen.dart';
-import 'package:uuid/uuid.dart'; // For generating new routine IDs
+import 'package:gymgenius/providers/workout_session_manager.dart';
+import 'package:gymgenius/screens/active_workout_session_screen.dart';
+import 'package:gymgenius/utils/enums.dart';
+import 'package:gymgenius/widgets/routine_card.dart';
+import 'package:provider/provider.dart';
+import 'package:uuid/uuid.dart';
 
-// Global Uuid instance (consider making it private or local if only used here)
-var uuid = Uuid();
+import '../main_dashboard_screen.dart'; // Pour kProfileTabIndex
 
-// Constant for the Profile tab index (adjust if your tab order changes)
-const int kProfileTabIndex = 2; // Assuming Home(0), Tracking(1), Profile(2)
-// If you have 4 tabs and Profile is last, this would be 3.
+final _uuid = Uuid();
 
 class HomeTabScreen extends StatefulWidget {
   final User user;
-  final Function(int) onNavigateToTab; // Callback to navigate to a specific tab
+  final Function(int) onNavigateToTab;
 
-  const HomeTabScreen({
-    super.key,
-    required this.user,
-    required this.onNavigateToTab,
-  });
+  const HomeTabScreen(
+      {super.key, required this.user, required this.onNavigateToTab});
 
   @override
   State<HomeTabScreen> createState() => _HomeTabScreenState();
 }
 
 class _HomeTabScreenState extends State<HomeTabScreen> {
-  bool _isGeneratingRoutine = false;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  Stream<DocumentSnapshot<Map<String, dynamic>>>? _userDocStream;
-  // Firebase Functions instance
-  // ADJUST THE REGION if necessary (e.g., 'europe-west1') for your Cloud Functions.
-  final FirebaseFunctions _functions = FirebaseFunctions.instance;
+  Stream<DocumentSnapshot<Map<String, dynamic>>>? _userProfileStream;
+  RoutineGenerationState _routineGenerationState = RoutineGenerationState.idle;
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _userDocStream = _firestore
-        .collection('users')
-        .doc(widget.user.uid)
-        .snapshots() // Listen to real-time updates of the user document
-        .cast<DocumentSnapshot<Map<String, dynamic>>>(); // Ensure correct type
-
-    // Emulator configuration for Functions should now be done in main.dart for global setup.
+    _initializeUserProfileStream();
+    print(
+        "HomeTabScreen initState: User ID: ${widget.user.uid}. Initializing profile stream.");
   }
 
-  // Calls the Cloud Function to generate an AI-powered routine.
-  Future<Map<String, dynamic>> _callAiRoutineService({
-    required String
-        userId, // Useful for logging or context in the Cloud Function
-    required Map<String, dynamic> onboardingData,
-    Map<String, dynamic>?
-        previousRoutineData, // Optional: for evolving routines
-  }) async {
-    print("HomeTabScreen: Calling Cloud Function 'generateAiRoutine'...");
-
-    final Map<String, dynamic> payload = {
-      'onboardingData': onboardingData,
-      if (previousRoutineData != null)
-        'previousRoutineData': previousRoutineData,
-    };
-
-    final HttpsCallable callable =
-        _functions.httpsCallable('generateAiRoutine');
-
-    try {
-      final HttpsCallableResult result =
-          await callable.call<Map<String, dynamic>>(payload);
-      print("HomeTabScreen: Received data from Cloud Function: ${result.data}");
-      if (result.data == null) {
-        throw Exception(
-            "Cloud function 'generateAiRoutine' returned null data.");
-      }
-      // Basic validation for expected keys from the Cloud Function response
-      if (result.data!['name'] == null ||
-          result.data!['durationInWeeks'] == null ||
-          result.data!['dailyWorkouts'] == null) {
-        throw Exception(
-            "Cloud function returned an incomplete data structure. Missing 'name', 'durationInWeeks', or 'dailyWorkouts'.");
-      }
-      return result.data!; // Return the data from the Cloud Function
-    } on FirebaseFunctionsException catch (e) {
+  void _initializeUserProfileStream() {
+    if (mounted) {
+      setState(() {
+        _userProfileStream = FirebaseFirestore.instance
+            .collection('users')
+            .doc(widget.user.uid)
+            .snapshots();
+      });
       print(
-          "HomeTabScreen: FirebaseFunctionsException calling 'generateAiRoutine': ${e.code} - ${e.message}");
-      // Provide more user-friendly error messages based on the exception code
-      String friendlyMessage =
-          "Failed to generate routine: ${e.message ?? e.code}";
-      if (e.code == 'aborted') {
-        // Often used if the function itself threw an error (e.g., prompt blocked)
-        friendlyMessage = "Routine generation failed: ${e.message}";
-      } else if (e.code == 'internal') {
-        friendlyMessage =
-            "An internal error occurred during routine generation. Please try again later.";
-      } else if (e.code == 'invalid-argument') {
-        friendlyMessage =
-            "Invalid data sent for routine generation. Please check your profile information.";
-      } else if (e.code == 'unauthenticated') {
-        friendlyMessage =
-            "Authentication error. Please sign out and sign in again.";
-      }
-      throw Exception(friendlyMessage); // Propagate the user-friendly error
-    } catch (e) {
-      print(
-          "HomeTabScreen: Generic error calling Cloud Function 'generateAiRoutine': $e");
-      throw Exception(
-          "An unexpected error occurred while contacting the AI service. Please try again.");
+          "HomeTabScreen _initializeUserProfileStream: Stream initialized for user ${widget.user.uid}");
     }
   }
 
-  // Generates a new routine by fetching onboarding data, calling the AI service, and saving to Firestore.
-  Future<void> _generateRoutine() async {
-    if (_isGeneratingRoutine)
-      return; // Prevent multiple simultaneous generations
-    if (mounted) setState(() => _isGeneratingRoutine = true);
+  Future<void> _triggerAiRoutineGeneration(
+      OnboardingData onboardingData, WeeklyRoutine? previousRoutine) async {
+    if (!mounted) return;
+    setState(() {
+      _routineGenerationState = RoutineGenerationState.loading;
+      _errorMessage = null;
+    });
+    print(
+        "HomeTabScreen _triggerAiRoutineGeneration: Setting state to LOADING for user ${widget.user.uid}.");
 
     try {
-      DocumentSnapshot<Map<String, dynamic>> userDoc =
-          await _firestore.collection('users').doc(widget.user.uid).get();
+      final HttpsCallable callable = FirebaseFunctions.instance.httpsCallable(
+          'generateAiRoutine',
+          options: HttpsCallableOptions(timeout: const Duration(seconds: 120)));
 
-      Map<String, dynamic> onboardingData = {};
-      Map<String, dynamic>? oldRoutineData;
+      print(
+          "HomeTabScreen _triggerAiRoutineGeneration: Calling Cloud Function 'generateAiRoutine' with onboarding data: ${onboardingData.toMap()} and possibly previous routine: ${previousRoutine?.toMapForCloudFunction()}");
+      final HttpsCallableResult result = await callable.call(<String, dynamic>{
+        'onboardingData': onboardingData.toMap(),
+        if (previousRoutine != null)
+          'previousRoutineData': previousRoutine.toMapForCloudFunction(),
+      });
 
-      if (userDoc.exists && userDoc.data() != null) {
-        final data = userDoc.data()!;
-        onboardingData =
-            (data['onboardingData'] as Map<String, dynamic>?) ?? {};
-        oldRoutineData = (data['currentRoutine']
-            as Map<String, dynamic>?); // For context to the AI
-      }
+      if (!mounted) return;
 
-      if (onboardingData.isEmpty) {
-        _showErrorSnackBar(
-            "Please complete your preferences in your profile before generating a plan.");
-        widget.onNavigateToTab(kProfileTabIndex); // Navigate to profile tab
-        // Do not return here if we want to ensure the loader stops in 'finally'
-      } else {
-        // Proceed only if onboardingData is present
-        // CALL THE CLOUD FUNCTION
-        final Map<String, dynamic> aiGeneratedParts =
-            await _callAiRoutineService(
-          userId: widget.user.uid,
-          onboardingData: onboardingData,
-          previousRoutineData: oldRoutineData,
-        );
-
-        // Construct the new routine object for Firestore
-        final String newRoutineId = uuid.v4();
-        final DateTime now = DateTime.now();
-        final int durationInWeeks =
-            aiGeneratedParts['durationInWeeks'] as int? ?? 4;
-        final DateTime expiresAt = now.add(Duration(days: durationInWeeks * 7));
-
-        // Ensure dailyWorkouts is correctly structured.
-        // Assuming the Cloud Function returns Map<String, List<Map<String, dynamic>>> for dailyWorkouts.
-        final Map<String, dynamic> newCurrentRoutine = {
-          'id': newRoutineId,
-          'name': aiGeneratedParts['name'] as String? ?? 'AI Generated Routine',
-          'dailyWorkouts': aiGeneratedParts['dailyWorkouts'] ??
-              {}, // Directly from Cloud Function
-          'durationInWeeks': durationInWeeks,
-          'generatedAt': Timestamp.fromDate(now),
-          'expiresAt': Timestamp.fromDate(expiresAt),
-          'onboardingSnapshot':
-              onboardingData, // Snapshot of onboarding data at time of generation
-        };
-
-        // Save the new routine to Firestore
-        await _firestore.collection('users').doc(widget.user.uid).set(
-          {'currentRoutine': newCurrentRoutine},
-          SetOptions(merge: true), // Merge to avoid overwriting other user data
-        );
-
-        if (mounted) {
-          _showSuccessSnackBar("New routine generated successfully!");
+      final Map<String, dynamic> aiRoutineData;
+      if (result.data is Map) {
+        try {
+          aiRoutineData = Map<String, dynamic>.from(result.data as Map);
+        } catch (e) {
+          print("Error converting result.data to Map<String, dynamic>: $e");
+          throw Exception(
+              "Received malformed data structure from AI service (top level).");
         }
+      } else {
+        print(
+            "AI response (result.data) is not a Map: ${result.data.runtimeType}");
+        throw Exception("Unexpected data format from AI service (top level).");
       }
-    } catch (e) {
-      // Catches errors from Firestore, _callAiRoutineService, etc.
-      print("HomeTabScreen: Error during routine generation process: $e");
-      if (mounted) {
-        _showErrorSnackBar(
-            e.toString()); // Display the propagated error message
+
+      print(
+          "HomeTabScreen _triggerAiRoutineGeneration: Received data from Cloud Function: $aiRoutineData");
+
+      final String newRoutineId = _uuid.v4();
+
+      Map<String, dynamic> dailyWorkoutsFromAIConverted = {};
+      final dynamic rawDailyWorkouts = aiRoutineData['dailyWorkouts'];
+
+      if (rawDailyWorkouts == null) {
+        print(
+            "Warning: AI response missing 'dailyWorkouts'. Proceeding with empty workouts.");
+      } else if (rawDailyWorkouts is Map) {
+        rawDailyWorkouts.forEach((dayKey, exercisesForDay) {
+          if (dayKey is String && exercisesForDay is List) {
+            List<Map<String, dynamic>> convertedExercises = [];
+            for (var exercise in exercisesForDay) {
+              if (exercise is Map) {
+                try {
+                  convertedExercises.add(Map<String, dynamic>.from(exercise));
+                } catch (e) {
+                  print(
+                      "Error converting an exercise to Map<String, dynamic> for day $dayKey: $e. Exercise data: $exercise");
+                }
+              } else {
+                print(
+                    "Exercise data for day $dayKey is not a Map: ${exercise.runtimeType}");
+              }
+            }
+            dailyWorkoutsFromAIConverted[dayKey.toLowerCase()] =
+                convertedExercises;
+          } else {
+            print(
+                "Malformed daily workout entry: Day key is not String or exercises not List. Key: ${dayKey.runtimeType}, Value: ${exercisesForDay.runtimeType}");
+          }
+        });
+      } else {
+        throw Exception(
+            "AI response 'dailyWorkouts' is not a map. Received: ${rawDailyWorkouts.runtimeType}");
       }
-    } finally {
-      if (mounted) setState(() => _isGeneratingRoutine = false);
+
+      final Map<String, dynamic> dataForWeeklyRoutineConstructor = {
+        'id': newRoutineId,
+        'name': aiRoutineData['name'] as String?,
+        'durationInWeeks': (aiRoutineData['durationInWeeks'] as num?)?.toInt(),
+        'dailyWorkouts': dailyWorkoutsFromAIConverted,
+        'generatedAt': Timestamp.now(),
+        'expiresAt': Timestamp.fromDate(DateTime.now().add(Duration(
+            days: ((aiRoutineData['durationInWeeks'] as num?)?.toInt() ?? 4) *
+                7))),
+      };
+      print(
+          "HomeTabScreen _triggerAiRoutineGeneration: Data being passed to WeeklyRoutine.fromMap: $dataForWeeklyRoutineConstructor");
+
+      final WeeklyRoutine newRoutine =
+          WeeklyRoutine.fromMap(dataForWeeklyRoutineConstructor);
+
+      print(
+          "HomeTabScreen _triggerAiRoutineGeneration: Constructed WeeklyRoutine object. Name: ${newRoutine.name}, ID: ${newRoutine.id}, Duration: ${newRoutine.durationInWeeks} weeks.");
+      newRoutine.dailyWorkouts.forEach((day, exercises) {
+        print(
+            "HomeTabScreen _triggerAiRoutineGeneration: Processed Day: $day, Number of exercises: ${exercises.length}");
+        for (var ex in exercises) {
+          print(
+              "HomeTabScreen _triggerAiRoutineGeneration: Processed Exercise in newRoutine: ID: ${ex.id}, Name: '${ex.name}', Sets: ${ex.sets}, Reps: ${ex.reps}, UsesWeight: ${ex.usesWeight}, IsTimed: ${ex.isTimed}, TargetDuration: ${ex.targetDurationSeconds}, Desc: '${ex.description}', WeightSugg: '${ex.weightSuggestionKg}'");
+        }
+      });
+
+      final Map<String, dynamic> routineToSaveInFirestore =
+          newRoutine.toMapForFirestore();
+      print(
+          "HomeTabScreen _triggerAiRoutineGeneration: Data being sent to Firestore (toMapForFirestore result): $routineToSaveInFirestore");
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.user.uid)
+          .update({
+        'currentRoutine': routineToSaveInFirestore,
+        'onboardingCompleted': true,
+        'lastRoutineGeneratedAt': FieldValue.serverTimestamp(),
+      });
+
+      if (!mounted) return;
+      setState(() {
+        _routineGenerationState = RoutineGenerationState.success;
+        print(
+            "HomeTabScreen _triggerAiRoutineGeneration: Routine saved successfully. State set to SUCCESS.");
+      });
+    } on FirebaseFunctionsException catch (e, s) {
+      if (!mounted) return;
+      print(
+          "HomeTabScreen _triggerAiRoutineGeneration: FirebaseFunctionsException calling 'generateAiRoutine': ${e.code} - ${e.message}\nDetails: ${e.details}\nStackTrace: $s");
+      setState(() {
+        _routineGenerationState = RoutineGenerationState.error;
+        _errorMessage =
+            "Failed to generate routine: ${e.message ?? 'Cloud function error.'} (Code: ${e.code}). Please try again.";
+      });
+    } catch (e, s) {
+      if (!mounted) return;
+      print(
+          "HomeTabScreen _triggerAiRoutineGeneration: Generic error during routine generation process: $e\nStackTrace: $s");
+      setState(() {
+        _routineGenerationState = RoutineGenerationState.error;
+        _errorMessage =
+            "An unexpected error occurred while creating your routine. Please try again in a few moments. If the issue continues, our team has been notified.";
+      });
     }
   }
 
-  // Helper to show error SnackBars
-  void _showErrorSnackBar(String message) {
-    if (!mounted) return;
-    // Potentially remove "Exception: " prefix from the message for cleaner display
-    final displayMessage =
-        message.startsWith("Exception: ") ? message.substring(11) : message;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(displayMessage,
-          style: TextStyle(color: Theme.of(context).colorScheme.onError)),
-      backgroundColor: Theme.of(context).colorScheme.error,
-      duration: const Duration(seconds: 4),
-      behavior: SnackBarBehavior.floating, // Consider floating for better UI
-    ));
-  }
+  void _startTodaysWorkout(
+      BuildContext context, WeeklyRoutine routine, String dayKey) {
+    final List<RoutineExercise>? exercisesForDay =
+        routine.dailyWorkouts[dayKey.toLowerCase()];
 
-  // Helper to show success SnackBars
-  void _showSuccessSnackBar(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(message,
-          style: TextStyle(
-              color: Theme.of(context).colorScheme.onSecondaryContainer)),
-      backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
-      duration: const Duration(seconds: 3),
-      behavior: SnackBarBehavior.floating,
-    ));
-  }
-
-  // Determines the status of the routine (active, expired, invalid).
-  ({String statusText, bool isExpired, bool isValid}) _getRoutineStatus(
-      Map<String, dynamic>? routineData) {
-    if (routineData == null || routineData.isEmpty) {
-      return (statusText: "No Active Plan", isExpired: true, isValid: false);
-    }
-    final Timestamp? generatedAtTs = routineData['generatedAt'] as Timestamp?;
-    final Timestamp? expiresAtTs = routineData['expiresAt'] as Timestamp?;
-    final int durationInWeeks = routineData['durationInWeeks'] as int? ?? 0;
-    final String routineName = routineData['name'] as String? ?? '';
-
-    if (generatedAtTs == null ||
-        expiresAtTs == null ||
-        durationInWeeks <= 0 ||
-        routineName.isEmpty) {
-      return (statusText: "Invalid Plan Data", isExpired: true, isValid: false);
+    if (exercisesForDay == null || exercisesForDay.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content:
+              Text("No exercises planned for ${capitalize(dayKey)} today."),
+          backgroundColor: Colors.orangeAccent,
+        ),
+      );
+      print("HomeTabScreen _startTodaysWorkout: No exercises for $dayKey.");
+      return;
     }
 
-    final DateTime expiresAtDate = expiresAtTs.toDate();
-    if (DateTime.now().isAfter(expiresAtDate)) {
-      return (
-        statusText: "Plan Finished",
-        isExpired: true,
-        isValid: true
-      ); // Valid structure, but expired
+    final workoutManager =
+        Provider.of<WorkoutSessionManager>(context, listen: false);
+    final theme = Theme.of(context);
+
+    if (workoutManager.isWorkoutActive) {
+      showDialog(
+          context: context,
+          builder: (dialogCtx) => AlertDialog(
+                title: const Text("Workout in Progress"),
+                content: const Text(
+                    "A workout session is currently active. What would you like to do?"),
+                actions: <Widget>[
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(dialogCtx).pop();
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const ActiveWorkoutSessionScreen()),
+                      );
+                    },
+                    child: Text("Resume Current",
+                        style: TextStyle(
+                            color: theme.colorScheme.primary,
+                            fontWeight: FontWeight.bold)),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(dialogCtx).pop();
+                      workoutManager.forceStartNewWorkout(
+                        exercisesForDay,
+                        workoutName:
+                            "${capitalize(routine.name)} - ${capitalize(dayKey)}",
+                        routineId: routine.id,
+                        dayKey: dayKey.toLowerCase(),
+                      );
+                      if (workoutManager.isWorkoutActive) {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) =>
+                                  const ActiveWorkoutSessionScreen()),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            content:
+                                const Text("Failed to start the new workout."),
+                            backgroundColor: theme.colorScheme.error));
+                      }
+                    },
+                    child: Text("End & Start New",
+                        style: TextStyle(color: theme.colorScheme.error)),
+                  ),
+                  TextButton(
+                      onPressed: () => Navigator.of(dialogCtx).pop(),
+                      child: const Text("Cancel")),
+                ],
+              ));
+    } else {
+      bool started = workoutManager.startWorkoutIfNoSession(
+        exercisesForDay,
+        workoutName: "${capitalize(routine.name)} - ${capitalize(dayKey)}",
+        routineId: routine.id,
+        dayKey: dayKey.toLowerCase(),
+      );
+      if (started) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ActiveWorkoutSessionScreen()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: const Text(
+                "Failed to start workout. An unexpected error occurred."),
+            backgroundColor: theme.colorScheme.error));
+      }
     }
-
-    final Duration difference = expiresAtDate.difference(DateTime.now());
-    int weeksRemaining = (difference.inDays / 7).ceil();
-    if (weeksRemaining < 0) weeksRemaining = 0;
-    // Cap weeks remaining at total duration to avoid display issues if dates are off
-    if (weeksRemaining > durationInWeeks) weeksRemaining = durationInWeeks;
-
-    return (
-      statusText:
-          "$weeksRemaining week${weeksRemaining == 1 ? '' : 's'} remaining",
-      isExpired: false,
-      isValid: true
-    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final colorScheme = Theme.of(context).colorScheme;
+    print(
+        "HomeTabScreen build: Building UI. Current routine generation state: $_routineGenerationState");
+    return Scaffold(
+      body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+        stream: _userProfileStream,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting &&
+              _userProfileStream == null) {
+            return const Center(
+                child: CircularProgressIndicator(
+                    key: Key("initial_profile_load")));
+          }
+          if (snapshot.connectionState == ConnectionState.waiting &&
+              _routineGenerationState != RoutineGenerationState.loading) {
+            return const Center(
+                child: CircularProgressIndicator(
+                    key: Key("profile_snapshot_waiting")));
+          }
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-          16.0, 16.0, 16.0, 8.0), // Adjust bottom padding
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(
-                bottom: 12.0, top: 0.0), // Reduced top padding
-            child: Center(
-                child: Text(
-              _isGeneratingRoutine ? "Generating Your Plan..." : "Current Plan",
-              style: _isGeneratingRoutine
-                  ? textTheme.titleLarge?.copyWith(
-                      color: colorScheme.primary) // Style for generating state
-                  : textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold), // Style for normal state
-            )),
-          ),
-          Expanded(
-            child: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-              stream: _userDocStream,
-              builder: (context,
-                  AsyncSnapshot<DocumentSnapshot<Map<String, dynamic>>>
-                      snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting &&
-                    !_isGeneratingRoutine) {
-                  return Center(
-                      child: CircularProgressIndicator(
-                          color: colorScheme.primary));
-                }
-                if (snapshot.hasError) {
-                  print(
-                      "HomeTabScreen: Error in UserDoc StreamBuilder: ${snapshot.error}");
-                  return Center(
-                      child: Text(
-                    "Error loading your data. Please try again.",
-                    style:
-                        textTheme.bodyLarge?.copyWith(color: colorScheme.error),
-                    textAlign: TextAlign.center,
-                  ));
-                }
+          if (snapshot.hasError) {
+            return Center(
+                child: Text("Error loading profile: ${snapshot.error}"));
+          }
 
-                final Map<String, dynamic>? userData = snapshot.data?.data();
+          if (!snapshot.hasData || !snapshot.data!.exists) {
+            print(
+                "HomeTabScreen: User profile document does not exist for user ${widget.user.uid}. This is unexpected if AuthWrapper worked correctly.");
+            return _buildWrapperForRefreshIndicatorCenteredContent(
+                _buildErrorState(
+                    "User profile not found. Please try logging out and back in.",
+                    OnboardingData(completed: false),
+                    null));
+          }
 
-                if (!snapshot.hasData ||
-                    !snapshot.data!.exists ||
-                    userData == null) {
-                  // This case might indicate a new user or data issue.
-                  return _buildOnboardingPromptUI(
-                      context,
-                      "Welcome to GymGenius!",
-                      "Let's get your first fitness plan by setting up your preferences.",
-                      "Setup Preferences");
-                }
+          final Map<String, dynamic> userProfile = snapshot.data!.data()!;
+          final bool onboardingCompletedFlag =
+              userProfile['onboardingCompleted'] as bool? ?? false;
 
-                final Map<String, dynamic>? onboardingData =
-                    userData['onboardingData'] as Map<String, dynamic>?;
-                if (onboardingData == null || onboardingData.isEmpty) {
-                  return _buildOnboardingPromptUI(
-                      context,
-                      "Set Your Preferences",
-                      "We need your fitness goals and preferences to create the best plan for you.",
-                      "Go to Profile");
-                }
+          OnboardingData? onboardingDataModel;
+          if (userProfile['onboardingData'] != null &&
+              userProfile['onboardingData'] is Map) {
+            try {
+              onboardingDataModel = OnboardingData.fromMap(
+                  Map<String, dynamic>.from(userProfile['onboardingData']));
+            } catch (e) {
+              print("Error parsing onboardingData from Firestore: $e");
+              onboardingDataModel =
+                  OnboardingData(completed: onboardingCompletedFlag);
+            }
+          } else {
+            onboardingDataModel =
+                OnboardingData(completed: onboardingCompletedFlag);
+          }
 
-                Map<String, dynamic>? currentRoutineData =
-                    userData['currentRoutine'] as Map<String, dynamic>?;
-                final routineStatusInfo = _getRoutineStatus(currentRoutineData);
+          final WeeklyRoutine? currentRoutine =
+              userProfile['currentRoutine'] != null &&
+                      userProfile['currentRoutine'] is Map
+                  ? WeeklyRoutine.fromMap(
+                      Map<String, dynamic>.from(userProfile['currentRoutine']))
+                  : null;
 
-                final bool showGenerateFirstOrNewUI =
-                    !routineStatusInfo.isValid || routineStatusInfo.isExpired;
+          if (!onboardingCompletedFlag) {
+            print(
+                "HomeTabScreen: onboardingCompletedFlag is false. This user should have been caught by AuthWrapper.");
+            return _buildWrapperForRefreshIndicatorCenteredContent(
+                _buildNeedsProfileCompletionState(context, true));
+          }
 
-                if (_isGeneratingRoutine) {
-                  return _buildGeneratingUI(context);
-                }
-
-                if (showGenerateFirstOrNewUI) {
-                  bool hadValidPreviousAndExpired =
-                      currentRoutineData != null &&
-                          routineStatusInfo.isValid &&
-                          routineStatusInfo.isExpired;
-                  return _buildNoOrExpiredRoutineUI(
-                      context, currentRoutineData, hadValidPreviousAndExpired);
-                } else {
-                  // Assume fromMap handles data correctly
-                  try {
-                    final WeeklyRoutine activeRoutine =
-                        WeeklyRoutine.fromMap(currentRoutineData!);
-                    return _buildActiveRoutineUI(
-                        context, activeRoutine, routineStatusInfo.statusText);
-                  } catch (e) {
-                    print(
-                        "HomeTabScreen: Error converting Firestore Map to WeeklyRoutine: $e. Routine Data: $currentRoutineData");
-                    // If conversion fails, display as if the routine is invalid or missing
-                    return _buildNoOrExpiredRoutineUI(
-                        context,
-                        currentRoutineData,
-                        false); // Treat as "no valid routine"
-                  }
-                }
+          if (onboardingDataModel == null ||
+              !onboardingDataModel.isSufficientForAiGeneration) {
+            print(
+                "HomeTabScreen: Onboarding is 'completed' (flag is true) but data is insufficient or null. User needs to complete profile details. isSufficient: ${onboardingDataModel?.isSufficientForAiGeneration}");
+            return RefreshIndicator(
+              onRefresh: () async {
+                _initializeUserProfileStream();
               },
-            ),
-          ),
-        ],
+              child: _buildWrapperForRefreshIndicatorCenteredContent(
+                  _buildNeedsProfileCompletionState(context, false)),
+            );
+          }
+
+          final OnboardingData finalOnboardingData = onboardingDataModel;
+
+          Widget screenContent;
+
+          if (_routineGenerationState == RoutineGenerationState.loading) {
+            screenContent = _buildWrapperForRefreshIndicatorCenteredContent(
+                _buildLoadingIndicator(
+                    "Generating your personalized routine..."));
+          } else if (_routineGenerationState == RoutineGenerationState.error &&
+              _errorMessage != null) {
+            screenContent = _buildWrapperForRefreshIndicatorCenteredContent(
+                _buildErrorState(
+                    _errorMessage!, finalOnboardingData, currentRoutine));
+          } else if (currentRoutine == null) {
+            screenContent = _buildWrapperForRefreshIndicatorCenteredContent(
+                _buildNoRoutineState(finalOnboardingData));
+          } else {
+            screenContent = ListView(
+              padding: const EdgeInsets.all(16.0),
+              children: [
+                _buildCurrentRoutineSection(currentRoutine, finalOnboardingData)
+              ],
+            );
+          }
+
+          return RefreshIndicator(
+            onRefresh: () async {
+              await _triggerAiRoutineGeneration(
+                  finalOnboardingData, currentRoutine);
+            },
+            child: screenContent,
+          );
+        },
       ),
     );
   }
 
-  // UI for when a routine is being generated
-  Widget _buildGeneratingUI(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final colorScheme = Theme.of(context).colorScheme;
-    return Center(
-        child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        CircularProgressIndicator(color: colorScheme.primary),
-        const SizedBox(height: 20),
-        Text("Hold on, crafting your personalized plan...",
-            style: textTheme.titleMedium
-                ?.copyWith(color: colorScheme.onSurfaceVariant),
-            textAlign: TextAlign.center),
-      ],
-    ));
+  Widget _buildWrapperForRefreshIndicatorCenteredContent(Widget child) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16.0),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: constraints.maxHeight - 32.0,
+            ),
+            child: Center(
+              child: child,
+            ),
+          ),
+        );
+      },
+    );
   }
 
-  // UI to prompt user to complete onboarding/profile
-  Widget _buildOnboardingPromptUI(
-      BuildContext context, String title, String message, String buttonText) {
-    final textTheme = Theme.of(context).textTheme;
-    final colorScheme = Theme.of(context).colorScheme;
+  Widget _buildLoadingIndicator(String message) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Icon(Icons.settings_input_component_outlined,
-                size: 64, color: colorScheme.primary.withOpacity(0.8)),
-            const SizedBox(height: 20),
-            Text(title,
-                style: textTheme.headlineSmall
-                    ?.copyWith(fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center),
-            const SizedBox(height: 12),
-            Text(message,
-                style: textTheme.bodyLarge, textAlign: TextAlign.center),
-            const SizedBox(height: 28),
-            ElevatedButton.icon(
-              icon: _isGeneratingRoutine
-                  ? SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2.5, color: colorScheme.onPrimary))
-                  : const Icon(Icons.person_search_outlined), // Changed icon
-              label: Text(_isGeneratingRoutine ? "Loading..." : buttonText),
-              onPressed: _isGeneratingRoutine
-                  ? null
-                  : () =>
-                      widget.onNavigateToTab(kProfileTabIndex), // Use constant
-              style: ElevatedButton.styleFrom(
-                backgroundColor: colorScheme.primary,
-                foregroundColor: colorScheme.onPrimary,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-                textStyle: textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold), // Using titleSmall for button
-              ),
-            ),
-          ],
-        ),
+        padding: const EdgeInsets.symmetric(vertical: 40.0),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const CircularProgressIndicator(),
+          const SizedBox(height: 20),
+          Text(message,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleMedium),
+        ]),
       ),
     );
   }
 
-  // UI for when there's no active routine or an old one has expired
-  Widget _buildNoOrExpiredRoutineUI(BuildContext context,
-      Map<String, dynamic>? oldRoutineData, bool hadValidPreviousAndExpired) {
-    final textTheme = Theme.of(context).textTheme;
-    final colorScheme = Theme.of(context).colorScheme;
-
-    final String? previousRoutineName =
-        (oldRoutineData != null && hadValidPreviousAndExpired)
-            ? (oldRoutineData['name'] as String? ?? 'Unnamed Plan')
-            : null;
-
-    String title =
-        hadValidPreviousAndExpired ? "Plan Finished!" : "No Active Plan";
-    String message = hadValidPreviousAndExpired
-        ? "Your previous plan '${previousRoutineName ?? 'Unnamed Plan'}' has ended. Ready for a new challenge?"
-        : "Let's generate your first personalized AI fitness plan!";
-    String buttonText =
-        hadValidPreviousAndExpired ? "Generate New Plan" : "Get My First Plan";
-    IconData iconData = hadValidPreviousAndExpired
-        ? Icons.event_repeat_outlined
-        : Icons.auto_awesome_outlined; // Changed icons
-
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        if (hadValidPreviousAndExpired && previousRoutineName != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12.0),
-            child: Text("Last Plan: $previousRoutineName",
-                style: textTheme.titleSmall?.copyWith(
-                    fontStyle: FontStyle.italic,
-                    color: colorScheme.onSurfaceVariant.withOpacity(0.7))),
+  Widget _buildErrorState(String errorMessage, OnboardingData onboardingData,
+      WeeklyRoutine? previousRoutine) {
+    return Card(
+      color: Theme.of(context).colorScheme.errorContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Icon(Icons.error_outline,
+              color: Theme.of(context).colorScheme.onErrorContainer, size: 40),
+          const SizedBox(height: 10),
+          Text(
+            "Routine Generation Failed",
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: Theme.of(context).colorScheme.onErrorContainer,
+                fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
           ),
-        Card(
-            elevation: 3, // Slightly more elevation
-            color: colorScheme
-                .surfaceContainerHigh, // Use a slightly different surface color for emphasis
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16.0)),
-            child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(vertical: 28.0, horizontal: 20.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(iconData, color: colorScheme.primary, size: 52),
-                  const SizedBox(height: 16),
-                  Text(title,
-                      style: textTheme.headlineSmall
-                          ?.copyWith(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 10),
-                  Text(message,
-                      style: textTheme.bodyLarge, textAlign: TextAlign.center),
-                  const SizedBox(height: 28),
-                  ElevatedButton.icon(
-                    icon: _isGeneratingRoutine
-                        ? SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2.5, color: colorScheme.onPrimary))
-                        : const Icon(Icons.fitness_center), // Changed icon
-                    label: Text(
-                        _isGeneratingRoutine ? "Generating..." : buttonText),
-                    onPressed: _isGeneratingRoutine
-                        ? null
-                        : _generateRoutine, // Calls the function that calls the Cloud Function
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: colorScheme.primary,
-                      foregroundColor: colorScheme.onPrimary,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 28, vertical: 14),
-                      textStyle: textTheme.titleSmall
-                          ?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                  )
-                ],
-              ),
-            )),
-      ],
+          const SizedBox(height: 8),
+          Text(errorMessage,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onErrorContainer)),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.refresh),
+            label: const Text("Try Again"),
+            onPressed: () =>
+                _triggerAiRoutineGeneration(onboardingData, previousRoutine),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.error,
+                foregroundColor: Theme.of(context).colorScheme.onError),
+          )
+        ]),
+      ),
     );
   }
 
-  // UI to display the currently active routine
-  Widget _buildActiveRoutineUI(BuildContext context,
-      WeeklyRoutine activeRoutine, String routineStatusText) {
-    final textTheme = Theme.of(context).textTheme;
-    final colorScheme = Theme.of(context).colorScheme;
+  Widget _buildNoRoutineState(OnboardingData onboardingData) {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Icon(Icons.fitness_center,
+              size: 50, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(height: 16),
+          Text("No Workout Plan Found",
+              style: Theme.of(context).textTheme.headlineSmall,
+              textAlign: TextAlign.center),
+          const SizedBox(height: 10),
+          const Text(
+              "Let's generate a personalized workout plan to help you reach your fitness goals!",
+              textAlign: TextAlign.center),
+          const SizedBox(height: 20),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.auto_awesome_outlined),
+            label: const Text("Generate My First Routine"),
+            onPressed: () => _triggerAiRoutineGeneration(onboardingData, null),
+            style: ElevatedButton.styleFrom(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12)),
+          ),
+        ]),
+      ),
+    );
+  }
+
+  Widget _buildNeedsProfileCompletionState(
+      BuildContext context, bool dueToOnboardingFlagFalse) {
+    String title = "Complete Your Profile";
+    String message =
+        "To generate a personalized workout plan, we need a bit more information about you and your goals.";
+    String buttonText = "Complete Profile";
+
+    if (dueToOnboardingFlagFalse) {
+      title = "Finalize Account Setup";
+      message =
+          "Please complete your profile to activate all features and get your personalized workout plan.";
+      buttonText = "Go to Profile";
+    }
+
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Icon(Icons.person_pin_circle_outlined,
+              size: 50, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(height: 16),
+          Text(title,
+              style: Theme.of(context).textTheme.headlineSmall,
+              textAlign: TextAlign.center),
+          const SizedBox(height: 10),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.account_circle_outlined),
+            label: Text(buttonText),
+            onPressed: () {
+              widget.onNavigateToTab(kProfileTabIndex);
+            },
+            style: ElevatedButton.styleFrom(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12)),
+          ),
+        ]),
+      ),
+    );
+  }
+
+  Widget _buildCurrentRoutineSection(
+      WeeklyRoutine currentRoutine, OnboardingData onboardingData) {
+    final theme = Theme.of(context);
+    final today = DateTime.now();
+    final todayDayKey = WeeklyRoutine.daysOfWeek[today.weekday - 1];
+    final List<RoutineExercise>? todaysExercises =
+        currentRoutine.dailyWorkouts[todayDayKey.toLowerCase()];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding:
-              const EdgeInsets.only(bottom: 10.0, top: 4.0), // Adjusted padding
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                child: Text(
-                  activeRoutine.name,
-                  style: textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w600), // Slightly bolder title
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 2,
-                ),
+        Text("Your Current Plan: ${currentRoutine.name}",
+            style: Theme.of(context).textTheme.headlineSmall),
+        Text(
+            "Duration: ${currentRoutine.durationInWeeks} weeks. Expires: ${currentRoutine.expiresAt.toDate().toLocal().toString().split(' ')[0]}",
+            style: Theme.of(context).textTheme.bodySmall),
+        const SizedBox(height: 10),
+        if (todaysExercises != null && todaysExercises.isNotEmpty)
+          Card(
+            color: theme.colorScheme.primaryContainer
+                .withAlpha((0.7 * 255).round()),
+            elevation: 1,
+            child: ListTile(
+              contentPadding:
+                  const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+              leading: Icon(Icons.fitness_center_outlined,
+                  color: theme.colorScheme.onPrimaryContainer, size: 28),
+              title: Text("Today: ${capitalize(todayDayKey)}",
+                  style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onPrimaryContainer)),
+              subtitle: Text("${todaysExercises.length} exercises planned",
+                  style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onPrimaryContainer
+                          .withAlpha((0.8 * 255).round()))),
+              trailing: ElevatedButton.icon(
+                icon: const Icon(Icons.play_arrow_rounded, size: 20),
+                label: const Text("Start"),
+                onPressed: () =>
+                    _startTodaysWorkout(context, currentRoutine, todayDayKey),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primary,
+                    foregroundColor: theme.colorScheme.onPrimary,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    textStyle: theme.textTheme.labelMedium
+                        ?.copyWith(fontWeight: FontWeight.bold)),
               ),
-              const SizedBox(width: 8),
-              Chip(
-                avatar: Icon(Icons.timer_outlined,
-                    size: 18,
-                    color: colorScheme.onSecondaryContainer.withOpacity(0.9)),
-                label: Text(routineStatusText,
-                    style: textTheme.labelSmall?.copyWith(
-                        color: colorScheme.onSecondaryContainer,
-                        fontWeight: FontWeight.w600)),
-                backgroundColor: colorScheme.secondaryContainer
-                    .withOpacity(0.8), // Slightly transparent
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10.0, vertical: 4.0),
-                labelPadding: const EdgeInsets.only(
-                    left: 2.0, right: 2.0), // Adjusted label padding
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: ListView.builder(
-            itemCount: WeeklyRoutine.daysOfWeek.length,
-            itemBuilder: (context, index) {
-              final dayKey = WeeklyRoutine.daysOfWeek[index];
-              final List<RoutineExercise>? dayExercises =
-                  activeRoutine.dailyWorkouts[dayKey];
-              final isRestDay = dayExercises == null || dayExercises.isEmpty;
-              final dayTitle = dayKey[0].toUpperCase() + dayKey.substring(1);
-
-              return Card(
-                margin: const EdgeInsets.symmetric(
-                    vertical: 6.0), // Slightly more vertical margin
-                elevation: 1.5, // Subtle elevation
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12.0)),
-                color: colorScheme.surfaceContainer, // Consistent surface color
-                child: InkWell(
-                  // Add InkWell for tap feedback
-                  onTap: isRestDay
-                      ? null
-                      : () {
-                          if (dayExercises != null && dayExercises.isNotEmpty) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => DailyWorkoutDetailScreen(
-                                  dayTitle: "$dayTitle Workout",
-                                  exercises:
-                                      dayExercises, // Pass the list of RoutineExercise objects
-                                ),
-                              ),
-                            );
-                          }
-                        },
-                  borderRadius: BorderRadius.circular(12.0),
-                  child: Padding(
-                    // Add padding inside InkWell
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 12.0, horizontal: 16.0),
-                    child: Row(
-                      children: [
-                        Icon(
-                          isRestDay
-                              ? Icons.hotel_outlined
-                              : Icons.directions_run_outlined, // Changed icons
-                          color: isRestDay
-                              ? colorScheme.onSurfaceVariant.withOpacity(0.6)
-                              : colorScheme.primary,
-                          size: 26,
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(dayTitle,
-                                  style: textTheme.titleMedium
-                                      ?.copyWith(fontWeight: FontWeight.w600)),
-                              Text(
-                                isRestDay
-                                    ? "Rest Day"
-                                    : "${dayExercises!.length} exercise${dayExercises.length == 1 ? '' : 's'}",
-                                style: textTheme.bodyMedium?.copyWith(
-                                    color: colorScheme.onSurfaceVariant),
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (!isRestDay)
-                          Icon(Icons.arrow_forward_ios,
-                              size: 16,
-                              color: colorScheme.onSurfaceVariant
-                                  .withOpacity(0.6)),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-        // No "Generate New Plan" button is shown here if a routine is active and not expired.
-        // User would typically go to profile or settings to manage/request a new plan if desired before expiry.
-        // Or, you could add a small button/icon for "Request New Plan Early".
-        const SizedBox(
-            height: 8), // Add a little space at the bottom of the list
-        Center(
-          child: OutlinedButton.icon(
-            icon: Icon(Icons.refresh, size: 18),
-            label: Text("Refresh Plan"),
-            onPressed: _isGeneratingRoutine ? null : _generateRoutine,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: colorScheme.primary,
-              side: BorderSide(color: colorScheme.primary.withOpacity(0.5)),
-              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            ),
+          )
+        else
+          Card(
+            color: theme.colorScheme.surfaceContainerHighest,
+            child: ListTile(
+              leading: Icon(Icons.weekend_outlined,
+                  color: theme.colorScheme.onSurfaceVariant),
+              title: Text("Rest Day Today!",
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSurfaceVariant)),
+              subtitle: Text(
+                  "Enjoy your recovery, ${widget.user.displayName?.split(' ')[0] ?? 'User'}.",
+                  style: TextStyle(
+                      color: theme.colorScheme.onSurfaceVariant
+                          .withAlpha((0.8 * 255).round()))),
             ),
           ),
+        const SizedBox(height: 20),
+        Text("Full Routine Schedule:",
+            style: Theme.of(context).textTheme.titleLarge),
+        const SizedBox(height: 10),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: WeeklyRoutine.daysOfWeek.length,
+          itemBuilder: (context, index) {
+            final dayKey = WeeklyRoutine.daysOfWeek[index];
+            final exercises =
+                currentRoutine.dailyWorkouts[dayKey.toLowerCase()] ?? [];
+            return RoutineCard(
+              dayKey: dayKey,
+              exercises: exercises,
+              parentRoutine: currentRoutine,
+              isToday: dayKey.toLowerCase() == todayDayKey.toLowerCase(),
+            );
+          },
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
+        Center(
+          child: OutlinedButton.icon(
+            icon: const Icon(Icons.autorenew_outlined),
+            label: const Text("Generate New Routine Variation"),
+            onPressed: () =>
+                _triggerAiRoutineGeneration(onboardingData, currentRoutine),
+            style: OutlinedButton.styleFrom(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                side: BorderSide(color: theme.colorScheme.primary)),
+          ),
+        ),
       ],
     );
+  }
+
+  String capitalize(String s) {
+    if (s.isEmpty) return s;
+    return s[0].toUpperCase() + s.substring(1);
   }
 }

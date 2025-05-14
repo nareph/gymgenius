@@ -59,6 +59,7 @@ build/
 /android/local.properties
 /android/**/GeneratedPluginRegistrant.java
 /android/key.properties
+/android/.cxx/ 
 
 # Fichiers spécifiques à iOS
 /ios/**/*.mode1v3
@@ -115,3 +116,15 @@ Thumbs.db
 
 # Fichiers de build macOS (si développé sur Mac)
 .DS_Store
+
+# Fichiers générés/build
+android/app/.cxx/
+windows/flutter/generated_*
+linux/flutter/generated_*
+macos/Flutter/GeneratedPlugin*
+
+# Logs
+flutter_log.txt
+
+# Firebase exports
+/firebase-data/

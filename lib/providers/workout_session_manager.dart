@@ -1,12 +1,13 @@
 // lib/providers/workout_session_manager.dart
 import 'dart:async';
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
-import 'package:gymgenius/models/routine.dart'; // For RoutineExercise
+import 'package:gymgenius/models/routine.dart';
 
 class LoggedSetData {
-  final int setNumber; // 1-based index for the set
+  final int setNumber;
   final String performedReps;
   final String performedWeightKg;
   final DateTime loggedAt;
@@ -23,16 +24,15 @@ class LoggedSetData {
       'setNumber': setNumber,
       'performedReps': performedReps,
       'performedWeightKg': performedWeightKg,
-      'loggedAt': Timestamp.fromDate(
-          loggedAt), // Convert DateTime to Firestore Timestamp
+      'loggedAt': Timestamp.fromDate(loggedAt), // Good for Firestore
     };
   }
 }
 
 class LoggedExerciseData {
-  final RoutineExercise originalExercise; // The planned exercise details
-  final List<LoggedSetData> loggedSets; // Sets performed by the user
-  bool isCompleted; // Tracks if all sets for this exercise are done
+  final RoutineExercise originalExercise;
+  final List<LoggedSetData> loggedSets;
+  bool isCompleted;
 
   LoggedExerciseData({
     required this.originalExercise,
@@ -40,32 +40,36 @@ class LoggedExerciseData {
     this.isCompleted = false,
   });
 
-  // Returns a new instance with the added set (immutable pattern)
   LoggedExerciseData addSet(LoggedSetData set) {
     return LoggedExerciseData(
       originalExercise: originalExercise,
-      loggedSets: List.from(loggedSets)..add(set), // Create new list
-      isCompleted: isCompleted,
+      loggedSets: List.from(loggedSets)..add(set),
+      isCompleted:
+          isCompleted, // isCompleted status is not changed by just adding a set
     );
   }
 
-  // Returns a new instance with the updated completion status (immutable pattern)
   LoggedExerciseData markAsCompleted(bool completedStatus) {
     return LoggedExerciseData(
       originalExercise: originalExercise,
-      loggedSets: loggedSets,
+      loggedSets: loggedSets, // Keep existing sets
       isCompleted: completedStatus,
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
+      'exerciseId': originalExercise.id,
       'exerciseName': originalExercise.name,
       'targetSets': originalExercise.sets,
       'targetReps': originalExercise.reps,
       'targetWeight': originalExercise.weightSuggestionKg,
       'targetRest': originalExercise.restBetweenSetsSeconds,
       'description': originalExercise.description,
+      'usesWeight': originalExercise.usesWeight,
+      'isTimed': originalExercise.isTimed,
+      if (originalExercise.targetDurationSeconds != null)
+        'targetDurationSeconds': originalExercise.targetDurationSeconds,
       'loggedSets': loggedSets.map((s) => s.toMap()).toList(),
       'isCompleted': isCompleted,
     };
@@ -73,31 +77,45 @@ class LoggedExerciseData {
 }
 
 class WorkoutSessionManager with ChangeNotifier {
-  // Session State
+  // --- Audio Player ---
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  bool _restEndTimeSoundPlayed = false;
+  bool _exerciseTimeUpSoundPlayed = false; // For timed exercises ending in ELS
+
+  // --- Session State ---
   bool _isWorkoutActive = false;
   DateTime? _workoutStartTime;
   Timer? _sessionDurationTimer;
   Duration _currentWorkoutDuration = Duration.zero;
   String _currentWorkoutName = "";
+  String? _currentRoutineId;
+  String? _currentDayKey;
 
-  // Exercise Tracking
+  // --- Exercise Tracking ---
   List<RoutineExercise> _plannedExercises = [];
   List<LoggedExerciseData> _loggedExercisesData = [];
-  int _currentExerciseIndex = -1; // -1 if no exercise selected or before start
+  int _currentExerciseIndex = -1; // Index for current exercise
 
-  // Rest Timer State
+  // --- Rest Timer State ---
   Timer? _restTimer;
   int _restTimeRemainingSeconds = 0;
+  int _currentRestTotalSeconds = 0;
   bool _isResting = false;
 
-  // Current Set Tracking (for the current exercise)
-  int _currentSetIndexForLogging = 0; // 0-based index for the next set to log
+  // --- Current Set Tracking ---
+  // Using a getter for currentSetIndexForLogging is generally more robust
+  int get currentSetIndexForLogging =>
+      currentLoggedExerciseData?.loggedSets.length ?? 0;
+  // int _currentSetIndexForLogging = 0; // If you prefer manual tracking
 
   // --- Getters ---
   bool get isWorkoutActive => _isWorkoutActive;
   Duration get currentWorkoutDuration => _currentWorkoutDuration;
   DateTime? get workoutStartTime => _workoutStartTime;
   String get currentWorkoutName => _currentWorkoutName;
+  String? get currentRoutineId => _currentRoutineId;
+  String? get currentDayKey => _currentDayKey;
+
   List<RoutineExercise> get plannedExercises =>
       List.unmodifiable(_plannedExercises);
   List<LoggedExerciseData> get loggedExercisesData =>
@@ -122,31 +140,52 @@ class WorkoutSessionManager with ChangeNotifier {
 
   bool get isResting => _isResting;
   int get restTimeRemainingSeconds => _restTimeRemainingSeconds;
-  int get currentSetIndexForLogging => _currentSetIndexForLogging; // 0-based
+  int get currentRestTotalSeconds => _currentRestTotalSeconds;
 
-  void startWorkout(List<RoutineExercise> exercisesForSession,
-      {String workoutName = "Workout Session"}) {
-    if (_isWorkoutActive) {
-      print(
-          "MANAGER startWorkout: Workout already active ('$_currentWorkoutName'). To start a new one, end current or use forceStart. Current session continues.");
-      return; // Do not overwrite the active session without explicit UI confirmation.
+  // --- Sound Methods ---
+  Future<void> _playSound(String assetName) async {
+    try {
+      await _audioPlayer.play(AssetSource('sounds/$assetName'));
+      print("MANAGER Played sound: assets/sounds/$assetName");
+    } catch (e) {
+      print("MANAGER Error playing sound 'assets/sounds/$assetName': $e");
     }
-    print("MANAGER startWorkout: Initializing new workout '$workoutName'.");
+  }
+
+  // Public method for ELS to call when its timer for a timed exercise ends
+  Future<void> playExerciseTimeUpSound() async {
+    if (!_exerciseTimeUpSoundPlayed) {
+      await _playSound(
+          'exercise_end.mp3'); // Assuming 'exercise_end.mp3' is for this
+      _exerciseTimeUpSoundPlayed = true;
+    }
+  }
+
+  // Call this from ELS when initializing a new timed set
+  void resetExerciseTimeUpSoundFlag() {
+    _exerciseTimeUpSoundPlayed = false;
+  }
+
+  // --- Workout Lifecycle Methods ---
+  void _startWorkoutInternal(
+    List<RoutineExercise> exercisesForSession, {
+    String workoutName = "Workout Session",
+    String? routineId,
+    String? dayKey,
+  }) {
     _isWorkoutActive = true;
     _workoutStartTime = DateTime.now();
     _currentWorkoutDuration = Duration.zero;
     _currentWorkoutName = workoutName;
+    _currentRoutineId = routineId;
+    _currentDayKey = dayKey;
     _plannedExercises = List.from(exercisesForSession);
     _loggedExercisesData = _plannedExercises
         .map((ex) => LoggedExerciseData(originalExercise: ex))
         .toList();
 
-    if (_plannedExercises.isNotEmpty) {
-      _currentExerciseIndex = 0;
-      _currentSetIndexForLogging = 0;
-    } else {
-      _currentExerciseIndex = -1; // No exercises to start with
-    }
+    _currentExerciseIndex = _plannedExercises.isNotEmpty ? 0 : -1;
+    // _currentSetIndexForLogging = 0; // Getter handles this
 
     _sessionDurationTimer?.cancel();
     _sessionDurationTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -158,179 +197,213 @@ class WorkoutSessionManager with ChangeNotifier {
       notifyListeners();
     });
     print(
-        "MANAGER startWorkout: Workout '$workoutName' started with ${_plannedExercises.length} exercises. currentExerciseIndex: $_currentExerciseIndex.");
-    notifyListeners();
+        "MANAGER: Workout '$workoutName' started. CurrentExIndex: $_currentExerciseIndex. RoutineID: $routineId, DayKey: $dayKey");
   }
 
-  void forceStartNewWorkout(List<RoutineExercise> exercisesForSession,
-      {String workoutName = "Workout Session"}) {
-    print(
-        "MANAGER forceStartNewWorkout: Forcing new workout '$workoutName', resetting previous session if any.");
-    _resetSessionState(); // This will set _isWorkoutActive to false
-    startWorkout(exercisesForSession, workoutName: workoutName);
+  bool startWorkoutIfNoSession(
+    List<RoutineExercise> exercisesForSession, {
+    String workoutName = "Workout Session",
+    String? routineId,
+    String? dayKey,
+  }) {
+    if (_isWorkoutActive) {
+      print(
+          "MANAGER: Workout already active ('$_currentWorkoutName'). Not starting.");
+      return false;
+    }
+    print("MANAGER: Initializing new workout '$workoutName'.");
+    _startWorkoutInternal(exercisesForSession,
+        workoutName: workoutName, routineId: routineId, dayKey: dayKey);
+    notifyListeners();
+    return true;
+  }
+
+  void forceStartNewWorkout(
+    List<RoutineExercise> exercisesForSession, {
+    String workoutName = "Workout Session",
+    String? routineId,
+    String? dayKey,
+  }) {
+    print("MANAGER: Forcing new workout '$workoutName'.");
+    if (_isWorkoutActive) {
+      print("MANAGER: Resetting previous active session.");
+      _resetSessionState(notify: false); // Reset without immediate notify
+    }
+    _startWorkoutInternal(exercisesForSession,
+        workoutName: workoutName, routineId: routineId, dayKey: dayKey);
+    notifyListeners(); // Notify after new state is set
   }
 
   void logSetForCurrentExercise(String reps, String weight) {
-    if (currentExercise == null ||
-        _currentExerciseIndex < 0 ||
-        _currentExerciseIndex >= _loggedExercisesData.length) {
-      print(
-          "MANAGER logSet: Error - No current exercise or index out of bounds. Index: $_currentExerciseIndex");
-      return;
-    }
-    if (_loggedExercisesData[_currentExerciseIndex].isCompleted) {
-      print(
-          "MANAGER logSet: Error - Attempt to log set for already completed exercise: ${currentExercise!.name}");
+    if (currentExercise == null || currentLoggedExerciseData == null) {
+      print("MANAGER logSet: Error - No current exercise data.");
       return;
     }
 
+    // If exercise was marked complete but user logs another set (e.g. "extra set")
+    if (currentLoggedExerciseData!.isCompleted) {
+      print(
+          "MANAGER logSet: Note - Exercise '${currentExercise!.name}' was marked complete. Logging an additional set.");
+    }
+
     final loggedSet = LoggedSetData(
-      setNumber: _currentSetIndexForLogging +
-          1, // UI typically shows 1-based set numbers
+      setNumber: currentLoggedExerciseData!.loggedSets.length + 1,
       performedReps: reps,
       performedWeightKg: weight,
       loggedAt: DateTime.now(),
     );
 
-    final currentLoggedExData = _loggedExercisesData[_currentExerciseIndex];
+    // Update the LoggedExerciseData for the current exercise
     _loggedExercisesData[_currentExerciseIndex] =
-        currentLoggedExData.addSet(loggedSet);
+        currentLoggedExerciseData!.addSet(loggedSet);
+    // _currentSetIndexForLogging++; // No longer needed if using getter for currentSetIndexForLogging
 
     print(
-        "MANAGER logSet: Logged set ${_currentSetIndexForLogging + 1} for ${currentExercise!.name}: Reps $reps, Weight $weight kg");
+        "MANAGER logSet: Logged set ${loggedSet.setNumber} for '${currentExercise!.name}': Reps $reps, Weight $weight kg. Total sets logged: ${_loggedExercisesData[_currentExerciseIndex].loggedSets.length}");
 
-    // Check if all sets for the current exercise are completed
-    if (_loggedExercisesData[_currentExerciseIndex].loggedSets.length >=
-        currentExercise!.sets) {
+    // Check if this set completes the planned number of sets for the exercise
+    // and if the exercise wasn't already marked as complete
+    if (!_loggedExercisesData[_currentExerciseIndex].isCompleted &&
+        _loggedExercisesData[_currentExerciseIndex].loggedSets.length >=
+            currentExercise!.sets) {
       _loggedExercisesData[_currentExerciseIndex] =
           _loggedExercisesData[_currentExerciseIndex].markAsCompleted(true);
       print(
-          "MANAGER logSet: Exercise ${currentExercise!.name} marked as completed.");
-    }
+          "MANAGER logSet: Exercise '${currentExercise!.name}' now marked as completed.");
 
-    if (!_loggedExercisesData[_currentExerciseIndex].isCompleted) {
-      _currentSetIndexForLogging++;
-      print(
-          "MANAGER logSet: Moving to next set index for ${currentExercise!.name}: $_currentSetIndexForLogging");
-      // Automatically start rest timer if applicable
+      // If exercise just got completed, don't start a rest timer for it.
+      // The user will move to the next exercise or end the workout.
+      if (_isResting) {
+        // Cancel any ongoing rest if the exercise completes
+        skipRest();
+      }
+    } else if (!_loggedExercisesData[_currentExerciseIndex].isCompleted) {
+      // If exercise is not yet complete, and more sets might be coming, start rest
       if (currentExercise!.restBetweenSetsSeconds > 0) {
         startRestTimer(currentExercise!.restBetweenSetsSeconds);
       }
     } else {
-      // Exercise just completed, cancel any ongoing rest (e.g., if manually marked complete)
-      _isResting = false;
-      _restTimer?.cancel();
+      // Exercise was already complete or just got completed.
       print(
-          "MANAGER logSet: Exercise ${currentExercise!.name} just completed. Rest cancelled/not started.");
+          "MANAGER logSet: Exercise '${currentExercise!.name}' is complete. No automatic rest initiated from here.");
     }
+
     notifyListeners();
   }
 
   void startRestTimer(int durationSeconds) {
     if (durationSeconds <= 0) return;
-    _restTimer?.cancel();
+    _restTimer?.cancel(); // Cancel any existing timer
     _isResting = true;
+    _currentRestTotalSeconds = durationSeconds;
     _restTimeRemainingSeconds = durationSeconds;
+    _restEndTimeSoundPlayed = false; // Reset sound flag for this rest period
     print(
-        "MANAGER startRestTimer: Starting rest for $durationSeconds seconds for ${currentExercise?.name}.");
+        "MANAGER: Starting rest for $durationSeconds seconds for ${currentExercise?.name}.");
     notifyListeners();
 
     _restTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!_isWorkoutActive || !_isResting) {
-        print(
-            "MANAGER restTimer tick: Workout no longer active or not resting. Cancelling rest timer.");
         timer.cancel();
         _isResting = false;
         _restTimeRemainingSeconds = 0;
-        notifyListeners();
+        notifyListeners(); // Ensure UI updates if rest is prematurely stopped
         return;
       }
+
       if (_restTimeRemainingSeconds > 0) {
         _restTimeRemainingSeconds--;
       } else {
-        _isResting = false;
+        // Timer reached 0
         timer.cancel();
-        print(
-            "MANAGER restTimer tick: Rest finished for ${currentExercise?.name}.");
+        if (_isResting) {
+          // Check if rest finished naturally
+          if (!_restEndTimeSoundPlayed) {
+            _playSound('rest_end.mp3'); // Play rest end sound
+            _restEndTimeSoundPlayed = true;
+          }
+        }
+        _isResting = false;
+        // _currentSetIndexForLogging should naturally be ready for next set after rest
       }
       notifyListeners();
     });
   }
 
   void skipRest() {
-    print("MANAGER skipRest: Skipping rest for ${currentExercise?.name}.");
+    print("MANAGER: Skipping rest for ${currentExercise?.name}.");
     _restTimer?.cancel();
     _isResting = false;
     _restTimeRemainingSeconds = 0;
+    _currentRestTotalSeconds = 0;
+    _restEndTimeSoundPlayed = true; // Ensure sound doesn't play
     notifyListeners();
   }
 
   bool moveToNextExercise() {
-    if (!_isWorkoutActive) {
-      print("MANAGER moveToNextExercise: Workout NOT active. Returning false.");
-      return false;
-    }
+    if (!_isWorkoutActive) return false;
     print(
-        "MANAGER moveToNextExercise: Attempting to move from index $_currentExerciseIndex (${currentExercise?.name})");
+        "MANAGER: Attempting move from index $_currentExerciseIndex (${currentExercise?.name})");
 
-    // Mark current exercise as completed if all sets are done but it wasn't explicitly marked
+    // Mark current as complete if all planned sets are done (safety check)
     if (currentExercise != null &&
         currentLoggedExerciseData != null &&
-        currentLoggedExerciseData!.loggedSets.length >= currentExercise!.sets &&
-        !currentLoggedExerciseData!.isCompleted) {
-      print(
-          "MANAGER moveToNextExercise: Marking current exercise ${currentExercise!.name} as completed before moving.");
+        !currentLoggedExerciseData!.isCompleted &&
+        currentLoggedExerciseData!.loggedSets.length >= currentExercise!.sets) {
       _loggedExercisesData[_currentExerciseIndex] =
           _loggedExercisesData[_currentExerciseIndex].markAsCompleted(true);
+      print(
+          "MANAGER moveToNextExercise: Auto-marked '${currentExercise!.name}' as complete.");
     }
 
-    int nextIndex = -1;
-    // Start searching from the exercise after the current one
-    int searchStartIndex =
-        (_currentExerciseIndex < 0) ? 0 : _currentExerciseIndex + 1;
-    print(
-        "MANAGER moveToNextExercise: Searching for next uncompleted exercise from index $searchStartIndex.");
+    if (_isResting) skipRest(); // Cancel rest if moving
 
-    for (int i = searchStartIndex; i < _plannedExercises.length; i++) {
+    // Find the first uncompleted exercise starting from the beginning
+    int nextIdx = -1;
+    for (int i = 0; i < _plannedExercises.length; i++) {
       if (i < _loggedExercisesData.length &&
           !_loggedExercisesData[i].isCompleted) {
-        nextIndex = i;
+        // If this uncompleted exercise is the current one, we need to look *after* it
+        if (i == _currentExerciseIndex) {
+          continue; // Skip current, look for the *next* uncompleted
+        }
+        nextIdx = i;
         break;
       }
     }
+    // If the loop above didn't find one (e.g. current was the only uncompleted), search specifically after current
+    if (nextIdx == -1 || nextIdx <= _currentExerciseIndex) {
+      nextIdx = -1; // reset
+      for (int i = _currentExerciseIndex + 1;
+          i < _plannedExercises.length;
+          i++) {
+        if (i < _loggedExercisesData.length &&
+            !_loggedExercisesData[i].isCompleted) {
+          nextIdx = i;
+          break;
+        }
+      }
+    }
 
-    if (nextIndex != -1) {
-      _currentExerciseIndex = nextIndex;
-      _currentSetIndexForLogging = _loggedExercisesData[_currentExerciseIndex]
-          .loggedSets
-          .length; // Resume from logged sets
-      _isResting = false; // Cancel any ongoing rest from previous exercise
-      _restTimer?.cancel();
+    if (nextIdx != -1) {
+      _currentExerciseIndex = nextIdx;
+      // _currentSetIndexForLogging = 0; // Getter handles this for the new exercise
+      _exerciseTimeUpSoundPlayed =
+          false; // Reset for new exercise if it's timed
       print(
-          "MANAGER moveToNextExercise: Successfully moved to next exercise: ${_plannedExercises[_currentExerciseIndex].name} (index $_currentExerciseIndex). Next set to log: ${_currentSetIndexForLogging + 1}");
+          "MANAGER: Moved to: ${_plannedExercises[_currentExerciseIndex].name} (index $_currentExerciseIndex). Next set index: $currentSetIndexForLogging");
       notifyListeners();
       return true;
     } else {
-      // No *further* uncompleted exercises found. Check if all are done.
-      bool allDone = _plannedExercises.isNotEmpty &&
-          _loggedExercisesData.every((ex) => ex.isCompleted);
-      if (allDone) {
-        _currentExerciseIndex =
-            _plannedExercises.length; // Sentinel: indicates all exercises done
-        _isResting = false;
-        _restTimer?.cancel();
-        print(
-            "MANAGER moveToNextExercise: All exercises in the session are completed! currentExerciseIndex set to $_currentExerciseIndex");
+      bool allDone = _loggedExercisesData.every((ex) => ex.isCompleted);
+      if (allDone && _plannedExercises.isNotEmpty) {
+        print("MANAGER: All exercises are now completed!");
+        // Optionally, set _currentExerciseIndex = _plannedExercises.length to indicate "past the end"
       } else {
-        // This case might occur if we are on the last exercise and it's not yet completed,
-        // or if there was an issue. The UI should ideally prevent calling moveToNextExercise if not appropriate.
-        if (_currentExerciseIndex < _plannedExercises.length) {
-          print(
-              "MANAGER moveToNextExercise: No *further* uncompleted exercises found. Current index $_currentExerciseIndex is likely the last uncompleted, or all are done and this was called again.");
-        }
+        print("MANAGER: No further uncompleted exercises found.");
       }
       notifyListeners();
-      return false; // No next exercise to move to, or all done
+      return false;
     }
   }
 
@@ -340,80 +413,74 @@ class WorkoutSessionManager with ChangeNotifier {
           "MANAGER selectExercise: Invalid index $index or workout not active.");
       return false;
     }
-    print(
-        "MANAGER selectExercise: Selecting exercise at index $index: ${_plannedExercises[index].name}.");
+    print("MANAGER: Selecting index $index: ${_plannedExercises[index].name}.");
     _currentExerciseIndex = index;
-    _currentSetIndexForLogging = _loggedExercisesData[index]
-        .loggedSets
-        .length; // Next set to log for this exercise
-    _isResting = false; // Cancel rest if user manually navigates
-    _restTimer?.cancel();
+    // _currentSetIndexForLogging = 0; // Getter handles this for selected exercise
+    _exerciseTimeUpSoundPlayed =
+        false; // Reset for selected exercise if it's timed
+    if (_isResting) skipRest();
     notifyListeners();
     return true;
   }
 
   Map<String, dynamic>? endWorkout() {
     if (!_isWorkoutActive) {
-      print("MANAGER endWorkout: Called but workout session NOT active.");
+      print("MANAGER: Workout NOT active. Cannot end.");
       return null;
     }
-    // The debugPrintStack calls were useful for diagnosing issues where _isWorkoutActive
-    // might have been reset unexpectedly. Keeping the log for context.
+    String endedWorkoutName = _currentWorkoutName; // Capture before reset
     print(
-        "MANAGER endWorkout: CALLED. Workout WAS active. Current duration: ${_formatDuration(_currentWorkoutDuration)}. Stack trace for context:");
-    debugPrintStack(maxFrames: 3); // Short stack trace for context
+        "MANAGER: Ending workout '$endedWorkoutName'. Duration: ${_formatDuration(_currentWorkoutDuration)}.");
 
     _sessionDurationTimer?.cancel();
     _restTimer?.cancel();
 
     final Map<String, dynamic> workoutLogData = {
       'workoutName': _currentWorkoutName,
-      'workoutDate': Timestamp.fromDate(_workoutStartTime!),
-      'durationInSeconds': _currentWorkoutDuration.inSeconds,
-      'completedExercises':
+      'routineId': _currentRoutineId,
+      'dayKey': _currentDayKey,
+      'startTime': _workoutStartTime?.toIso8601String(),
+      'endTime': DateTime.now().toIso8601String(),
+      'durationSeconds': _currentWorkoutDuration.inSeconds,
+      'exercises':
           _loggedExercisesData.map((exData) => exData.toMap()).toList(),
-      // Could also add: 'totalPlannedExercises': _plannedExercises.length,
-      // 'actuallyCompletedExercisesCount': _loggedExercisesData.where((e) => e.isCompleted).length,
+      'totalPlannedExercises': _plannedExercises.length,
+      'totalCompletedExercises': completedExercisesCount,
     };
 
-    String summary =
-        "Workout Ended: $_currentWorkoutName. Duration: ${_formatDuration(_currentWorkoutDuration)}. Exercises with logged sets: ${_loggedExercisesData.where((e) => e.loggedSets.isNotEmpty).length}.";
-
-    _resetSessionState(); // This will set _isWorkoutActive to false
-
+    _resetSessionState(notify: false); // Reset state AFTER getting all data
     print(
-        "MANAGER endWorkout: Session ended. Data prepared. isWorkoutActive is now $_isWorkoutActive.");
-    print(summary);
-    notifyListeners(); // Notify listeners after state is fully reset and data prepared
+        "MANAGER: Session '$endedWorkoutName' ended. Log prepared. isWorkoutActive is now $_isWorkoutActive.");
+    notifyListeners(); // Single notify after all state changes
     return workoutLogData;
   }
 
-  void _resetSessionState() {
-    // This method is critical. The debugPrintStack can help if state issues arise (e.g., _isWorkoutActive unexpectedly false).
-    print(
-        "MANAGER _resetSessionState: CALLED! About to set isWorkoutActive to false. Current value: $_isWorkoutActive. Stack trace for context:");
-    debugPrintStack(maxFrames: 3);
-
+  void _resetSessionState({bool notify = true}) {
+    print("MANAGER: Resetting session state.");
     _isWorkoutActive = false;
     _workoutStartTime = null;
     _currentWorkoutDuration = Duration.zero;
     _currentWorkoutName = "";
+    _currentRoutineId = null;
+    _currentDayKey = null;
     _plannedExercises = [];
     _loggedExercisesData = [];
     _currentExerciseIndex = -1;
-    _currentSetIndexForLogging = 0;
+    // _currentSetIndexForLogging = 0;
     _isResting = false;
     _restTimeRemainingSeconds = 0;
+    _currentRestTotalSeconds = 0;
+    _restEndTimeSoundPlayed = false;
+    _exerciseTimeUpSoundPlayed = false;
 
     _sessionDurationTimer?.cancel();
     _sessionDurationTimer = null;
     _restTimer?.cancel();
     _restTimer = null;
-
-    print(
-        "MANAGER _resetSessionState: FINISHED. isWorkoutActive is now $_isWorkoutActive.");
-    // Note: notifyListeners() is not called here directly.
-    // It's usually called by the public method that invoked _resetSessionState (e.g., endWorkout, forceStartNewWorkout).
+    print("MANAGER: Session state reset. isWorkoutActive: $_isWorkoutActive.");
+    if (notify) {
+      notifyListeners();
+    }
   }
 
   String _formatDuration(Duration duration) {
@@ -421,21 +488,16 @@ class WorkoutSessionManager with ChangeNotifier {
     final hours = twoDigits(duration.inHours);
     final minutes = twoDigits(duration.inMinutes.remainder(60));
     final seconds = twoDigits(duration.inSeconds.remainder(60));
-    if (duration.inHours > 0) {
-      return "$hours:$minutes:$seconds";
-    }
+    if (duration.inHours > 0) return "$hours:$minutes:$seconds";
     return "$minutes:$seconds";
   }
 
   @override
   void dispose() {
-    print("MANAGER WorkoutSessionManager: dispose called. Resetting state.");
-    _sessionDurationTimer?.cancel(); // Ensure timers are cancelled
+    print("MANAGER: WorkoutSessionManager dispose called.");
+    _sessionDurationTimer?.cancel();
     _restTimer?.cancel();
-    // _resetSessionState(); // Call reset to clean up all state variables
-    // Actually, dispose should cancel timers and let super.dispose handle listeners.
-    // _resetSessionState might be too much if the manager is simply being disposed by provider.
-    // For safety, explicit timer cancellation is good.
+    _audioPlayer.dispose();
     super.dispose();
   }
 }

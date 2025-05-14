@@ -21,11 +21,7 @@ class AppTheme {
       surface: Colors.grey
           .shade900, // Background color for surfaces like cards, bottom sheets
       onSurface: Colors.white
-          .withOpacity(0.9), // Text/icon color on surface background
-      background: Colors.grey
-          .shade900, // Main background color of the app - consistent with surface
-      onBackground:
-          Colors.white.withOpacity(0.9), // Text/icon color on main background
+          .withOpacity(0.9), // Text/icon color on main background
       error: Colors.redAccent
           .shade400, // Error color (e.g., for error messages, invalid fields)
       onError: Colors.black, // Text/icon color on error background
@@ -239,7 +235,7 @@ class AppTheme {
       textTheme: textTheme, // Apply the adjusted TextTheme
       // fontFamily: _fontFamily, // Apply global font family if defined
       scaffoldBackgroundColor:
-          colorScheme.background, // Use background from colorScheme
+          colorScheme.surface, // Use background from colorScheme
       appBarTheme: appBarTheme,
       elevatedButtonTheme:
           elevatedButtonTheme, // Apply the updated ElevatedButtonTheme

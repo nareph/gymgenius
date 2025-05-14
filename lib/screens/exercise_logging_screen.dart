@@ -1,14 +1,16 @@
 // lib/screens/exercise_logging_screen.dart
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:gymgenius/models/routine.dart'; // For RoutineExercise
-import 'package:gymgenius/providers/workout_session_manager.dart'; // For WorkoutSessionManager, LoggedExerciseData
-import 'package:intl/intl.dart'; // For date formatting (e.g., logged set time)
-import 'package:provider/provider.dart'; // For accessing WorkoutSessionManager
+import 'package:flutter/services.dart'; // Pour TextInputFormatter
+import 'package:gymgenius/models/routine.dart';
+import 'package:gymgenius/providers/workout_session_manager.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 class ExerciseLoggingScreen extends StatefulWidget {
-  final RoutineExercise exercise; // The specific exercise being logged
-  final VoidCallback
-      onExerciseCompleted; // Callback when this exercise is fully logged
+  final RoutineExercise exercise;
+  final VoidCallback onExerciseCompleted;
 
   const ExerciseLoggingScreen({
     super.key,
@@ -20,136 +22,265 @@ class ExerciseLoggingScreen extends StatefulWidget {
   State<ExerciseLoggingScreen> createState() => _ExerciseLoggingScreenState();
 }
 
-class _ExerciseLoggingScreenState extends State<ExerciseLoggingScreen> {
+class _ExerciseLoggingScreenState extends State<ExerciseLoggingScreen>
+    with TickerProviderStateMixin {
   late TextEditingController _repsController;
   late TextEditingController _weightController;
-  bool _isPopping =
-      false; // Flag to prevent multiple pops if state changes rapidly
+  late TextEditingController _durationController;
+
+  bool _isPopping = false;
+
+  Timer? _exerciseTimer;
+  int _currentExerciseRunDownSeconds = 0;
+  int _userSetTargetDurationSeconds = 0;
+  bool _isExerciseTimerRunning = false;
 
   @override
   void initState() {
     super.initState();
     _repsController = TextEditingController();
     _weightController = TextEditingController();
+    _durationController = TextEditingController();
 
-    // Initialize fields after the first frame to ensure manager state is available
+    final manager = Provider.of<WorkoutSessionManager>(context, listen: false);
+
+    if (widget.exercise.isTimed) {
+      if (widget.exercise.targetDurationSeconds != null &&
+          widget.exercise.targetDurationSeconds! > 0) {
+        _userSetTargetDurationSeconds = widget.exercise.targetDurationSeconds!;
+      } else {
+        _userSetTargetDurationSeconds = 30; // Default 30s si non fourni
+      }
+      _durationController.text =
+          _formatDurationForInputDisplay(_userSetTargetDurationSeconds);
+      _currentExerciseRunDownSeconds = _userSetTargetDurationSeconds;
+      manager.resetExerciseTimeUpSoundFlag();
+    }
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return; // Check if widget is still in the tree
-
-      final manager =
-          Provider.of<WorkoutSessionManager>(context, listen: false);
-
-      // Validate if this screen is still relevant for the current exercise in the manager
+      if (!mounted) return;
       if (manager.isWorkoutActive &&
           manager.currentExercise?.id == widget.exercise.id &&
           manager.currentLoggedExerciseData?.originalExercise.id ==
               widget.exercise.id) {
-        // If the exercise is not yet completed, initialize input fields
         if (!(manager.currentLoggedExerciseData?.isCompleted ?? false)) {
           _initializeFieldsForCurrentSet(manager);
         }
-        // If it is completed, the build method will handle showing the "Completed" UI.
       } else if (mounted && !_isPopping && Navigator.canPop(context)) {
-        // If the manager's state doesn't match this screen's exercise, pop back.
-        // This can happen if the workout was ended or changed externally.
-        print(
-            "ExerciseLoggingScreen initState: Manager state mismatch. Popping. Manager Ex: ${manager.currentExercise?.name}, Screen Ex: ${widget.exercise.name}");
         _isPopping = true;
         Navigator.of(context).pop();
       }
     });
   }
 
-  // Initializes the reps and weight input fields based on the current set's suggestions.
-  void _initializeFieldsForCurrentSet(WorkoutSessionManager manager) {
-    final RoutineExercise? exerciseToLogFrom =
-        manager.currentExercise; // Should be non-null if called correctly
-    final LoggedExerciseData? loggedData =
-        manager.currentLoggedExerciseData; // Should be non-null
-
-    if (exerciseToLogFrom == null || loggedData == null) {
-      print(
-          "ExerciseLoggingScreen _initializeFieldsForCurrentSet: exerciseToLogFrom or loggedData is null. Cannot initialize.");
-      return;
-    }
-
-    final int setIndexToLog =
-        manager.currentSetIndexForLogging; // 0-based index of the set to log
-
-    // If exercise is completed or all sets are targeted, clear fields (or handle as completed)
-    if (loggedData.isCompleted || setIndexToLog >= exerciseToLogFrom.sets) {
-      _repsController.text = "";
-      _weightController.text = "";
-      return;
-    }
-
-    // --- Initialize Reps Field ---
-    String repsSuggestion = exerciseToLogFrom.reps.trim();
-    String initialRepsText = "";
-    final RegExp repsRangeRegex =
-        RegExp(r'^(\d+)\s*-\s*\d+'); // e.g., "8-12" -> extracts "8"
-    final RegExp singleRepRegex =
-        RegExp(r'^(\d+)$'); // e.g., "10" -> extracts "10"
-
-    if (repsSuggestion.toLowerCase() == 'amrap' ||
-        repsSuggestion.toLowerCase() == 'to failure' ||
-        repsSuggestion == 'N/A') {
-      initialRepsText = ""; // No specific rep suggestion
-    } else if (repsRangeRegex.hasMatch(repsSuggestion)) {
-      initialRepsText = repsRangeRegex.firstMatch(repsSuggestion)!.group(1)!;
-    } else if (singleRepRegex.hasMatch(repsSuggestion)) {
-      initialRepsText = singleRepRegex.firstMatch(repsSuggestion)!.group(1)!;
-    }
-    _repsController.text = initialRepsText;
-
-    // --- Initialize Weight Field ---
-    String weightSuggestion = exerciseToLogFrom.weightSuggestionKg.trim();
-    String initialWeightText = "";
-    if (weightSuggestion.toLowerCase() == 'bodyweight' ||
-        weightSuggestion.toLowerCase() == 'bw' ||
-        weightSuggestion == 'N/A' ||
-        weightSuggestion.isEmpty) {
-      initialWeightText =
-          ""; // For bodyweight or no suggestion, leave field empty (implies 0 or user input)
-    } else {
-      // Try to extract a number, with or without "kg" at the end
-      final RegExp weightRegex =
-          RegExp(r'^(\d+(\.\d+)?)\s*(kg)?$', caseSensitive: false);
-      final match = weightRegex.firstMatch(weightSuggestion);
-      if (match != null) {
-        initialWeightText = match.group(1)!; // Takes the numeric part
-      }
-      // If not N/A, empty, or a number (with optional kg), initialWeightText remains ""
-    }
-    _weightController.text = initialWeightText;
+  String _formatDurationForInputDisplay(int totalSeconds) {
+    if (totalSeconds <= 0) return "00:00";
+    final minutes = (totalSeconds ~/ 60);
+    final seconds = (totalSeconds % 60);
+    return "${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}";
   }
 
-  // Handles logging the current set's performance.
+  int _parseDurationFromInput(String input) {
+    if (input.isEmpty) return 0;
+    final parts = input.split(':');
+    if (parts.length == 2) {
+      final minutes = int.tryParse(parts[0]) ?? 0;
+      final seconds = int.tryParse(parts[1]) ?? 0;
+      if (seconds < 0 || seconds > 59 || minutes < 0) return 0;
+      return (minutes * 60) + seconds;
+    } else if (parts.length == 1) {
+      final seconds = int.tryParse(parts[0]) ?? 0;
+      return (seconds >= 0) ? seconds : 0;
+    }
+    return 0;
+  }
+
+  void _initializeFieldsForCurrentSet(WorkoutSessionManager manager) {
+    final RoutineExercise? exerciseToLogFrom = manager.currentExercise;
+    final LoggedExerciseData? loggedData = manager.currentLoggedExerciseData;
+
+    if (exerciseToLogFrom == null || loggedData == null) return;
+
+    if (loggedData.isCompleted ||
+        manager.currentSetIndexForLogging >= exerciseToLogFrom.sets) {
+      _repsController.text = "";
+      _weightController.text = "";
+      if (exerciseToLogFrom.isTimed) {
+        _userSetTargetDurationSeconds = (exerciseToLogFrom
+                        .targetDurationSeconds !=
+                    null &&
+                exerciseToLogFrom.targetDurationSeconds! > 0)
+            ? exerciseToLogFrom.targetDurationSeconds!
+            : _userSetTargetDurationSeconds > 0
+                ? _userSetTargetDurationSeconds
+                : 30; // Conserve la dernière valeur utilisateur si valide, sinon défaut
+        _durationController.text =
+            _formatDurationForInputDisplay(_userSetTargetDurationSeconds);
+        _currentExerciseRunDownSeconds = _userSetTargetDurationSeconds;
+        _isExerciseTimerRunning = false;
+      } else {
+        _durationController.text = "";
+      }
+      if (mounted) setState(() {});
+      return;
+    }
+
+    if (exerciseToLogFrom.isTimed) {
+      manager.resetExerciseTimeUpSoundFlag();
+      // Conserve la valeur de _userSetTargetDurationSeconds (potentiellement modifiée par l'utilisateur)
+      // pour le prochain set, ou réinitialise si c'est le tout premier set pour cet exercice dans cet écran.
+      if (manager.currentSetIndexForLogging == 0 &&
+          loggedData.loggedSets.isEmpty) {
+        _userSetTargetDurationSeconds =
+            (exerciseToLogFrom.targetDurationSeconds != null &&
+                    exerciseToLogFrom.targetDurationSeconds! > 0)
+                ? exerciseToLogFrom.targetDurationSeconds!
+                : _userSetTargetDurationSeconds > 0
+                    ? _userSetTargetDurationSeconds
+                    : 30;
+      } // Sinon, _userSetTargetDurationSeconds conserve sa valeur potentiellement modifiée.
+
+      _durationController.text =
+          _formatDurationForInputDisplay(_userSetTargetDurationSeconds);
+      _currentExerciseRunDownSeconds = _userSetTargetDurationSeconds;
+      _isExerciseTimerRunning = false;
+      _repsController.text = "";
+      _weightController.text = "";
+    } else {
+      String repsSuggestion = exerciseToLogFrom.reps.trim();
+      String initialRepsText = "";
+      final RegExp repsRangeRegex = RegExp(r'^(\d+)\s*-\s*\d+');
+      final RegExp singleRepRegex = RegExp(r'^(\d+)$');
+      if (repsSuggestion.toLowerCase() == 'amrap' ||
+          repsSuggestion.toLowerCase() == 'to failure' ||
+          repsSuggestion == 'N/A') {
+        initialRepsText = "";
+      } else if (repsRangeRegex.hasMatch(repsSuggestion)) {
+        initialRepsText = repsRangeRegex.firstMatch(repsSuggestion)!.group(1)!;
+      } else if (singleRepRegex.hasMatch(repsSuggestion)) {
+        initialRepsText = singleRepRegex.firstMatch(repsSuggestion)!.group(1)!;
+      }
+      _repsController.text = initialRepsText;
+
+      if (exerciseToLogFrom.usesWeight) {
+        String weightSuggestion = exerciseToLogFrom.weightSuggestionKg.trim();
+        String initialWeightText = "";
+        if (weightSuggestion.toLowerCase() == 'bodyweight' ||
+            weightSuggestion.toLowerCase() == 'bw' ||
+            weightSuggestion == 'N/A' ||
+            weightSuggestion.isEmpty) {
+          initialWeightText = "";
+        } else {
+          final RegExp weightRegex =
+              RegExp(r'^(\d+(\.\d+)?)\s*(kg)?$', caseSensitive: false);
+          final match = weightRegex.firstMatch(weightSuggestion);
+          if (match != null) {
+            initialWeightText = match.group(1)!;
+          }
+        }
+        _weightController.text = initialWeightText;
+      } else {
+        _weightController.text = "";
+      }
+      _durationController.text = "";
+    }
+    if (mounted) setState(() {});
+  }
+
+  void _startOrStopExerciseTimer(WorkoutSessionManager manager) {
+    if (!widget.exercise.isTimed) return;
+    FocusScope.of(context).unfocus();
+
+    if (_isExerciseTimerRunning) {
+      _exerciseTimer?.cancel();
+      _isExerciseTimerRunning = false;
+
+      int durationPerformed =
+          _userSetTargetDurationSeconds - _currentExerciseRunDownSeconds;
+      if (durationPerformed < 0) durationPerformed = 0;
+
+      if (mounted) {
+        setState(() {});
+      }
+
+      print(
+          "ELS: Timer arrêté par l'utilisateur. Durée effectuée: $durationPerformed secondes. Cible initiale du set: $_userSetTargetDurationSeconds");
+      manager.logSetForCurrentExercise(durationPerformed.toString(), "0");
+
+      if (mounted &&
+          !(manager.currentLoggedExerciseData?.isCompleted ?? true) &&
+          !manager.isResting) {
+        _initializeFieldsForCurrentSet(manager);
+      }
+    } else {
+      final int newTargetDurationFromInput =
+          _parseDurationFromInput(_durationController.text);
+
+      if (newTargetDurationFromInput <= 0) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text(
+                  "Please enter a valid target duration (e.g., 00:30 for 30s).")));
+        }
+        return;
+      }
+      _userSetTargetDurationSeconds = newTargetDurationFromInput;
+      _currentExerciseRunDownSeconds = _userSetTargetDurationSeconds;
+      _isExerciseTimerRunning = true;
+      manager.resetExerciseTimeUpSoundFlag();
+      if (mounted) setState(() {});
+
+      _exerciseTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        if (!mounted) {
+          timer.cancel();
+          _isExerciseTimerRunning = false;
+          return;
+        }
+        if (_currentExerciseRunDownSeconds > 0) {
+          if (mounted) setState(() => _currentExerciseRunDownSeconds--);
+        } else {
+          _exerciseTimer?.cancel();
+          _isExerciseTimerRunning = false;
+          manager.playExerciseTimeUpSound();
+          if (mounted) setState(() {});
+
+          print(
+              "ELS: Timer terminé (temps écoulé). Log de la durée cible: $_userSetTargetDurationSeconds s.");
+          manager.logSetForCurrentExercise(
+              _userSetTargetDurationSeconds.toString(), "0");
+
+          if (mounted &&
+              !(manager.currentLoggedExerciseData?.isCompleted ?? true) &&
+              !manager.isResting) {
+            _initializeFieldsForCurrentSet(manager);
+          }
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                content: Text("Time's up! Set logged."),
+                backgroundColor: Colors.green,
+                behavior: SnackBarBehavior.floating));
+          }
+        }
+      });
+    }
+  }
+
   void _handleLogSet(WorkoutSessionManager manager) {
-    if (!mounted || _isPopping)
-      return; // Prevent action if widget is disposed or already popping
+    if (!mounted || _isPopping) return;
+    FocusScope.of(context).unfocus();
+
+    if (widget.exercise.isTimed) {
+      print(
+          "ELS _handleLogSet: Should not be called for timed exercise. Use _startOrStopExerciseTimer.");
+      return;
+    }
 
     final LoggedExerciseData? currentLogData =
         manager.currentLoggedExerciseData;
-    // Double-check manager state consistency before proceeding
     if (manager.currentExercise == null ||
         currentLogData == null ||
         manager.currentExercise!.id != widget.exercise.id ||
         currentLogData.originalExercise.id != widget.exercise.id) {
-      print(
-          "ExerciseLoggingScreen _handleLogSet: Manager state mismatch. Popping. Manager Ex: ${manager.currentExercise?.name}, Screen Ex: ${widget.exercise.name}");
-      if (mounted && !_isPopping && Navigator.canPop(context)) {
-        _isPopping = true;
-        Navigator.of(context).pop();
-      }
-      return;
-    }
-
-    // If the exercise is already marked as completed by the manager, pop back
-    if (currentLogData.isCompleted) {
-      print(
-          "ExerciseLoggingScreen _handleLogSet: Exercise already completed by manager. Popping.");
-      widget.onExerciseCompleted(); // Notify parent
       if (mounted && !_isPopping && Navigator.canPop(context)) {
         _isPopping = true;
         Navigator.of(context).pop();
@@ -159,59 +290,55 @@ class _ExerciseLoggingScreenState extends State<ExerciseLoggingScreen> {
 
     final String reps = _repsController.text.trim();
     final String weightInput = _weightController.text.trim();
-    String weightToLog = "0"; // Default to "0" if weight input is empty
+    String weightToLog = "0";
 
-    // Validate reps
-    if (reps.isEmpty || int.tryParse(reps) == null || int.parse(reps) <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: const Text("Please enter a valid number of reps (> 0)."),
-        backgroundColor: Theme.of(context).colorScheme.error,
-        behavior: SnackBarBehavior.floating,
-      ));
+    if (reps.isEmpty || int.tryParse(reps) == null || int.parse(reps) < 0) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: const Text("Please enter valid reps (>= 0)."),
+            backgroundColor: Theme.of(context).colorScheme.error));
+      }
       return;
     }
 
-    // Validate and parse weight
-    if (weightInput.isNotEmpty) {
-      if (double.tryParse(weightInput) != null &&
-          double.parse(weightInput) >= 0) {
-        weightToLog = double.parse(weightInput)
-            .toString(); // Standardize numeric format (e.g., "50.0" or "50")
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: const Text(
-              "Weight must be a valid number (e.g., 10 or 10.5) or empty for 0kg."),
-          backgroundColor: Theme.of(context).colorScheme.error,
-          behavior: SnackBarBehavior.floating,
-        ));
-        return;
+    if (widget.exercise.usesWeight) {
+      if (weightInput.isNotEmpty) {
+        if (double.tryParse(weightInput) != null &&
+            double.parse(weightInput) >= 0) {
+          weightToLog = double.parse(weightInput).toStringAsFixed(2);
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: const Text(
+                    "Weight must be a valid number or empty for 0kg."),
+                backgroundColor: Theme.of(context).colorScheme.error));
+          }
+          return;
+        }
       }
+    } else {
+      weightToLog = "N/A";
     }
 
-    print(
-        "ExerciseLoggingScreen _handleLogSet: Logging set - Reps: $reps, Weight: $weightToLog kg for ${manager.currentExercise?.name}");
-    manager.logSetForCurrentExercise(
-        reps, weightToLog); // This updates the manager's state
+    manager.logSetForCurrentExercise(reps, weightToLog);
 
-    // If the exercise is NOT completed after this set AND not currently resting, re-initialize fields for the next set.
-    // The manager.logSetForCurrentExercise method handles starting rest if applicable.
     if (mounted &&
         !(manager.currentLoggedExerciseData?.isCompleted ?? true) &&
         !manager.isResting) {
       _initializeFieldsForCurrentSet(manager);
     }
-    // If exercise is completed or rest started, the Consumer in build() will update UI.
   }
 
   @override
   void dispose() {
     _repsController.dispose();
     _weightController.dispose();
+    _durationController.dispose();
+    _exerciseTimer?.cancel();
     super.dispose();
   }
 
-  // Formats rest time from seconds to MM:SS.
-  String _formatRestTime(int totalSeconds) {
+  String _formatDurationForTimerDisplay(int totalSeconds) {
     final minutes = (totalSeconds ~/ 60).toString().padLeft(2, '0');
     final seconds = (totalSeconds % 60).toString().padLeft(2, '0');
     return "$minutes:$seconds";
@@ -222,7 +349,6 @@ class _ExerciseLoggingScreenState extends State<ExerciseLoggingScreen> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    // Consumer to react to WorkoutSessionManager state changes
     return Consumer<WorkoutSessionManager>(
       builder: (consumerContext, manager, child) {
         final RoutineExercise? currentRoutineExFromManager =
@@ -230,55 +356,40 @@ class _ExerciseLoggingScreenState extends State<ExerciseLoggingScreen> {
         final LoggedExerciseData? currentLoggedDataFromManager =
             manager.currentLoggedExerciseData;
 
-        // If _isPopping is true, show a loading indicator to prevent UI flicker during pop.
         if (_isPopping) {
           return Scaffold(
-              appBar: AppBar(
-                  title: Text(widget
-                      .exercise.name)), // Show exercise name while popping
+              appBar: AppBar(title: Text(widget.exercise.name)),
               body: const Center(child: CircularProgressIndicator()));
         }
 
-        // Safety check: If manager state is inconsistent with this screen, schedule a pop.
-        // This is a fallback for edge cases.
         if (!manager.isWorkoutActive ||
             currentRoutineExFromManager == null ||
             currentLoggedDataFromManager == null ||
             currentRoutineExFromManager.id != widget.exercise.id ||
             currentLoggedDataFromManager.originalExercise.id !=
                 widget.exercise.id) {
-          print(
-              "ExerciseLoggingScreen Consumer build: Manager state mismatch or workout inactive. Scheduling pop. Manager Ex: ${currentRoutineExFromManager?.name}, Screen Ex: ${widget.exercise.name}");
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted && Navigator.canPop(consumerContext) && !_isPopping) {
-              // Check if this screen is still the current route before popping
               if (ModalRoute.of(consumerContext)?.isCurrent ?? false) {
-                print(
-                    "ExerciseLoggingScreen Consumer build (callback): Popping due to state mismatch.");
                 _isPopping = true;
                 Navigator.pop(consumerContext);
               }
             }
           });
-          // Show a temporary placeholder UI while popping
           return Scaffold(
               appBar: AppBar(title: Text(widget.exercise.name)),
-              body: const Center(child: Text("Session updated, returning...")));
+              body: const Center(child: Text("Finalizing exercise...")));
         }
 
-        // At this point, manager state is consistent with widget.exercise
         final RoutineExercise exerciseToDisplay = currentRoutineExFromManager;
         final LoggedExerciseData loggedDataForThisExercise =
             currentLoggedDataFromManager;
-
         final int totalSetsInPlan = exerciseToDisplay.sets;
         final bool isThisExerciseCompletedByManager =
             loggedDataForThisExercise.isCompleted;
-        // currentSetIndexForLogging is 0-based for the *next* set to be logged.
         final int setBeingLoggedDisplayNumber =
             manager.currentSetIndexForLogging + 1;
 
-        // --- UI for Completed Exercise ---
         if (isThisExerciseCompletedByManager) {
           return Scaffold(
             appBar: AppBar(
@@ -288,79 +399,100 @@ class _ExerciseLoggingScreenState extends State<ExerciseLoggingScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(20.0),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.check_circle_outline_rounded,
-                        size: 80, color: Colors.green.shade600),
-                    const SizedBox(height: 24),
-                    Text("${exerciseToDisplay.name} Complete!",
-                        style: theme.textTheme.headlineSmall
-                            ?.copyWith(fontWeight: FontWeight.bold),
-                        textAlign: TextAlign.center),
-                    const SizedBox(height: 10),
-                    Text(
-                        "${loggedDataForThisExercise.loggedSets.length} / $totalSetsInPlan sets logged.",
-                        style: theme.textTheme.titleMedium?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant)),
-                    const SizedBox(height: 36),
-                    ElevatedButton.icon(
-                      icon:
-                          const Icon(Icons.arrow_forward_ios_rounded, size: 18),
-                      label: const Text("Continue Workout"),
-                      onPressed: () {
-                        widget.onExerciseCompleted(); // Call the callback
-                        if (mounted &&
-                            Navigator.canPop(consumerContext) &&
-                            !_isPopping) {
-                          print(
-                              "ExerciseLoggingScreen Completed UI: Popping after exercise completion.");
-                          _isPopping = true;
-                          Navigator.pop(consumerContext);
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green.shade700,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 32, vertical: 14),
-                          textStyle: theme.textTheme.labelLarge
-                              ?.copyWith(fontWeight: FontWeight.bold)),
-                    ),
-                  ],
-                ),
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.check_circle_outline_rounded,
+                          size: 80, color: Colors.green.shade600),
+                      const SizedBox(height: 24),
+                      Text("${exerciseToDisplay.name} Complete!",
+                          style: theme.textTheme.headlineSmall
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                          textAlign: TextAlign.center),
+                      const SizedBox(height: 10),
+                      Text(
+                          "${loggedDataForThisExercise.loggedSets.length} / $totalSetsInPlan sets logged.",
+                          style: theme.textTheme.titleMedium?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant)),
+                      const SizedBox(height: 36),
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.arrow_forward_ios_rounded,
+                            size: 18),
+                        label: const Text("Continue Workout"),
+                        onPressed: () {
+                          widget.onExerciseCompleted();
+                          if (mounted &&
+                              Navigator.canPop(consumerContext) &&
+                              !_isPopping) {
+                            _isPopping = true;
+                            Navigator.pop(consumerContext);
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green.shade700,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 32, vertical: 14),
+                            textStyle: theme.textTheme.labelLarge
+                                ?.copyWith(fontWeight: FontWeight.bold)),
+                      ),
+                    ]),
               ),
             ),
           );
         }
 
-        // --- UI for Logging Current Set or Resting ---
         return Scaffold(
           appBar: AppBar(
             title: Text(exerciseToDisplay.name),
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
               onPressed: () {
-                // Manually handle back press
-                if (mounted &&
-                    Navigator.canPop(consumerContext) &&
-                    !_isPopping) {
-                  print(
-                      "ExerciseLoggingScreen AppBar: Back button pressed. Popping.");
-                  _isPopping = true;
-                  Navigator.pop(consumerContext);
+                if (_isExerciseTimerRunning) {
+                  showDialog(
+                      context: consumerContext,
+                      builder: (dialogCtx) => AlertDialog(
+                            title: const Text("Timer Running"),
+                            content: const Text(
+                                "A timer is active. Are you sure you want to go back? The current timed set won't be logged automatically if you stop it now."),
+                            actions: [
+                              TextButton(
+                                  child: const Text("Cancel"),
+                                  onPressed: () => Navigator.pop(dialogCtx)),
+                              TextButton(
+                                  child: Text("Go Back",
+                                      style: TextStyle(
+                                          color: theme.colorScheme.error)),
+                                  onPressed: () {
+                                    Navigator.pop(dialogCtx);
+                                    _exerciseTimer?.cancel();
+                                    _isExerciseTimerRunning = false;
+                                    if (mounted &&
+                                        Navigator.canPop(consumerContext) &&
+                                        !_isPopping) {
+                                      _isPopping = true;
+                                      Navigator.pop(consumerContext);
+                                    }
+                                  }),
+                            ],
+                          ));
+                } else {
+                  if (mounted &&
+                      Navigator.canPop(consumerContext) &&
+                      !_isPopping) {
+                    _isPopping = true;
+                    Navigator.pop(consumerContext);
+                  }
                 }
               },
             ),
           ),
           body: GestureDetector(
-            // To dismiss keyboard on tap outside fields
             onTap: () => FocusScope.of(consumerContext).unfocus(),
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // --- Exercise Info Card ---
                   Card(
                     elevation: 1.5,
                     margin: const EdgeInsets.only(bottom: 20),
@@ -369,177 +501,314 @@ class _ExerciseLoggingScreenState extends State<ExerciseLoggingScreen> {
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Text(
-                            setBeingLoggedDisplayNumber <= totalSetsInPlan
-                                ? "Set $setBeingLoggedDisplayNumber of $totalSetsInPlan"
-                                : "All $totalSetsInPlan sets targeted", // Should be caught by 'isCompleted' earlier
-                            style: theme.textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: colorScheme.primary),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            "Target: ${exerciseToDisplay.reps} @ ${exerciseToDisplay.weightSuggestionKg}",
-                            style: theme.textTheme.titleSmall
-                                ?.copyWith(color: colorScheme.onSurfaceVariant),
-                            textAlign: TextAlign.center,
-                          ),
-                          if (exerciseToDisplay.restBetweenSetsSeconds > 0 &&
-                              loggedDataForThisExercise.loggedSets.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 6.0),
-                              child: Text(
-                                "(Rest after set: ${exerciseToDisplay.restBetweenSetsSeconds} sec)",
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                    color: theme.colorScheme.outline),
-                                textAlign: TextAlign.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Center(
+                              child: Column(
+                                children: [
+                                  Text(
+                                    setBeingLoggedDisplayNumber <=
+                                            totalSetsInPlan
+                                        ? "Set $setBeingLoggedDisplayNumber of $totalSetsInPlan"
+                                        : "Logging Extra Set (Beyond $totalSetsInPlan planned)",
+                                    style: theme.textTheme.headlineSmall
+                                        ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color: colorScheme.primary),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    exerciseToDisplay.isTimed
+                                        ? "Target Duration: ${_formatDurationForInputDisplay(_userSetTargetDurationSeconds)}"
+                                        : "Target: ${exerciseToDisplay.reps} ${exerciseToDisplay.usesWeight && exerciseToDisplay.weightSuggestionKg.isNotEmpty && exerciseToDisplay.weightSuggestionKg.toLowerCase() != 'n/a' ? '@ ${exerciseToDisplay.weightSuggestionKg}' : ''}",
+                                    style: theme.textTheme.titleSmall?.copyWith(
+                                        color: colorScheme.onSurfaceVariant),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  if (exerciseToDisplay.restBetweenSetsSeconds >
+                                          0 &&
+                                      loggedDataForThisExercise
+                                          .loggedSets.isNotEmpty &&
+                                      setBeingLoggedDisplayNumber <=
+                                          totalSetsInPlan)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 6.0),
+                                      child: Text(
+                                          "(Rest after set: ${exerciseToDisplay.restBetweenSetsSeconds} sec)",
+                                          style: theme.textTheme.bodySmall
+                                              ?.copyWith(
+                                                  color: theme
+                                                      .colorScheme.outline)),
+                                    ),
+                                ],
                               ),
                             ),
-                          if (exerciseToDisplay.description.isNotEmpty) ...[
-                            const SizedBox(height: 12),
-                            Divider(
-                                color: colorScheme.outlineVariant
-                                    .withOpacity(0.5)),
-                            const SizedBox(height: 8),
-                            Text("Notes:",
-                                style: theme.textTheme.titleSmall
-                                    ?.copyWith(fontWeight: FontWeight.w600)),
-                            const SizedBox(height: 4),
-                            Text(exerciseToDisplay.description,
-                                style: theme.textTheme.bodyMedium,
-                                textAlign: TextAlign.start),
-                          ]
-                        ],
-                      ),
+                            if (exerciseToDisplay.description.isNotEmpty) ...[
+                              const SizedBox(height: 16),
+                              Divider(
+                                  color: colorScheme.outlineVariant
+                                      .withAlpha(100)),
+                              const SizedBox(height: 12),
+                              Text("How to Perform:",
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: colorScheme.onSurfaceVariant)),
+                              const SizedBox(height: 8),
+                              Text(
+                                exerciseToDisplay.description,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  height: 1.5,
+                                  color: colorScheme.onSurface,
+                                ),
+                                textAlign: TextAlign.start,
+                              ),
+                              const SizedBox(height: 16),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 10),
+                                decoration: BoxDecoration(
+                                    color: colorScheme.surfaceContainerLowest,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                        color: colorScheme.outline
+                                            .withOpacity(0.3))),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Icon(Icons.ondemand_video_outlined,
+                                        size: 20, color: colorScheme.secondary),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        "Tip: For a visual guide on how to perform \"${exerciseToDisplay.name}\" correctly, search for videos online. Proper form is key to maximize results and prevent injuries.",
+                                        style: theme.textTheme.bodySmall
+                                            ?.copyWith(
+                                                color: colorScheme
+                                                    .onSurfaceVariant,
+                                                fontStyle: FontStyle.normal,
+                                                height: 1.3),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                            ]
+                          ]),
                     ),
                   ),
-
-                  // --- Rest Timer UI ---
                   if (manager.isResting)
                     Card(
                       elevation: 2,
                       margin: const EdgeInsets.symmetric(vertical: 10.0),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
-                      color: colorScheme
-                          .surfaceContainerHighest, // A distinct background for rest
+                      color: colorScheme.surfaceContainerHighest,
                       child: Padding(
                         padding: const EdgeInsets.all(20.0),
-                        child: Column(
-                          children: [
-                            Text("REST",
-                                style: theme.textTheme.headlineSmall?.copyWith(
-                                    color: colorScheme.primary,
-                                    fontWeight: FontWeight.bold)),
-                            const SizedBox(height: 12),
-                            Text(
-                              _formatRestTime(manager.restTimeRemainingSeconds),
+                        child: Column(children: [
+                          Text("REST",
+                              style: theme.textTheme.headlineSmall?.copyWith(
+                                  color: colorScheme.primary,
+                                  fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 12),
+                          Text(
+                              _formatDurationForTimerDisplay(
+                                  manager.restTimeRemainingSeconds),
                               style: theme.textTheme.displaySmall?.copyWith(
                                   fontWeight: FontWeight.bold,
-                                  color: colorScheme.primary),
-                            ),
-                            const SizedBox(height: 16),
-                            if (exerciseToDisplay.restBetweenSetsSeconds > 0)
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 20.0),
-                                child: LinearProgressIndicator(
-                                  value: (exerciseToDisplay
-                                              .restBetweenSetsSeconds >
-                                          0)
-                                      ? (manager.restTimeRemainingSeconds /
-                                          exerciseToDisplay
-                                              .restBetweenSetsSeconds)
-                                      : 0,
-                                  minHeight: 12,
-                                  borderRadius: BorderRadius.circular(6),
-                                  backgroundColor: colorScheme.surfaceVariant,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                      colorScheme.primary),
-                                ),
+                                  color: colorScheme.primary)),
+                          const SizedBox(height: 16),
+                          if (manager.currentRestTotalSeconds > 0)
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 20.0),
+                              child: LinearProgressIndicator(
+                                value: (manager.currentRestTotalSeconds > 0)
+                                    ? (manager.restTimeRemainingSeconds /
+                                        manager.currentRestTotalSeconds)
+                                    : 0,
+                                minHeight: 12,
+                                borderRadius: BorderRadius.circular(6),
+                                backgroundColor:
+                                    colorScheme.surfaceContainerHighest,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                    colorScheme.primary),
                               ),
-                            const SizedBox(height: 20),
-                            TextButton(
+                            ),
+                          const SizedBox(height: 20),
+                          TextButton(
                               onPressed: manager.skipRest,
                               child: Text("Skip Rest",
                                   style: TextStyle(
                                       color: colorScheme.primary,
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 16)),
-                            ),
-                          ],
-                        ),
+                                      fontSize: 16))),
+                        ]),
                       ),
                     ),
-
-                  // --- Input Fields and Log Button (if not resting and sets remaining) ---
                   if (!manager.isResting &&
-                      setBeingLoggedDisplayNumber <= totalSetsInPlan) ...[
+                      (setBeingLoggedDisplayNumber <= totalSetsInPlan ||
+                          !exerciseToDisplay.isTimed)) ...[
                     const SizedBox(height: 10),
-                    TextFormField(
-                      // Changed to TextFormField for consistency and validation potential
-                      controller: _weightController,
-                      decoration: InputDecoration(
-                        labelText: "Weight (kg)",
-                        hintText: exerciseToDisplay.weightSuggestionKg
+                    if (exerciseToDisplay.isTimed) ...[
+                      TextFormField(
+                        controller: _durationController,
+                        decoration: InputDecoration(
+                          labelText: "Set Target Duration (MM:SS)",
+                          hintText: "e.g., 00:30 or 1:15",
+                          isDense: true,
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          prefixIcon: Icon(Icons.timer_outlined,
+                              color: colorScheme.primary),
+                        ),
+                        keyboardType: TextInputType.datetime,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(RegExp(r'[0-9:]')),
+                          _TimeTextInputFormatter(),
+                        ],
+                        enabled: !_isExerciseTimerRunning,
+                        onChanged: (value) {
+                          if (!_isExerciseTimerRunning) {
+                            final newDuration = _parseDurationFromInput(value);
+                            setState(() {
+                              _currentExerciseRunDownSeconds = (newDuration > 0)
+                                  ? newDuration
+                                  : _userSetTargetDurationSeconds;
+                            });
+                          }
+                        },
+                        onEditingComplete: () {
+                          if (!_isExerciseTimerRunning) {
+                            final newDuration = _parseDurationFromInput(
+                                _durationController.text);
+                            if (newDuration > 0) {
+                              setState(() {
+                                _userSetTargetDurationSeconds = newDuration;
+                                _currentExerciseRunDownSeconds =
+                                    _userSetTargetDurationSeconds;
+                              });
+                            } else {
+                              _durationController.text =
+                                  _formatDurationForInputDisplay(
+                                      _userSetTargetDurationSeconds);
+                            }
+                          }
+                          FocusScope.of(context).unfocus();
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                          _formatDurationForTimerDisplay(
+                              _currentExerciseRunDownSeconds),
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.displayMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: _isExerciseTimerRunning
+                                  ? colorScheme.primary
+                                  : colorScheme.onSurfaceVariant)),
+                      const SizedBox(height: 12),
+                      if (_userSetTargetDurationSeconds > 0 &&
+                          _isExerciseTimerRunning)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 30.0),
+                          child: LinearProgressIndicator(
+                              value: (_userSetTargetDurationSeconds -
+                                      _currentExerciseRunDownSeconds) /
+                                  _userSetTargetDurationSeconds,
+                              minHeight: 10,
+                              borderRadius: BorderRadius.circular(5),
+                              backgroundColor:
+                                  colorScheme.surfaceContainerHighest,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                  colorScheme.primary)),
+                        ),
+                      const SizedBox(height: 24),
+                      ElevatedButton.icon(
+                        icon: Icon(
+                            _isExerciseTimerRunning
+                                ? Icons.stop_circle_outlined
+                                : Icons.play_circle_outline,
+                            size: 22),
+                        label: Text(_isExerciseTimerRunning
+                            ? "Stop & Log Time"
+                            : "Start Timer"),
+                        onPressed: () => _startOrStopExerciseTimer(manager),
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: _isExerciseTimerRunning
+                                ? colorScheme.error
+                                : colorScheme.primary,
+                            foregroundColor: _isExerciseTimerRunning
+                                ? colorScheme.onError
+                                : colorScheme.onPrimary,
+                            minimumSize: const Size(double.infinity, 52),
+                            textStyle: theme.textTheme.labelLarge
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12))),
+                      ),
+                    ] else ...[
+                      if (exerciseToDisplay.usesWeight) ...[
+                        TextFormField(
+                            controller: _weightController,
+                            decoration: InputDecoration(
+                                labelText: "Weight (kg)",
+                                hintText: exerciseToDisplay.weightSuggestionKg
+                                                .replaceAll('kg', '')
+                                                .trim() ==
+                                            'N/A' ||
+                                        exerciseToDisplay.weightSuggestionKg
+                                            .trim()
+                                            .isEmpty
+                                    ? "e.g., 50 or 50.5"
+                                    : exerciseToDisplay.weightSuggestionKg
                                         .replaceAll('kg', '')
-                                        .trim() ==
-                                    'N/A' ||
-                                exerciseToDisplay.weightSuggestionKg
-                                    .trim()
-                                    .isEmpty
-                            ? "e.g., 50 or 50.5"
-                            : exerciseToDisplay.weightSuggestionKg
-                                .replaceAll('kg', '')
-                                .trim(),
-                        isDense: true,
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                        prefixIcon: Icon(Icons.fitness_center_outlined,
-                            color: colorScheme.primary), // Changed icon
+                                        .trim(),
+                                isDense: true,
+                                border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12)),
+                                prefixIcon: Icon(Icons.fitness_center_outlined,
+                                    color: colorScheme.primary)),
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true)),
+                        const SizedBox(height: 16),
+                      ],
+                      TextFormField(
+                          controller: _repsController,
+                          decoration: InputDecoration(
+                              labelText: "Reps",
+                              hintText: exerciseToDisplay.reps.toLowerCase() ==
+                                      'amrap'
+                                  ? 'As Many As Possible'
+                                  : exerciseToDisplay.reps,
+                              isDense: true,
+                              border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                              prefixIcon: Icon(
+                                  Icons.replay_circle_filled_outlined,
+                                  color: colorScheme.primary)),
+                          keyboardType: TextInputType.number),
+                      const SizedBox(height: 24),
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.check_circle_outline, size: 20),
+                        label: Text(
+                            setBeingLoggedDisplayNumber <= totalSetsInPlan
+                                ? "Log Set $setBeingLoggedDisplayNumber"
+                                : "Log Extra Set"),
+                        onPressed: () => _handleLogSet(manager),
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: colorScheme.primary,
+                            foregroundColor: colorScheme.onPrimary,
+                            minimumSize: const Size(double.infinity, 52),
+                            textStyle: theme.textTheme.labelLarge
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12))),
                       ),
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
-                      // validator: (value) { /* Add validation if needed */ },
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _repsController,
-                      decoration: InputDecoration(
-                        labelText: "Reps",
-                        hintText:
-                            exerciseToDisplay.reps.toLowerCase() == 'amrap'
-                                ? 'As Many As Possible'
-                                : exerciseToDisplay.reps,
-                        isDense: true,
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                        prefixIcon: Icon(Icons.replay_circle_filled_outlined,
-                            color: colorScheme.primary), // Changed icon
-                      ),
-                      keyboardType: TextInputType.number,
-                      // validator: (value) { /* Add validation if needed */ },
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton.icon(
-                      icon: const Icon(Icons.check_circle_outline, size: 20),
-                      label: Text("Log Set $setBeingLoggedDisplayNumber"),
-                      onPressed: () => _handleLogSet(manager),
-                      style: ElevatedButton.styleFrom(
-                          backgroundColor: colorScheme.primary,
-                          foregroundColor: colorScheme.onPrimary,
-                          minimumSize: const Size(double.infinity, 52),
-                          textStyle: theme.textTheme.labelLarge
-                              ?.copyWith(fontWeight: FontWeight.bold),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12))),
-                    ),
+                    ],
                   ],
-
-                  // --- Display Logged Sets ---
                   if (loggedDataForThisExercise.loggedSets.isNotEmpty) ...[
                     const SizedBox(height: 30),
                     Text("Logged Sets:",
@@ -547,12 +816,11 @@ class _ExerciseLoggingScreenState extends State<ExerciseLoggingScreen> {
                             ?.copyWith(fontWeight: FontWeight.w600)),
                     const SizedBox(height: 10),
                     ListView.builder(
-                      shrinkWrap:
-                          true, // Important within a SingleChildScrollView
-                      physics:
-                          const NeverScrollableScrollPhysics(), // Disable its own scrolling
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
                       itemCount: loggedDataForThisExercise.loggedSets.length,
                       itemBuilder: (ctx, index) {
+                        // ITEMBUILDER CORRIGÉ
                         final loggedSet =
                             loggedDataForThisExercise.loggedSets[index];
                         return Card(
@@ -561,7 +829,7 @@ class _ExerciseLoggingScreenState extends State<ExerciseLoggingScreen> {
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10)),
                           child: ListTile(
-                            dense: false, // Slightly more padding
+                            dense: false,
                             leading: CircleAvatar(
                                 backgroundColor: colorScheme.secondaryContainer,
                                 radius: 18,
@@ -571,13 +839,14 @@ class _ExerciseLoggingScreenState extends State<ExerciseLoggingScreen> {
                                         color: colorScheme.onSecondaryContainer,
                                         fontWeight: FontWeight.bold))),
                             title: Text(
-                              "Reps: ${loggedSet.performedReps}, Weight: ${loggedSet.performedWeightKg}${loggedSet.performedWeightKg == "0" || loggedSet.performedWeightKg.isEmpty ? "" : "kg"}",
+                              exerciseToDisplay.isTimed
+                                  ? "Duration: ${loggedSet.performedReps}s"
+                                  : "Reps: ${loggedSet.performedReps}, Weight: ${loggedSet.performedWeightKg}${loggedSet.performedWeightKg.toLowerCase() == "n/a" || loggedSet.performedWeightKg == "0" || loggedSet.performedWeightKg.isEmpty ? "" : "kg"}",
                               style: theme.textTheme.bodyMedium
                                   ?.copyWith(fontWeight: FontWeight.w500),
                             ),
                             trailing: Text(
-                                DateFormat.jm().format(
-                                    loggedSet.loggedAt), // e.g., 5:30 PM
+                                DateFormat.jm().format(loggedSet.loggedAt),
                                 style: theme.textTheme.bodySmall
                                     ?.copyWith(color: colorScheme.outline)),
                           ),
@@ -591,6 +860,68 @@ class _ExerciseLoggingScreenState extends State<ExerciseLoggingScreen> {
           ),
         );
       },
+    );
+  }
+}
+
+class _TimeTextInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    final newText = newValue.text;
+    String filteredText = newText.replaceAll(RegExp(r'[^0-9]'), '');
+
+    if (filteredText.length > 4) {
+      filteredText = filteredText.substring(0, 4);
+    }
+
+    String formattedText = '';
+    int len = filteredText.length;
+
+    if (len == 0) {
+      // Allow empty field
+    } else if (len <= 2) {
+      // SS
+      formattedText = filteredText;
+    } else if (len == 3) {
+      // M:SS or S:SM (assume M:SS for simplicity now)
+      formattedText =
+          '${filteredText.substring(0, 1)}:${filteredText.substring(1, 3)}';
+    } else {
+      // MM:SS
+      formattedText =
+          '${filteredText.substring(0, 2)}:${filteredText.substring(2, 4)}';
+    }
+
+    // Handle ':' typing
+    if (newText.endsWith(':') &&
+        formattedText.length == 2 &&
+        !formattedText.contains(':')) {
+      // If user types 'MM:', keep it as 'MM:'
+      formattedText = newText;
+    } else if (newText.length == 3 &&
+        newText[1] == ':' &&
+        !newText.endsWith(':')) {
+      // If user types 'M:', convert to '0M:'
+      if (RegExp(r'^\d:\d{0,2}$').hasMatch(newText)) {
+        formattedText = '0${newText[0]}:${newText.substring(2)}';
+      }
+    }
+
+    // Correction pour le curseur
+    int selectionIndex = formattedText.length;
+    // Si l'utilisateur supprime le ':'
+    if (oldValue.text.contains(':') &&
+        !formattedText.contains(':') &&
+        oldValue.text.length > formattedText.length) {
+      // Essayer de placer le curseur intelligemment. Si 'MM:S' -> 'MMS', curseur après S.
+      // Si 'M:SS' -> 'MSS', curseur après S.
+      // Cette partie peut devenir complexe. Pour l'instant, fin de la chaîne.
+    }
+
+    return TextEditingValue(
+      text: formattedText,
+      selection: TextSelection.collapsed(offset: selectionIndex),
     );
   }
 }

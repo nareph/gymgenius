@@ -1,5 +1,5 @@
 // lib/screens/tabs/tracking_tab_screen.dart
-import 'dart:async'; // Import for StreamSubscription
+import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -21,21 +21,15 @@ class _TrackingTabScreenState extends State<TrackingTabScreen> {
   late DateTime _focusedDay; // The day the calendar is currently focused on
   DateTime? _selectedDay; // The day currently selected by the user
 
-  // Stores events loaded from the user's planned routine
   Map<DateTime, List<String>> _plannedEvents = {};
-  // Stream to listen for changes in the user's document (which contains the current routine)
-  Stream<DocumentSnapshot<Map<String, dynamic>>>?
-      _userDocStreamForPlannedRoutine;
-  StreamSubscription? _userDocSubscription; // To store user doc subscription
+  StreamSubscription? _userDocSubscription;
 
-  // Stores dates on which workouts were completed, loaded from workout_logs
   Set<DateTime> _completedWorkoutDates = {};
-  // Stream to listen for workout logs
-  Stream<QuerySnapshot<Map<String, dynamic>>>? _workoutLogsStream;
-  StreamSubscription?
-      _workoutLogsSubscription; // To store workout logs subscription
-  // Stores the raw log data for the _selectedDay
+  StreamSubscription? _workoutLogsSubscription;
   List<Map<String, dynamic>> _selectedDayRawLogs = [];
+
+  final String _dateFieldForWorkoutLog =
+      'savedAt'; // Ou 'workoutDate' si c'est votre champ principal
 
   @override
   void initState() {
@@ -44,46 +38,45 @@ class _TrackingTabScreenState extends State<TrackingTabScreen> {
     _focusedDay = now;
     _selectedDay =
         DateTime(now.year, now.month, now.day); // Normalize to date only
+    print(
+        "TrackingTabScreen initState: _selectedDay initialisé à $_selectedDay");
 
-    // Stream for the user's current planned routine
-    _userDocStreamForPlannedRoutine = _firestore
+    final userDocStreamForPlannedRoutine = _firestore
         .collection('users')
         .doc(widget.user.uid)
         .snapshots()
-        .cast<DocumentSnapshot<Map<String, dynamic>>>(); // Ensure correct type
+        .cast<DocumentSnapshot<Map<String, dynamic>>>();
 
-    // Stream for the user's workout logs
-    _workoutLogsStream = _firestore
+    final workoutLogsStream = _firestore
         .collection('workout_logs')
         .where('userId', isEqualTo: widget.user.uid)
-        .orderBy('workoutDate', descending: true) // Most recent logs first
+        .orderBy(_dateFieldForWorkoutLog, descending: true)
         .snapshots()
-        .cast<QuerySnapshot<Map<String, dynamic>>>(); // Ensure correct type
+        .cast<QuerySnapshot<Map<String, dynamic>>>();
 
-    _loadPlannedRoutineEvents(); // Initial load and listener setup for planned events
-    _listenToWorkoutLogsAndUpdateCalendar(); // Initial load and listener for completed logs
+    _loadPlannedRoutineEvents(userDocStreamForPlannedRoutine);
+    _listenToWorkoutLogsAndUpdateCalendar(workoutLogsStream);
 
     if (_selectedDay != null) {
-      _loadLogsForSelectedDay(
-          _selectedDay!); // Load logs for the initially selected day
+      _loadLogsForSelectedDay(_selectedDay!);
     }
   }
 
   @override
   void dispose() {
     print("TrackingTabScreen: Disposing and cancelling listeners.");
-    _userDocSubscription?.cancel(); // Cancel user doc listener
-    _workoutLogsSubscription?.cancel(); // Cancel workout logs listener
-    super.dispose(); // IMPORTANT: Call super.dispose() last
+    _userDocSubscription?.cancel();
+    _workoutLogsSubscription?.cancel();
+    super.dispose();
   }
 
-  // Listens to the user document stream to update planned workout events on the calendar.
-  void _loadPlannedRoutineEvents() {
-    _userDocSubscription
-        ?.cancel(); // Cancel previous one if method is ever called again
-    _userDocSubscription =
-        _userDocStreamForPlannedRoutine?.listen((userDocSnapshot) {
-      if (!mounted) return; // Check if the widget is still in the tree
+  void _loadPlannedRoutineEvents(
+      Stream<DocumentSnapshot<Map<String, dynamic>>> stream) {
+    _userDocSubscription?.cancel();
+    _userDocSubscription = stream.listen((userDocSnapshot) {
+      print(
+          "TrackingTabScreen: User doc snapshot received. Exists: ${userDocSnapshot.exists}");
+      if (!mounted) return;
 
       if (userDocSnapshot.exists && userDocSnapshot.data() != null) {
         final Map<String, dynamic>? userData = userDocSnapshot.data();
@@ -92,6 +85,8 @@ class _TrackingTabScreenState extends State<TrackingTabScreen> {
 
         if (currentRoutineData != null) {
           try {
+            print(
+                "TrackingTabScreen: Parsing currentRoutine pour _plannedEvents.");
             final routine = WeeklyRoutine.fromMap(currentRoutineData);
             _generatePlannedEventsForRoutine(routine);
           } catch (e, s) {
@@ -100,139 +95,162 @@ class _TrackingTabScreenState extends State<TrackingTabScreen> {
             if (mounted) setState(() => _plannedEvents = {});
           }
         } else {
-          if (mounted) {
-            setState(() => _plannedEvents = {});
-          } // No current routine
+          print("TrackingTabScreen: No currentRoutine found in user doc.");
+          if (mounted) setState(() => _plannedEvents = {});
         }
       } else {
-        if (mounted) {
-          setState(() => _plannedEvents = {});
-        } // User document doesn't exist or no data
+        print("TrackingTabScreen: User doc does not exist or no data.");
+        if (mounted) setState(() => _plannedEvents = {});
       }
     }, onError: (error, stackTrace) {
-      // Added onError handler
       print(
-          "TrackingTabScreen: Error in _userDocStreamForPlannedRoutine listener: $error\n$stackTrace");
-      if (mounted) {
-        setState(() => _plannedEvents = {}); // Clear planned events on error
-      }
+          "TrackingTabScreen: Error in userDocStream listener: $error\n$stackTrace");
+      if (mounted) setState(() => _plannedEvents = {});
     });
   }
 
-  // Generates a map of dates to planned workout events based on the provided routine.
   void _generatePlannedEventsForRoutine(WeeklyRoutine routine) {
     final Map<DateTime, List<String>> newPlannedEvents = {};
     final Timestamp? createdAtTs = routine.generatedAt;
     if (createdAtTs == null || routine.durationInWeeks <= 0) {
-      if (mounted) {
-        setState(() => _plannedEvents = newPlannedEvents);
-      } // No start date or duration
+      print(
+          "TrackingTabScreen: No routine start date or duration for planned events.");
+      if (mounted) setState(() => _plannedEvents = newPlannedEvents);
       return;
     }
 
     final DateTime routineStartDate = createdAtTs.toDate();
     final Timestamp? expiresAtTs = routine.expiresAt;
-    // Calculate end date carefully
     final DateTime routineEndDate = expiresAtTs?.toDate() ??
         routineStartDate.add(Duration(days: (routine.durationInWeeks * 7) - 1));
 
     DateTime currentDate = DateTime(
         routineStartDate.year, routineStartDate.month, routineStartDate.day);
-    while (!currentDate.isAfter(routineEndDate)) {
-      final dayOfWeekName = DateFormat('EEEE')
-          .format(currentDate)
-          .toLowerCase(); // e.g., "monday"
-      final List<RoutineExercise>? exercisesForDay =
-          routine.dailyWorkouts[dayOfWeekName];
+    int count = 0;
 
-      if (exercisesForDay != null && exercisesForDay.isNotEmpty) {
-        final dateOnly = DateTime(currentDate.year, currentDate.month,
-            currentDate.day); // Normalize date
-        newPlannedEvents[dateOnly] = ['Planned Workout']; // Mark as planned
+    if (routine.dailyWorkouts.isEmpty) {
+      print("TrackingTabScreen: Routine has no dailyWorkouts defined.");
+      if (mounted) setState(() => _plannedEvents = newPlannedEvents);
+      return;
+    }
+    final List<String> dayKeys = WeeklyRoutine.daysOfWeek;
+
+    while (!currentDate.isAfter(routineEndDate) &&
+        count < (routine.durationInWeeks * 7 + 14)) {
+      count++;
+      final dayOfWeekIndex = currentDate.weekday - 1;
+
+      if (dayOfWeekIndex >= 0 && dayOfWeekIndex < dayKeys.length) {
+        final dayKey = dayKeys[dayOfWeekIndex];
+        final List<RoutineExercise>? exercisesForDay =
+            routine.dailyWorkouts[dayKey];
+        if (exercisesForDay != null && exercisesForDay.isNotEmpty) {
+          final dateOnly =
+              DateTime(currentDate.year, currentDate.month, currentDate.day);
+          newPlannedEvents[dateOnly] = ['Planned Workout'];
+        }
+      } else {
+        print(
+            "TrackingTabScreen: Invalid weekday index: $dayOfWeekIndex for date $currentDate");
       }
       currentDate = currentDate.add(const Duration(days: 1));
     }
-
-    if (mounted) {
-      setState(() => _plannedEvents = newPlannedEvents);
-    }
+    print(
+        "TrackingTabScreen: Generated ${newPlannedEvents.length} planned events.");
+    if (mounted) setState(() => _plannedEvents = newPlannedEvents);
   }
 
-  // Listens to the workout logs stream to update completed workout dates on the calendar
-  // and refresh logs for the selected day if it's affected.
-  void _listenToWorkoutLogsAndUpdateCalendar() {
-    _workoutLogsSubscription
-        ?.cancel(); // Cancel previous one if method is ever called again
-    _workoutLogsSubscription = _workoutLogsStream?.listen((logSnapshot) {
-      // logSnapshot is QuerySnapshot<Map<String, dynamic>>
-      if (!mounted) return;
+  void _listenToWorkoutLogsAndUpdateCalendar(
+      Stream<QuerySnapshot<Map<String, dynamic>>> stream) {
+    _workoutLogsSubscription?.cancel();
+    _workoutLogsSubscription = stream.listen((logSnapshot) {
+      print(
+          "TrackingTabScreen (Listener): Workout logs snapshot received. Docs count: ${logSnapshot.docs.length}");
+      if (!mounted) {
+        print(
+            "TrackingTabScreen (Listener): Widget not mounted. Skipping update.");
+        return;
+      }
 
       final Set<DateTime> newCompletedDates = {};
-      List<Map<String, dynamic>> currentSelectedDayLogsIfUpdated = [];
+      // bool currentSelectedDayIsAmongCompletedInSnapshot = false; // Retiré, on se base sur newCompletedDates.contains
 
       for (var doc in logSnapshot.docs) {
-        // doc is QueryDocumentSnapshot<Map<String, dynamic>>
-        final data = doc.data(); // data is Map<String, dynamic>
-        final Timestamp? timestamp = data['workoutDate'] as Timestamp?;
+        final data = doc.data();
+        final Timestamp? timestamp =
+            data[_dateFieldForWorkoutLog] as Timestamp?;
         if (timestamp != null) {
           final DateTime workoutDateTime = timestamp.toDate();
           final DateTime workoutDateOnly = DateTime(
               workoutDateTime.year, workoutDateTime.month, workoutDateTime.day);
-          newCompletedDates
-              .add(workoutDateOnly); // Add to set of completed dates
+          newCompletedDates.add(workoutDateOnly);
+          // if (_selectedDay != null && isSameDay(workoutDateOnly, _selectedDay!)) {
+          //   currentSelectedDayIsAmongCompletedInSnapshot = true;
+          // }
+        } else {
+          print(
+              "TrackingTabScreen (Listener): Log doc ${doc.id} missing '$_dateFieldForWorkoutLog' timestamp.");
+        }
+      }
+      print(
+          "TrackingTabScreen (Listener): newCompletedDates from logs: $newCompletedDates (total: ${newCompletedDates.length})");
+      // print("TrackingTabScreen (Listener): For _selectedDay: $_selectedDay, currentSelectedDayIsAmongCompletedInSnapshot: $currentSelectedDayIsAmongCompletedInSnapshot");
 
-          // If this log is for the currently selected day, add it to a temporary list
-          if (_selectedDay != null &&
-              isSameDay(workoutDateOnly, _selectedDay!)) {
-            currentSelectedDayLogsIfUpdated
-                .add({...data, 'id': doc.id}); // Clone map and add document ID
+      bool completedDatesCollectionHasChanged =
+          _completedWorkoutDates.length != newCompletedDates.length ||
+              !_completedWorkoutDates.containsAll(newCompletedDates) ||
+              !newCompletedDates.containsAll(_completedWorkoutDates);
+
+      if (mounted) {
+        if (completedDatesCollectionHasChanged) {
+          setState(() {
+            _completedWorkoutDates = newCompletedDates;
+            print(
+                "TrackingTabScreen (Listener): setState for _completedWorkoutDates. New count: ${_completedWorkoutDates.length}");
+          });
+        } else {
+          print(
+              "TrackingTabScreen (Listener): _completedWorkoutDates collection has not changed for calendar markers.");
+        }
+
+        if (_selectedDay != null) {
+          if (newCompletedDates.contains(_selectedDay!)) {
+            // Le jour sélectionné EST (ou reste) complété. On recharge ses logs pour être sûr.
+            print(
+                "TrackingTabScreen (Listener): _selectedDay ${_selectedDay} IS in newCompletedDates. Forcing reload of its logs via _loadLogsForSelectedDay.");
+            _loadLogsForSelectedDay(_selectedDay!);
+          } else if (_selectedDayRawLogs.isNotEmpty) {
+            // Le jour sélectionné N'EST PAS dans newCompletedDates (peut-être un log a été supprimé)
+            // ET il affichait des logs, donc on les vide.
+            print(
+                "TrackingTabScreen (Listener): _selectedDay ${_selectedDay} NOT in newCompletedDates, but was showing logs. Clearing its displayed logs.");
+            setState(() {
+              _selectedDayRawLogs = [];
+            });
+          } else {
+            print(
+                "TrackingTabScreen (Listener): _selectedDay ${_selectedDay} details not affected by this specific log update or no logs to clear.");
           }
         }
       }
-
-      if (mounted) {
-        setState(() {
-          _completedWorkoutDates = newCompletedDates;
-          // If the selected day was updated, refresh its logs
-          if (_selectedDay != null &&
-              newCompletedDates.contains(_selectedDay!)) {
-            // Sort logs for the selected day (most recent first)
-            currentSelectedDayLogsIfUpdated.sort((a, b) {
-              Timestamp tsA = (a['workoutDate'] as Timestamp?) ??
-                  (a['savedAt'] as Timestamp?) ??
-                  Timestamp.now();
-              Timestamp tsB = (b['workoutDate'] as Timestamp?) ??
-                  (b['savedAt'] as Timestamp?) ??
-                  Timestamp.now();
-              return tsB.compareTo(tsA);
-            });
-            _selectedDayRawLogs = currentSelectedDayLogsIfUpdated;
-          } else if (_selectedDay != null &&
-              !newCompletedDates.contains(_selectedDay!)) {
-            // If the selected day no longer has completed workouts (e.g., data deleted), clear its logs
-            _selectedDayRawLogs = [];
-          }
-        });
-      }
     }, onError: (error, stackTrace) {
-      // Added onError handler
       print(
-          "TrackingTabScreen: Error in _workoutLogsStream listener: $error\n$stackTrace");
+          "TrackingTabScreen (Listener): Error in workoutLogsStream listener: $error\n$stackTrace");
       if (mounted) {
         setState(() {
-          _completedWorkoutDates = {}; // Clear completed dates on error
-          _selectedDayRawLogs = []; // Clear logs for selected day
+          _completedWorkoutDates = {};
+          _selectedDayRawLogs = [];
         });
       }
     });
   }
 
-  // Fetches workout logs specifically for the given day.
   Future<void> _loadLogsForSelectedDay(DateTime day) async {
     if (!mounted) return;
-    final normalizedDay = DateTime(day.year, day.month, day.day); // Date only
+    final normalizedDay = DateTime(day.year, day.month, day.day);
+    print(
+        "TrackingTabScreen: _loadLogsForSelectedDay called for $normalizedDay");
 
-    // Create Firestore timestamp range for the selected day
     final startOfDay = Timestamp.fromDate(normalizedDay);
     final endOfDay =
         Timestamp.fromDate(normalizedDay.add(const Duration(days: 1)));
@@ -241,57 +259,68 @@ class _TrackingTabScreenState extends State<TrackingTabScreen> {
       final logSnapshot = await _firestore
           .collection('workout_logs')
           .where('userId', isEqualTo: widget.user.uid)
-          .where('workoutDate', isGreaterThanOrEqualTo: startOfDay)
-          .where('workoutDate', isLessThan: endOfDay)
-          .orderBy('workoutDate', descending: true)
-          .get(); // logSnapshot is QuerySnapshot<Map<String, dynamic>>
+          .where(_dateFieldForWorkoutLog, isGreaterThanOrEqualTo: startOfDay)
+          .where(_dateFieldForWorkoutLog, isLessThan: endOfDay)
+          .orderBy(_dateFieldForWorkoutLog, descending: true)
+          .get();
 
       if (!mounted) return;
+      print(
+          "TrackingTabScreen: Loaded ${logSnapshot.docs.length} logs for $normalizedDay from Firestore via _loadLogsForSelectedDay.");
 
+      // Comparer avec les logs existants pour éviter un setState inutile si les données sont identiques
+      // C'est une micro-optimisation, peut être omise si elle cause des problèmes.
+      // Pour la simplicité et la robustesse, on peut toujours appeler setState.
+      // bool logsChanged = _selectedDayRawLogs.length != logSnapshot.docs.length ||
+      //                    !ListEquality().equals(_selectedDayRawLogs.map((e) => e['id']).toList(), logSnapshot.docs.map((e) => e.id).toList());
+
+      // Toujours appeler setState pour garantir le rafraîchissement si _loadLogsForSelectedDay est appelé.
       setState(() {
         _selectedDayRawLogs = logSnapshot.docs.map((doc) {
-          // doc is QueryDocumentSnapshot<Map<String, dynamic>>
-          final data = doc.data(); // data is Map<String, dynamic>
-          return {...data, 'id': doc.id}; // Clone map and add document ID
+          final data = doc.data();
+          return {...data, 'id': doc.id};
         }).toList();
+        print(
+            "TrackingTabScreen: setState after _loadLogsForSelectedDay. _selectedDayRawLogs has ${_selectedDayRawLogs.length} items.");
       });
     } catch (e, s) {
       print(
           "TrackingTabScreen: Error loading logs for selected day $normalizedDay: $e\n$s");
-      if (mounted) {
-        setState(() => _selectedDayRawLogs = []); // Clear logs on error
-      }
-      // Optionally show a SnackBar to the user
+      if (mounted) setState(() => _selectedDayRawLogs = []);
     }
   }
 
-  // Provides events for the TableCalendar's eventLoader.
   List<String> _getEventsForDay(DateTime day) {
-    final dateOnly = DateTime(day.year, day.month, day.day); // Normalize date
+    final dateOnly = DateTime(day.year, day.month, day.day);
     List<String> events = [];
     if (_completedWorkoutDates.contains(dateOnly)) {
-      events.add('Completed'); // Mark as completed if a log exists
+      events.add('Completed');
     } else if (_plannedEvents[dateOnly]?.isNotEmpty ?? false) {
-      events.add('Planned'); // Mark as planned if in the routine
+      events.add('Planned');
     }
     return events;
   }
 
-  // Callback for when a day is selected on the calendar.
   void _onDaySelected(DateTime selectedDay, DateTime focusedDay) {
     final normalizedSelectedDay =
         DateTime(selectedDay.year, selectedDay.month, selectedDay.day);
+    print(
+        "TrackingTabScreen: _onDaySelected: selected $normalizedSelectedDay, current _selectedDay $_selectedDay");
     if (!isSameDay(_selectedDay, normalizedSelectedDay)) {
-      // Check if a new day is selected
       if (mounted) {
         setState(() {
           _selectedDay = normalizedSelectedDay;
-          _focusedDay = focusedDay; // Update focused day as well
-          _selectedDayRawLogs = []; // Clear logs for the previous day initially
+          _focusedDay = focusedDay;
+          _selectedDayRawLogs = [];
+          print(
+              "TrackingTabScreen: _onDaySelected - new day selected, _selectedDayRawLogs cleared.");
         });
-        _loadLogsForSelectedDay(
-            normalizedSelectedDay); // Load logs for the newly selected day
+        _loadLogsForSelectedDay(normalizedSelectedDay);
       }
+    } else {
+      print(
+          "TrackingTabScreen: _onDaySelected - same day selected. Forcing reload of logs for this day.");
+      _loadLogsForSelectedDay(normalizedSelectedDay);
     }
   }
 
@@ -299,14 +328,14 @@ class _TrackingTabScreenState extends State<TrackingTabScreen> {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
+    print(
+        "TrackingTabScreen: Build method called. _selectedDay: $_selectedDay, _completedWorkoutDates count: ${_completedWorkoutDates.length}, _selectedDayRawLogs count: ${_selectedDayRawLogs.length}");
 
     return Scaffold(
-      // No AppBar needed if this is a tab view within a larger Scaffold
       body: Column(
         children: [
           Padding(
-            padding:
-                const EdgeInsets.fromLTRB(16, 20, 16, 12), // Adjusted padding
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
             child: Text(
               "Track Your Progress",
               style: textTheme.headlineSmall?.copyWith(
@@ -315,23 +344,19 @@ class _TrackingTabScreenState extends State<TrackingTabScreen> {
             ),
           ),
           TableCalendar<String>(
-            // Specify event type if known, helps with `eventLoader` type
-            locale: 'en_US', // Set locale for date formatting
-            firstDay: DateTime.utc(
-                DateTime.now().year - 2, 1, 1), // Example: 2 years back
-            lastDay: DateTime.utc(
-                DateTime.now().year + 2, 12, 31), // Example: 2 years forward
+            locale: 'en_US',
+            firstDay: DateTime.utc(DateTime.now().year - 2, 1, 1),
+            lastDay: DateTime.utc(DateTime.now().year + 2, 12, 31),
             focusedDay: _focusedDay,
             selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
             onDaySelected: _onDaySelected,
             eventLoader: _getEventsForDay,
-            calendarFormat: CalendarFormat.month, // Default to month view
-            startingDayOfWeek: StartingDayOfWeek.monday, // Start week on Monday
+            calendarFormat: CalendarFormat.month,
+            startingDayOfWeek: StartingDayOfWeek.monday,
             calendarBuilders: CalendarBuilders(
               markerBuilder: (context, day, events) {
                 if (events.isNotEmpty) {
                   return Positioned(
-                    // Position markers nicely
                     right: 2,
                     bottom: 2,
                     child: _buildEventsMarker(events, colorScheme),
@@ -348,25 +373,23 @@ class _TrackingTabScreenState extends State<TrackingTabScreen> {
               selectedTextStyle: TextStyle(
                   color: colorScheme.onPrimary, fontWeight: FontWeight.bold),
               todayDecoration: BoxDecoration(
-                color: colorScheme.primaryContainer
-                    .withAlpha((255 * 0.7).round()), // FIXED
+                color:
+                    colorScheme.primaryContainer.withAlpha((255 * 0.7).round()),
                 shape: BoxShape.circle,
               ),
               todayTextStyle: TextStyle(
                   color: colorScheme.onPrimaryContainer,
                   fontWeight: FontWeight.bold),
-              outsideDaysVisible: false, // Hide days outside the current month
+              outsideDaysVisible: false,
               weekendTextStyle: TextStyle(
-                  color: colorScheme.onSurface
-                      .withAlpha((255 * 0.7).round())), // FIXED
+                  color: colorScheme.onSurface.withAlpha((255 * 0.7).round())),
               defaultTextStyle: TextStyle(color: colorScheme.onSurface),
             ),
             headerStyle: HeaderStyle(
-              formatButtonVisible:
-                  false, // Hide format button (Month/2 Weeks/Week)
+              formatButtonVisible: false,
               titleCentered: true,
               titleTextStyle: textTheme.titleMedium ??
-                  const TextStyle(fontWeight: FontWeight.bold), // Title style
+                  const TextStyle(fontWeight: FontWeight.bold),
               leftChevronIcon:
                   Icon(Icons.chevron_left, color: colorScheme.primary),
               rightChevronIcon:
@@ -374,16 +397,14 @@ class _TrackingTabScreenState extends State<TrackingTabScreen> {
             ),
             onPageChanged: (focusedDay) {
               if (mounted) {
-                setState(() => _focusedDay =
-                    focusedDay); // Update focused day when page changes
+                setState(() => _focusedDay = focusedDay);
               }
             },
           ),
           Divider(
               height: 1,
               thickness: 0.5,
-              color: colorScheme.outlineVariant
-                  .withAlpha((255 * 0.5).round())), // FIXED
+              color: colorScheme.outlineVariant.withAlpha((255 * 0.5).round())),
           Expanded(
             child: _buildSelectedDayInfo(context, textTheme, colorScheme),
           ),
@@ -392,26 +413,24 @@ class _TrackingTabScreenState extends State<TrackingTabScreen> {
     );
   }
 
-  // Builds a small marker dot for calendar days with events.
   Widget _buildEventsMarker(List<String> events, ColorScheme colorScheme) {
     bool isCompleted = events.contains('Completed');
     bool isPlanned = events.contains('Planned');
-
     Color markerColor;
     if (isCompleted) {
-      markerColor = Colors.green.shade600; // Green for completed
+      markerColor = Colors.green.shade600;
     } else if (isPlanned) {
-      markerColor = colorScheme.secondary; // Secondary theme color for planned
+      markerColor = colorScheme.secondary;
     } else {
-      return const SizedBox.shrink(); // No marker if no recognized event type
+      return const SizedBox.shrink();
     }
     return Container(
-      width: 7, height: 7, // Slightly smaller marker
+      width: 7,
+      height: 7,
       decoration: BoxDecoration(shape: BoxShape.circle, color: markerColor),
     );
   }
 
-  // Formats duration from total seconds to a HH:MM:SS or MM:SS string.
   String _formatDurationFromSeconds(int totalSeconds) {
     final duration = Duration(seconds: totalSeconds);
     String twoDigits(int n) => n.toString().padLeft(2, '0');
@@ -419,12 +438,11 @@ class _TrackingTabScreenState extends State<TrackingTabScreen> {
     final minutes = twoDigits(duration.inMinutes.remainder(60));
     final seconds = twoDigits(duration.inSeconds.remainder(60));
     if (hours > 0) {
-      return "${twoDigits(hours)}h ${minutes}m ${seconds}s"; // More descriptive
+      return "${twoDigits(hours)}h ${minutes}m ${seconds}s";
     }
     return "${minutes}m ${seconds}s";
   }
 
-  // Builds the UI to display information for the selected day.
   Widget _buildSelectedDayInfo(
       BuildContext context, TextTheme textTheme, ColorScheme colorScheme) {
     if (_selectedDay == null) {
@@ -432,6 +450,8 @@ class _TrackingTabScreenState extends State<TrackingTabScreen> {
           child:
               Text("Select a day to see details.", style: textTheme.bodyLarge));
     }
+    print(
+        "TrackingTabScreen _buildSelectedDayInfo: Building for _selectedDay: $_selectedDay");
 
     final normalizedSelectedDay =
         DateTime(_selectedDay!.year, _selectedDay!.month, _selectedDay!.day);
@@ -440,23 +460,26 @@ class _TrackingTabScreenState extends State<TrackingTabScreen> {
     final bool isWorkoutPlannedToday =
         _plannedEvents[normalizedSelectedDay]?.isNotEmpty ?? false;
 
+    print(
+        "TrackingTabScreen _buildSelectedDayInfo: isWorkoutCompletedToday: $isWorkoutCompletedToday, isWorkoutPlannedToday: $isWorkoutPlannedToday");
+    print(
+        "TrackingTabScreen _buildSelectedDayInfo: _selectedDayRawLogs count for display: ${_selectedDayRawLogs.length}");
+
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            DateFormat.yMMMMd('en_US')
-                .format(_selectedDay!), // e.g., "January 15, 2024"
+            DateFormat.yMMMMd('en_US').format(_selectedDay!),
             style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 12), // Consistent spacing
-
+          const SizedBox(height: 12),
           if (isWorkoutCompletedToday) ...[
             Row(
               children: [
                 Icon(Icons.check_circle_outline,
-                    color: Colors.green.shade700, size: 26), // Using outline
+                    color: Colors.green.shade700, size: 26),
                 const SizedBox(width: 8),
                 Text("Workout Completed!",
                     style: textTheme.titleMedium?.copyWith(
@@ -468,9 +491,19 @@ class _TrackingTabScreenState extends State<TrackingTabScreen> {
             Expanded(
               child: _selectedDayRawLogs.isEmpty
                   ? Center(
-                      child: Text("Loading workout details...",
-                          style: textTheme.bodyMedium
-                              ?.copyWith(color: colorScheme.onSurfaceVariant)))
+                      child: Column(
+                      // Pour centrer le texte et l'indicateur
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                            "Loading workout details...", // Changé de "not found" à "loading"
+                            textAlign: TextAlign.center,
+                            style: textTheme.bodyMedium?.copyWith(
+                                color: colorScheme.onSurfaceVariant)),
+                        const SizedBox(height: 10),
+                        const CircularProgressIndicator(), // Ajout d'un loader
+                      ],
+                    ))
                   : ListView.builder(
                       itemCount: _selectedDayRawLogs.length,
                       itemBuilder: (context, index) {
@@ -478,14 +511,22 @@ class _TrackingTabScreenState extends State<TrackingTabScreen> {
                         final workoutName =
                             log['workoutName'] as String? ?? "Unnamed Workout";
                         final durationSeconds =
-                            log['durationInSeconds'] as int? ?? 0;
+                            log['durationSeconds'] as int? ?? 0;
                         final exercisesLogged =
-                            log['completedExercises'] as List<dynamic>? ?? [];
-
+                            log['exercises'] as List<dynamic>? ?? [];
                         final Timestamp workoutDateTimestamp =
-                            log['workoutDate'] as Timestamp? ?? Timestamp.now();
-                        final String workoutTime = DateFormat.jm().format(
-                            workoutDateTimestamp.toDate()); // e.g., 5:30 PM
+                            log[_dateFieldForWorkoutLog] as Timestamp? ??
+                                Timestamp.now();
+                        final String workoutTime = DateFormat.jm()
+                            .format(workoutDateTimestamp.toDate());
+
+                        final exercisesWithLoggedSets =
+                            exercisesLogged.where((ex) {
+                          final exData = ex as Map<String, dynamic>?;
+                          final List<dynamic>? loggedSets =
+                              exData?['loggedSets'] as List<dynamic>?;
+                          return loggedSets != null && loggedSets.isNotEmpty;
+                        }).toList();
 
                         return Card(
                           elevation: 1.5,
@@ -494,14 +535,13 @@ class _TrackingTabScreenState extends State<TrackingTabScreen> {
                               borderRadius: BorderRadius.circular(10)),
                           child: ExpansionTile(
                             leading: Icon(Icons.assessment_outlined,
-                                color: colorScheme.primary,
-                                size: 26), // Changed icon
+                                color: colorScheme.primary, size: 26),
                             title: Text("$workoutName ($workoutTime)",
                                 style: textTheme.titleSmall
                                     ?.copyWith(fontWeight: FontWeight.w600)),
                             subtitle: Text(
                                 "Duration: ${_formatDurationFromSeconds(durationSeconds)}\n"
-                                "${exercisesLogged.where((ex) => (ex['loggedSets'] as List<dynamic>?)?.isNotEmpty ?? false).length} exercises with logged sets",
+                                "${exercisesWithLoggedSets.length} exercises with logged sets",
                                 style: textTheme.bodySmall?.copyWith(
                                     color: colorScheme.onSurfaceVariant)),
                             tilePadding: const EdgeInsets.symmetric(
@@ -510,63 +550,48 @@ class _TrackingTabScreenState extends State<TrackingTabScreen> {
                                 left: 16, right: 16, bottom: 12, top: 0),
                             iconColor: colorScheme.primary,
                             collapsedIconColor: colorScheme.onSurfaceVariant,
-                            children: exercisesLogged
-                                .map<Widget>((exMap) {
-                                  final exData = exMap as Map<String, dynamic>;
-                                  final String exName =
-                                      exData['exerciseName'] as String? ??
-                                          'Unknown Exercise';
-                                  final List<dynamic> loggedSetsDynamic =
-                                      exData['loggedSets'] as List<dynamic>? ??
-                                          [];
-
-                                  if (loggedSetsDynamic.isEmpty) {
-                                    return const SizedBox.shrink();
-                                  } // Don't show if no sets logged
-
-                                  return Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 5.0),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(exName,
-                                            style: textTheme.bodyMedium
-                                                ?.copyWith(
-                                                    fontWeight:
-                                                        FontWeight.bold)),
-                                        ...loggedSetsDynamic.map((setMap) {
-                                          final setData =
-                                              setMap as Map<String, dynamic>;
-                                          final setNum =
-                                              setData['setNumber'] as int?;
-                                          final reps = setData['performedReps']
+                            children:
+                                exercisesWithLoggedSets.map<Widget>((exMap) {
+                              final exData = exMap as Map<String, dynamic>;
+                              final String exName =
+                                  exData['exerciseName'] as String? ??
+                                      'Unknown Exercise';
+                              final List<dynamic> loggedSetsDynamic =
+                                  exData['loggedSets'] as List<dynamic>? ?? [];
+                              return Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 5.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(exName,
+                                        style: textTheme.bodyMedium?.copyWith(
+                                            fontWeight: FontWeight.bold)),
+                                    ...loggedSetsDynamic.map((setMap) {
+                                      final setData =
+                                          setMap as Map<String, dynamic>;
+                                      final setNum =
+                                          setData['setNumber'] as int?;
+                                      final reps =
+                                          setData['performedReps'] as String?;
+                                      final weight =
+                                          setData['performedWeightKg']
                                               as String?;
-                                          final weight =
-                                              setData['performedWeightKg']
-                                                  as String?;
-                                          // final Timestamp setLoggedAtTs = setData['loggedAt'] as Timestamp? ?? Timestamp.now();
-                                          // final String setTime = DateFormat.jm().format(setLoggedAtTs.toDate()); // Time for each set might be too much detail
-
-                                          return Padding(
-                                            padding: const EdgeInsets.only(
-                                                left: 16.0, top: 3.0),
-                                            child: Text(
-                                              "Set ${setNum ?? '-'}: ${reps ?? '-'} reps @ ${weight ?? '-'}kg",
-                                              style: textTheme.bodySmall
-                                                  ?.copyWith(
-                                                      color: colorScheme
-                                                          .onSurfaceVariant),
-                                            ),
-                                          );
-                                        }).toList(),
-                                      ],
-                                    ),
-                                  );
-                                })
-                                .where((widget) => widget is! SizedBox)
-                                .toList(), // Filter out empty SizedBoxes
+                                      return Padding(
+                                        padding: const EdgeInsets.only(
+                                            left: 16.0, top: 3.0),
+                                        child: Text(
+                                          "Set ${setNum ?? '-'}: ${reps ?? '-'} reps @ ${weight ?? '-'}kg",
+                                          style: textTheme.bodySmall?.copyWith(
+                                              color:
+                                                  colorScheme.onSurfaceVariant),
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
                           ),
                         );
                       },
@@ -576,7 +601,7 @@ class _TrackingTabScreenState extends State<TrackingTabScreen> {
             Row(
               children: [
                 Icon(Icons.event_available_outlined,
-                    color: colorScheme.secondary, size: 26), // Changed icon
+                    color: colorScheme.secondary, size: 26),
                 const SizedBox(width: 8),
                 Text("Workout Planned",
                     style: textTheme.titleMedium?.copyWith(
@@ -589,13 +614,12 @@ class _TrackingTabScreenState extends State<TrackingTabScreen> {
                 "This day is scheduled for a workout according to your current plan. Get ready!",
                 style: textTheme.bodyMedium),
           ] else ...[
-            // Rest day or no plan
             Row(
               children: [
                 Icon(Icons.bed_outlined,
                     color: colorScheme.onSurfaceVariant
-                        .withAlpha((255 * 0.7).round()), // FIXED
-                    size: 26), // Changed icon
+                        .withAlpha((255 * 0.7).round()),
+                    size: 26),
                 const SizedBox(width: 8),
                 Text("Rest Day",
                     style: textTheme.titleMedium
