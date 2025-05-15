@@ -20,8 +20,7 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
 
     on<CompleteOnboarding>((event, emit) {
       // Créer une copie des réponses actuelles pour y ajouter 'completed': true
-      final Map<String, dynamic> completedAnswers =
-          Map<String, dynamic>.from(state.answers);
+      final Map<String, dynamic> completedAnswers = Map<String, dynamic>.from(state.answers);
       completedAnswers['completed'] = true; // <<--- AJOUT CRUCIAL
 
       debugPrint(

@@ -190,4 +190,8 @@ class WeeklyRoutine {
     'saturday',
     'sunday'
   ];
+
+  bool isExpired() {
+    return expiresAt.toDate().isBefore(DateTime.now());
+  }
 }

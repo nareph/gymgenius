@@ -3,23 +3,22 @@
 class PhysicalStats {
   final int? age;
   final double? weightKg;
-  final double? heightM; // Changé de heightCm à heightM
-  final double? targetWeightKg; // Ajout de targetWeightKg
+  final double? heightM;
+  final double? targetWeightKg;
 
   PhysicalStats({
     this.age,
     this.weightKg,
     this.heightM,
-    this.targetWeightKg, // Ajouté au constructeur
+    this.targetWeightKg,
   });
 
   factory PhysicalStats.fromMap(Map<String, dynamic> map) {
     return PhysicalStats(
       age: map['age'] as int?,
       weightKg: (map['weight_kg'] as num?)?.toDouble(),
-      heightM: (map['height_m'] as num?)?.toDouble(), // Lire height_m
-      targetWeightKg: (map['target_weight_kg'] as num?)
-          ?.toDouble(), // Lire target_weight_kg
+      heightM: (map['height_m'] as num?)?.toDouble(),
+      targetWeightKg: (map['target_weight_kg'] as num?)?.toDouble(),
     );
   }
 
@@ -27,23 +26,15 @@ class PhysicalStats {
     final map = <String, dynamic>{};
     if (age != null) map['age'] = age;
     if (weightKg != null) map['weight_kg'] = weightKg;
-    if (heightM != null) map['height_m'] = heightM; // Sauvegarder height_m
-    if (targetWeightKg != null)
-      map['target_weight_kg'] = targetWeightKg; // Sauvegarder target_weight_kg
+    if (heightM != null) map['height_m'] = heightM;
+    if (targetWeightKg != null) map['target_weight_kg'] = targetWeightKg;
     return map;
   }
 
-  // isNotEmpty vérifie si AU MOINS UN des champs principaux est rempli.
-  // Si tous sont requis pour que l'objet soit considéré comme "rempli", la condition change.
-  // Pour la génération AI, on pourrait vouloir que age, weightKg, heightM soient tous présents.
-  // targetWeightKg peut être optionnel.
   bool get isSufficientForAi {
-    // Renommé pour plus de clarté par rapport à isSufficientForAiGeneration de OnboardingData
     return age != null && weightKg != null && heightM != null;
-    // targetWeightKg est optionnel pour la "suffisance" de PhysicalStats lui-même.
   }
 
-  // isNotEmpty peut rester pour vérifier si l'objet a au moins une donnée
   bool get isNotEmpty =>
       age != null ||
       weightKg != null ||
@@ -56,9 +47,11 @@ class OnboardingData {
   final String? gender;
   final String? experience;
   final String? frequency;
+  final String?
+      sessionDurationPreference; // <<--- CHAMP AJOUTÉ (correspond à l'ID "session_duration_minutes")
   final List<String>? workoutDays;
   final List<String>? equipment;
-  final List<String>? focusAreas; // Optionnel
+  final List<String>? focusAreas;
   final PhysicalStats? physicalStats;
   final bool completed;
 
@@ -67,6 +60,7 @@ class OnboardingData {
     this.gender,
     this.experience,
     this.frequency,
+    this.sessionDurationPreference, // <<--- AJOUTÉ AU CONSTRUCTEUR
     this.workoutDays,
     this.equipment,
     this.focusAreas,
@@ -85,13 +79,14 @@ class OnboardingData {
         experience!.isNotEmpty &&
         frequency != null &&
         frequency!.isNotEmpty &&
+        sessionDurationPreference != null && // <<--- VÉRIFICATION AJOUTÉE
+        sessionDurationPreference!.isNotEmpty &&
         workoutDays != null &&
         workoutDays!.isNotEmpty &&
         equipment != null &&
         equipment!.isNotEmpty &&
         physicalStats != null &&
-        physicalStats!
-            .isSufficientForAi; // Utilise la nouvelle méthode de PhysicalStats
+        physicalStats!.isSufficientForAi;
 
     return allRequiredFieldsPresent;
   }
@@ -102,6 +97,8 @@ class OnboardingData {
       gender: map['gender'] as String?,
       experience: map['experience'] as String?,
       frequency: map['frequency'] as String?,
+      sessionDurationPreference: map['session_duration_minutes']
+          as String?, // <<--- AJOUTÉ (utilise l'ID de la question)
       workoutDays: map['workout_days'] != null
           ? List<String>.from(map['workout_days'] as List<dynamic>)
           : null,
@@ -112,6 +109,7 @@ class OnboardingData {
           ? List<String>.from(map['focus_areas'] as List<dynamic>)
           : null,
       physicalStats: map['physical_stats'] != null &&
+              (map['physical_stats'] is Map) && // Vérification plus sûre
               (map['physical_stats'] as Map).isNotEmpty
           ? PhysicalStats.fromMap(map['physical_stats'] as Map<String, dynamic>)
           : null,
@@ -125,8 +123,12 @@ class OnboardingData {
     if (gender != null) map['gender'] = gender;
     if (experience != null) map['experience'] = experience;
     if (frequency != null) map['frequency'] = frequency;
+    if (sessionDurationPreference != null)
+      map['session_duration_minutes'] =
+          sessionDurationPreference; // <<--- AJOUTÉ (utilise l'ID de la question)
     if (workoutDays != null && workoutDays!.isNotEmpty) {
-      map['workout_days'] = workoutDays;
+      map['workout_days'] =
+          workoutDays; // Assurez-vous que la clé ici est "workout_days"
     }
     if (equipment != null && equipment!.isNotEmpty) {
       map['equipment'] = equipment;
@@ -135,7 +137,6 @@ class OnboardingData {
       map['focus_areas'] = focusAreas;
     }
     if (physicalStats != null && physicalStats!.isNotEmpty) {
-      // physicalStats!.isNotEmpty est toujours pertinent ici
       map['physical_stats'] = physicalStats!.toMap();
     }
     map['completed'] = completed;
@@ -147,6 +148,7 @@ class OnboardingData {
     String? gender,
     String? experience,
     String? frequency,
+    String? sessionDurationPreference, // <<--- AJOUTÉ
     List<String>? workoutDays,
     List<String>? equipment,
     List<String>? focusAreas,
@@ -158,6 +160,8 @@ class OnboardingData {
       gender: gender ?? this.gender,
       experience: experience ?? this.experience,
       frequency: frequency ?? this.frequency,
+      sessionDurationPreference: sessionDurationPreference ??
+          this.sessionDurationPreference, // <<--- AJOUTÉ
       workoutDays: workoutDays ?? this.workoutDays,
       equipment: equipment ?? this.equipment,
       focusAreas: focusAreas ?? this.focusAreas,

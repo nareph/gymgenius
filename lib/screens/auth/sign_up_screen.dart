@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:gymgenius/models/onboarding.dart'; // Importer OnboardingData
+import 'package:gymgenius/models/onboarding_question.dart'; // Pour defaultOnboardingQuestions pour l'affichage
 
 class SignUpScreen extends StatefulWidget {
   final Map<String, dynamic>?
@@ -48,28 +49,28 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
       if (user != null) {
         bool finalOnboardingCompletedFlag = false;
-        Map<String, dynamic> finalOnboardingDataMap;
+        OnboardingData
+            onboardingDataToSave; // Utiliser l'objet OnboardingData typé
 
         if (widget.onboardingData != null &&
             widget.onboardingData!.isNotEmpty) {
-          // Les données viennent de OnboardingBloc.state.answers
-          // OnboardingBloc doit s'assurer que 'completed' est dans ce map (par ex. mis à true lors de CompleteOnboarding)
-          finalOnboardingDataMap = widget.onboardingData!;
+          final Map<String, dynamic> rawOnboardingMap = widget.onboardingData!;
+          // OnboardingBloc s'assure que 'completed' est dans ce map
           finalOnboardingCompletedFlag =
-              finalOnboardingDataMap['completed'] as bool? ?? false;
+              rawOnboardingMap['completed'] as bool? ?? false;
 
-          // Si 'completed' n'est pas dans le map venant du bloc, on le force ici.
-          // C'est une sécurité, mais OnboardingBloc devrait le gérer.
-          if (finalOnboardingDataMap['completed'] == null) {
-            finalOnboardingDataMap['completed'] =
-                true; // L'utilisateur a "terminé" le flux d'onboarding
+          // Si 'completed' n'est pas dans le map venant du bloc (ne devrait pas arriver si le bloc est correct),
+          // on le force ici.
+          if (rawOnboardingMap['completed'] == null) {
+            rawOnboardingMap['completed'] = true;
             finalOnboardingCompletedFlag = true;
           }
+          // Créer l'objet OnboardingData à partir de la map
+          onboardingDataToSave = OnboardingData.fromMap(rawOnboardingMap);
         } else {
-          // Cas où SignUpScreen est accédé directement sans passer par OnboardingScreen
-          // (ou si OnboardingBloc n'a pas fourni de données).
-          // Créer un OnboardingData par défaut, marqué comme non complété.
-          finalOnboardingDataMap = OnboardingData(completed: false).toMap();
+          // Cas où SignUpScreen est accédé directement.
+          // onboardingDataToSave sera un objet avec completed: false
+          onboardingDataToSave = OnboardingData(completed: false);
           finalOnboardingCompletedFlag = false;
         }
 
@@ -78,10 +79,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
           'uid': user.uid,
           'createdAt': FieldValue.serverTimestamp(),
           'displayName': user.email?.split('@')[0] ?? 'New User',
-          'onboardingData':
-              finalOnboardingDataMap, // Contient son propre 'completed'
-          'onboardingCompleted':
-              finalOnboardingCompletedFlag, // Drapeau de haut niveau pour AuthWrapper
+          'onboardingData': onboardingDataToSave
+              .toMap(), // Sauvegarder l'objet OnboardingData sérialisé
+          'onboardingCompleted': finalOnboardingCompletedFlag,
         };
 
         await FirebaseFirestore.instance
@@ -90,8 +90,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
             .set(userProfileData);
 
         if (mounted) {
-          // AuthWrapper gérera la redirection vers OnboardingScreen (post-login)
-          // si 'onboardingCompleted' est false.
           Navigator.pushNamedAndRemoveUntil(
               context, '/main_app', (route) => false);
         }
@@ -152,45 +150,67 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   String _formatOnboardingDataForDisplay(Map<String, dynamic> data) {
     final displayableData = Map<String, dynamic>.from(data);
-    displayableData
-        .remove('completed'); // Ne pas afficher 'completed' dans le résumé
+    displayableData.remove('completed');
 
     final buffer = StringBuffer();
     if (displayableData.isEmpty) {
       return "No preferences selected yet.";
     }
 
-    displayableData.forEach((key, value) {
-      if (value == null)
-        return; // Ne pas afficher les clés avec des valeurs null
+    // Utiliser defaultOnboardingQuestions pour l'ordre et les libellés
+    for (var question in defaultOnboardingQuestions) {
+      final key = question
+          .id; // ex: "goal", "physical_stats", "session_duration_minutes"
+      final value = displayableData[key];
 
-      String displayKey = key
-          .replaceAll('_', ' ')
-          .split(' ')
-          .map((word) =>
-              word.isNotEmpty ? word[0].toUpperCase() + word.substring(1) : '')
-          .join(' ');
+      if (value == null || (value is List && value.isEmpty)) {
+        continue;
+      }
+
+      String displayKey = question.text;
+      if (displayKey.endsWith("?")) {
+        displayKey = displayKey.substring(0, displayKey.length - 1);
+      }
+      // Raccourcir les longs textes de question pour l'affichage résumé
+      if (displayKey.length > 40) {
+        displayKey = "${displayKey.substring(0, 37)}...";
+      }
 
       if (key == 'physical_stats' && value is Map<String, dynamic>) {
-        final stats = PhysicalStats.fromMap(
-            value); // Utiliser le modèle pour un formatage propre
-        buffer.writeln("- $displayKey:");
-        if (stats.age != null) buffer.writeln("  - Age: ${stats.age} years");
-        if (stats.weightKg != null)
-          buffer.writeln("  - Weight: ${stats.weightKg} kg");
-        if (stats.heightM != null)
-          buffer.writeln("  - Height: ${stats.heightM} m");
-        if (stats.targetWeightKg != null)
-          buffer.writeln("  - Target Weight: ${stats.targetWeightKg} kg");
+        final stats = PhysicalStats.fromMap(value);
+        if (stats.isNotEmpty) {
+          buffer.writeln("- $displayKey:");
+          if (stats.age != null) buffer.writeln("  - Age: ${stats.age} years");
+          if (stats.weightKg != null)
+            buffer.writeln("  - Weight: ${stats.weightKg} kg");
+          if (stats.heightM != null)
+            buffer.writeln("  - Height: ${stats.heightM} m");
+          if (stats.targetWeightKg != null)
+            buffer.writeln("  - Target Weight: ${stats.targetWeightKg} kg");
+        }
       } else if (value is List) {
-        if (value.isNotEmpty) {
-          // Afficher seulement si la liste n'est pas vide
-          buffer.writeln("- $displayKey: ${value.join(', ')}");
+        final selectedOptionTexts = value.map((val) {
+          try {
+            return question.options.firstWhere((opt) => opt.value == val).text;
+          } catch (e) {
+            return val.toString();
+          }
+        }).toList();
+        if (selectedOptionTexts.isNotEmpty) {
+          buffer.writeln("- $displayKey: ${selectedOptionTexts.join(', ')}");
+        }
+      } else if (question.type == QuestionType.singleChoice) {
+        try {
+          final selectedOptionText =
+              question.options.firstWhere((opt) => opt.value == value).text;
+          buffer.writeln("- $displayKey: $selectedOptionText");
+        } catch (e) {
+          buffer.writeln("- $displayKey: $value"); // Fallback
         }
       } else {
         buffer.writeln("- $displayKey: $value");
       }
-    });
+    }
 
     String result = buffer.toString().trim();
     return result.isEmpty ? "No preferences selected yet." : result;
@@ -200,7 +220,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
-    // Vérifier si des données significatives existent (en excluant 'completed' s'il est le seul champ)
     final bool hasMeaningfulOnboardingData = widget.onboardingData != null &&
         widget.onboardingData!.keys
             .any((k) => k != 'completed' && widget.onboardingData![k] != null);
@@ -208,9 +227,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-            hasMeaningfulOnboardingData // ou widget.onboardingData != null && widget.onboardingData!.isNotEmpty
-                ? "Final Step"
-                : "Create Account",
+            hasMeaningfulOnboardingData ? "Final Step" : "Create Account",
             style: textTheme.titleLarge),
         centerTitle: true,
         elevation: 0,
@@ -392,7 +409,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     Text(
                       "Already have an account?",
                       style: textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurface.withOpacity(0.7),
+                        color: colorScheme.onSurface
+                            .withAlpha((0.7 * 255).round()),
                       ),
                     ),
                     TextButton(

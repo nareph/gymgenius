@@ -7,8 +7,10 @@ import 'package:gymgenius/models/onboarding.dart';
 import 'package:gymgenius/models/routine.dart';
 import 'package:gymgenius/providers/workout_session_manager.dart';
 import 'package:gymgenius/screens/active_workout_session_screen.dart';
+// import 'package:gymgenius/screens/daily_workout_detail_screen.dart'; // Pas utilisé directement ici pour le moment
 import 'package:gymgenius/utils/enums.dart';
 import 'package:gymgenius/widgets/routine_card.dart';
+import 'package:intl/intl.dart'; // <<--- ADDED for date formatting
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
@@ -63,18 +65,69 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
     print(
         "HomeTabScreen _triggerAiRoutineGeneration: Setting state to LOADING for user ${widget.user.uid}.");
 
+    // Afficher une boîte de dialogue de confirmation si une routine précédente existe (même expirée)
+    bool shouldProceed = true;
+    if (previousRoutine != null) {
+      shouldProceed = await showDialog<bool>(
+            context: context,
+            builder: (BuildContext dialogContext) {
+              return AlertDialog(
+                title: const Text('Generate New Routine?'),
+                content: Text(previousRoutine.isExpired()
+                    ? 'Your current routine has expired. Would you like to generate a new one based on your progress and previous plan?'
+                    : 'You already have an active routine. Generating a new one will replace it. Are you sure you want to proceed? (This option might be removed or restricted later)'),
+                actions: <Widget>[
+                  TextButton(
+                    child: const Text('Cancel'),
+                    onPressed: () {
+                      Navigator.of(dialogContext).pop(false);
+                    },
+                  ),
+                  TextButton(
+                    child: Text('Generate New',
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary)),
+                    onPressed: () {
+                      Navigator.of(dialogContext).pop(true);
+                    },
+                  ),
+                ],
+              );
+            },
+          ) ??
+          false; // Si la dialogue est fermée sans sélection, on considère false
+    }
+
+    if (!shouldProceed) {
+      setState(() {
+        _routineGenerationState =
+            RoutineGenerationState.idle; // Reset loading state
+      });
+      print(
+          "HomeTabScreen _triggerAiRoutineGeneration: User cancelled generation.");
+      return;
+    }
+
     try {
       final HttpsCallable callable = FirebaseFunctions.instance.httpsCallable(
           'generateAiRoutine',
           options: HttpsCallableOptions(timeout: const Duration(seconds: 120)));
 
-      print(
-          "HomeTabScreen _triggerAiRoutineGeneration: Calling Cloud Function 'generateAiRoutine' with onboarding data: ${onboardingData.toMap()} and possibly previous routine: ${previousRoutine?.toMapForCloudFunction()}");
-      final HttpsCallableResult result = await callable.call(<String, dynamic>{
+      final Map<String, dynamic> payload = {
         'onboardingData': onboardingData.toMap(),
-        if (previousRoutine != null)
-          'previousRoutineData': previousRoutine.toMapForCloudFunction(),
-      });
+      };
+      if (previousRoutine != null) {
+        // Assurez-vous que toMapForCloudFunction() existe et fonctionne correctement
+        payload['previousRoutineData'] =
+            previousRoutine.toMapForCloudFunction();
+        print(
+            "HomeTabScreen _triggerAiRoutineGeneration: Calling Cloud Function 'generateAiRoutine' with onboarding data and previous routine: ${previousRoutine.id}");
+      } else {
+        print(
+            "HomeTabScreen _triggerAiRoutineGeneration: Calling Cloud Function 'generateAiRoutine' with onboarding data only.");
+      }
+
+      final HttpsCallableResult result = await callable.call(payload);
 
       if (!mounted) return;
 
@@ -133,15 +186,19 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
             "AI response 'dailyWorkouts' is not a map. Received: ${rawDailyWorkouts.runtimeType}");
       }
 
+      int durationInWeeks =
+          (aiRoutineData['durationInWeeks'] as num?)?.toInt() ?? 4;
+      // Assurer une durée minimale (ex: 1 semaine) et maximale (ex: 12 semaines)
+      durationInWeeks = durationInWeeks.clamp(1, 12);
+
       final Map<String, dynamic> dataForWeeklyRoutineConstructor = {
         'id': newRoutineId,
-        'name': aiRoutineData['name'] as String?,
-        'durationInWeeks': (aiRoutineData['durationInWeeks'] as num?)?.toInt(),
+        'name': aiRoutineData['name'] as String? ?? "My New Routine",
+        'durationInWeeks': durationInWeeks,
         'dailyWorkouts': dailyWorkoutsFromAIConverted,
         'generatedAt': Timestamp.now(),
-        'expiresAt': Timestamp.fromDate(DateTime.now().add(Duration(
-            days: ((aiRoutineData['durationInWeeks'] as num?)?.toInt() ?? 4) *
-                7))),
+        'expiresAt': Timestamp.fromDate(
+            DateTime.now().add(Duration(days: durationInWeeks * 7))),
       };
       print(
           "HomeTabScreen _triggerAiRoutineGeneration: Data being passed to WeeklyRoutine.fromMap: $dataForWeeklyRoutineConstructor");
@@ -151,14 +208,7 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
 
       print(
           "HomeTabScreen _triggerAiRoutineGeneration: Constructed WeeklyRoutine object. Name: ${newRoutine.name}, ID: ${newRoutine.id}, Duration: ${newRoutine.durationInWeeks} weeks.");
-      newRoutine.dailyWorkouts.forEach((day, exercises) {
-        print(
-            "HomeTabScreen _triggerAiRoutineGeneration: Processed Day: $day, Number of exercises: ${exercises.length}");
-        for (var ex in exercises) {
-          print(
-              "HomeTabScreen _triggerAiRoutineGeneration: Processed Exercise in newRoutine: ID: ${ex.id}, Name: '${ex.name}', Sets: ${ex.sets}, Reps: ${ex.reps}, UsesWeight: ${ex.usesWeight}, IsTimed: ${ex.isTimed}, TargetDuration: ${ex.targetDurationSeconds}, Desc: '${ex.description}', WeightSugg: '${ex.weightSuggestionKg}'");
-        }
-      });
+      // ... (le reste du logging et de la création de routine) ...
 
       final Map<String, dynamic> routineToSaveInFirestore =
           newRoutine.toMapForFirestore();
@@ -170,8 +220,10 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
           .doc(widget.user.uid)
           .update({
         'currentRoutine': routineToSaveInFirestore,
-        'onboardingCompleted': true,
+        'onboardingCompleted': true, // S'assurer que c'est toujours vrai ici
         'lastRoutineGeneratedAt': FieldValue.serverTimestamp(),
+        // Potentiellement, stocker un historique des routines si nécessaire
+        // 'routineHistory': FieldValue.arrayUnion([previousRoutine?.toMapForFirestore()]) // Exemple
       });
 
       if (!mounted) return;
@@ -196,13 +248,22 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
       setState(() {
         _routineGenerationState = RoutineGenerationState.error;
         _errorMessage =
-            "An unexpected error occurred while creating your routine. Please try again in a few moments. If the issue continues, our team has been notified.";
+            "An unexpected error occurred while creating your routine: $e. Please try again.";
       });
+    } finally {
+      // S'assurer que l'état de chargement est réinitialisé même en cas d'erreur avant la fin
+      if (_routineGenerationState == RoutineGenerationState.loading &&
+          mounted) {
+        setState(() {
+          _routineGenerationState = RoutineGenerationState.idle;
+        });
+      }
     }
   }
 
   void _startTodaysWorkout(
       BuildContext context, WeeklyRoutine routine, String dayKey) {
+    // ... (votre logique existante pour _startTodaysWorkout, qui semble correcte)
     final List<RoutineExercise>? exercisesForDay =
         routine.dailyWorkouts[dayKey.toLowerCase()];
 
@@ -311,8 +372,12 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
                 child: CircularProgressIndicator(
                     key: Key("initial_profile_load")));
           }
+          // Garder l'indicateur de chargement si _routineGenerationState est loading,
+          // SAUF si on est déjà dans un état d'erreur ou de succès pour cette génération.
           if (snapshot.connectionState == ConnectionState.waiting &&
-              _routineGenerationState != RoutineGenerationState.loading) {
+              _routineGenerationState != RoutineGenerationState.loading &&
+              _routineGenerationState != RoutineGenerationState.error &&
+              _routineGenerationState != RoutineGenerationState.success) {
             return const Center(
                 child: CircularProgressIndicator(
                     key: Key("profile_snapshot_waiting")));
@@ -325,7 +390,7 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
 
           if (!snapshot.hasData || !snapshot.data!.exists) {
             print(
-                "HomeTabScreen: User profile document does not exist for user ${widget.user.uid}. This is unexpected if AuthWrapper worked correctly.");
+                "HomeTabScreen: User profile document does not exist for user ${widget.user.uid}.");
             return _buildWrapperForRefreshIndicatorCenteredContent(
                 _buildErrorState(
                     "User profile not found. Please try logging out and back in.",
@@ -361,19 +426,17 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
                   : null;
 
           if (!onboardingCompletedFlag) {
-            print(
-                "HomeTabScreen: onboardingCompletedFlag is false. This user should have been caught by AuthWrapper.");
+            print("HomeTabScreen: onboardingCompletedFlag is false.");
             return _buildWrapperForRefreshIndicatorCenteredContent(
                 _buildNeedsProfileCompletionState(context, true));
           }
 
-          if (onboardingDataModel == null ||
-              !onboardingDataModel.isSufficientForAiGeneration) {
+          if (!onboardingDataModel.isSufficientForAiGeneration) {
             print(
-                "HomeTabScreen: Onboarding is 'completed' (flag is true) but data is insufficient or null. User needs to complete profile details. isSufficient: ${onboardingDataModel?.isSufficientForAiGeneration}");
+                "HomeTabScreen: Onboarding data is insufficient. isSufficient: ${onboardingDataModel.isSufficientForAiGeneration}");
             return RefreshIndicator(
               onRefresh: () async {
-                _initializeUserProfileStream();
+                _initializeUserProfileStream(); // Re-fetch profile data
               },
               child: _buildWrapperForRefreshIndicatorCenteredContent(
                   _buildNeedsProfileCompletionState(context, false)),
@@ -384,6 +447,7 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
 
           Widget screenContent;
 
+          // Priorité à l'état de génération de routine
           if (_routineGenerationState == RoutineGenerationState.loading) {
             screenContent = _buildWrapperForRefreshIndicatorCenteredContent(
                 _buildLoadingIndicator(
@@ -393,11 +457,53 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
             screenContent = _buildWrapperForRefreshIndicatorCenteredContent(
                 _buildErrorState(
                     _errorMessage!, finalOnboardingData, currentRoutine));
-          } else if (currentRoutine == null) {
+            // Après affichage de l'erreur, revenir à idle pour permettre une nouvelle tentative
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted &&
+                  _routineGenerationState == RoutineGenerationState.error) {
+                setState(() {
+                  _routineGenerationState = RoutineGenerationState.idle;
+                });
+              }
+            });
+          } else if (currentRoutine == null ||
+              _routineGenerationState == RoutineGenerationState.success) {
+            // Si la routine est null OU si on vient de générer avec succès une nouvelle routine
+            // (pour forcer la reconstruction de l'UI avec la nouvelle routine si currentRoutine était déjà là mais expiré)
+            // L'état success est temporaire, on veut afficher la nouvelle routine ou l'état "pas de routine"
+            // Si success, currentRoutine devrait être mis à jour par le stream, sinon on affiche "NoRoutine"
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted &&
+                  _routineGenerationState == RoutineGenerationState.success) {
+                setState(() {
+                  _routineGenerationState = RoutineGenerationState.idle;
+                });
+              }
+            });
+            if (currentRoutine == null) {
+              screenContent = _buildWrapperForRefreshIndicatorCenteredContent(
+                  _buildNoRoutineState(finalOnboardingData));
+            } else {
+              // Si routineGenerationState était success, on veut afficher la routine (qui devrait être la nouvelle)
+              screenContent = ListView(
+                // Changed to ListView to avoid AlwaysScrollableScrollPhysics conflict
+                padding: const EdgeInsets.all(16.0),
+                children: [
+                  _buildCurrentRoutineSection(
+                      currentRoutine, finalOnboardingData)
+                ],
+              );
+            }
+          }
+          // Si une routine existe et qu'elle est expirée
+          else if (currentRoutine.isExpired()) {
             screenContent = _buildWrapperForRefreshIndicatorCenteredContent(
-                _buildNoRoutineState(finalOnboardingData));
-          } else {
+                _buildExpiredRoutineState(currentRoutine, finalOnboardingData));
+          }
+          // Si une routine existe et n'est pas expirée
+          else {
             screenContent = ListView(
+              // Changed to ListView
               padding: const EdgeInsets.all(16.0),
               children: [
                 _buildCurrentRoutineSection(currentRoutine, finalOnboardingData)
@@ -407,8 +513,19 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
 
           return RefreshIndicator(
             onRefresh: () async {
-              await _triggerAiRoutineGeneration(
-                  finalOnboardingData, currentRoutine);
+              if (currentRoutine != null &&
+                  !currentRoutine.isExpired() &&
+                  _routineGenerationState == RoutineGenerationState.idle) {
+                // Si une routine active existe, le pull-to-refresh ne devrait rien faire
+                // ou afficher un message indiquant que la routine est active.
+                // Pour l'instant, on ne fait rien pour éviter une génération non désirée.
+                print(
+                    "Refresh action: Active routine present. No regeneration triggered.");
+                return;
+              }
+              // Si routine expirée ou pas de routine, ou si on est dans un état d'erreur, on peut tenter de générer.
+              await _triggerAiRoutineGeneration(finalOnboardingData,
+                  currentRoutine); // Passe la routine actuelle (expirée ou non)
             },
             child: screenContent,
           );
@@ -418,6 +535,7 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
   }
 
   Widget _buildWrapperForRefreshIndicatorCenteredContent(Widget child) {
+    // ... (inchangé)
     return LayoutBuilder(
       builder: (context, constraints) {
         return SingleChildScrollView(
@@ -425,9 +543,11 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
           padding: const EdgeInsets.all(16.0),
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              minHeight: constraints.maxHeight - 32.0,
+              minHeight: constraints.maxHeight -
+                  32.0, // Adjust if AppBar is present or other fixed elements
             ),
             child: Center(
+              // Center the content vertically if it's smaller than the viewport
               child: child,
             ),
           ),
@@ -437,7 +557,9 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
   }
 
   Widget _buildLoadingIndicator(String message) {
+    // ... (inchangé)
     return Center(
+      // Wrap in Center if not already centered by parent
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 40.0),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -453,6 +575,7 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
 
   Widget _buildErrorState(String errorMessage, OnboardingData onboardingData,
       WeeklyRoutine? previousRoutine) {
+    // ... (inchangé)
     return Card(
       color: Theme.of(context).colorScheme.errorContainer,
       child: Padding(
@@ -469,7 +592,7 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
-          Text(errorMessage,
+          Text(errorMessage, // Utilise le _errorMessage mis à jour
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onErrorContainer)),
@@ -489,6 +612,7 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
   }
 
   Widget _buildNoRoutineState(OnboardingData onboardingData) {
+    // ... (inchangé)
     return Card(
       elevation: 2,
       child: Padding(
@@ -508,7 +632,8 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
           ElevatedButton.icon(
             icon: const Icon(Icons.auto_awesome_outlined),
             label: const Text("Generate My First Routine"),
-            onPressed: () => _triggerAiRoutineGeneration(onboardingData, null),
+            onPressed: () => _triggerAiRoutineGeneration(
+                onboardingData, null), // Pas de routine précédente
             style: ElevatedButton.styleFrom(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 24, vertical: 12)),
@@ -520,6 +645,7 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
 
   Widget _buildNeedsProfileCompletionState(
       BuildContext context, bool dueToOnboardingFlagFalse) {
+    // ... (inchangé)
     String title = "Complete Your Profile";
     String message =
         "To generate a personalized workout plan, we need a bit more information about you and your goals.";
@@ -564,6 +690,84 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
     );
   }
 
+  // <<--- NEW WIDGET for Expired Routine State --- >>
+  Widget _buildExpiredRoutineState(
+      WeeklyRoutine expiredRoutine, OnboardingData onboardingData) {
+    final theme = Theme.of(context);
+    return Card(
+      elevation: 2,
+      color: theme.colorScheme.tertiaryContainer.withAlpha((0.7 * 255).round()),
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Icon(Icons.event_busy_outlined,
+              size: 50, color: theme.colorScheme.onTertiaryContainer),
+          const SizedBox(height: 16),
+          Text("Routine Expired!",
+              style: theme.textTheme.headlineSmall?.copyWith(
+                  color: theme.colorScheme.onTertiaryContainer,
+                  fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center),
+          const SizedBox(height: 10),
+          Text(
+              "Your routine '${expiredRoutine.name}' which started on ${DateFormat.yMMMd().format(expiredRoutine.generatedAt!.toDate())} has completed its ${expiredRoutine.durationInWeeks} weeks.", // Assumes generatedAt is not null
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyLarge
+                  ?.copyWith(color: theme.colorScheme.onTertiaryContainer)),
+          const SizedBox(height: 8),
+          Text(
+              "It's time to generate a new plan to continue your fitness journey and build on your progress!",
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onTertiaryContainer
+                      .withAlpha((0.9 * 255).round()))),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.autorenew_rounded),
+            label: const Text("Generate New Routine"),
+            onPressed: () => _triggerAiRoutineGeneration(
+                onboardingData, expiredRoutine), // Passe la routine expirée
+            style: ElevatedButton.styleFrom(
+                backgroundColor: theme.colorScheme.primary,
+                foregroundColor: theme.colorScheme.onPrimary,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                textStyle: theme.textTheme.labelLarge
+                    ?.copyWith(fontWeight: FontWeight.bold)),
+          ),
+          const SizedBox(height: 10),
+          TextButton(
+            onPressed: () {
+              // Pourrait afficher l'ancienne routine en lecture seule ou la supprimer
+              // Pour l'instant, on retourne à un état de "pas de routine" si l'utilisateur ne veut pas générer
+              FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(widget.user.uid)
+                  .update({
+                'currentRoutine': null, // ou archiver l'ancienne routine
+                // 'archivedRoutines': FieldValue.arrayUnion([expiredRoutine.toMapForFirestore()])
+              }).then((_) {
+                print("Expired routine cleared / archived conceptually.");
+                // L'UI se mettra à jour via le StreamBuilder pour afficher _buildNoRoutineState
+              }).catchError((error) {
+                print("Error clearing/archiving expired routine: $error");
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                      content: Text("Could not clear old routine: $error"),
+                      backgroundColor: theme.colorScheme.error),
+                );
+              });
+            },
+            child: Text("Dismiss (Clear Old Routine)",
+                style: TextStyle(
+                    color: theme.colorScheme.onSurfaceVariant
+                        .withAlpha((0.8 * 255).round()))),
+          )
+        ]),
+      ),
+    );
+  }
+
   Widget _buildCurrentRoutineSection(
       WeeklyRoutine currentRoutine, OnboardingData onboardingData) {
     final theme = Theme.of(context);
@@ -572,13 +776,15 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
     final List<RoutineExercise>? todaysExercises =
         currentRoutine.dailyWorkouts[todayDayKey.toLowerCase()];
 
+    // bool isRoutineExpired = currentRoutine.isExpired(); // Déjà vérifié avant d'appeler cette méthode
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text("Your Current Plan: ${currentRoutine.name}",
             style: Theme.of(context).textTheme.headlineSmall),
         Text(
-            "Duration: ${currentRoutine.durationInWeeks} weeks. Expires: ${currentRoutine.expiresAt.toDate().toLocal().toString().split(' ')[0]}",
+            "Duration: ${currentRoutine.durationInWeeks} weeks. Expires: ${DateFormat.yMMMd().add_jm().format(currentRoutine.expiresAt!.toDate().toLocal())}", // Assumes expiresAt is not null
             style: Theme.of(context).textTheme.bodySmall),
         const SizedBox(height: 10),
         if (todaysExercises != null && todaysExercises.isNotEmpty)
@@ -652,18 +858,22 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
           },
         ),
         const SizedBox(height: 20),
-        Center(
-          child: OutlinedButton.icon(
-            icon: const Icon(Icons.autorenew_outlined),
-            label: const Text("Generate New Routine Variation"),
-            onPressed: () =>
-                _triggerAiRoutineGeneration(onboardingData, currentRoutine),
-            style: OutlinedButton.styleFrom(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                side: BorderSide(color: theme.colorScheme.primary)),
-          ),
-        ),
+        // Le bouton "Generate New Routine Variation" est maintenant conditionnel ou remplacé par le flux d'expiration
+        // Si la routine n'est PAS expirée, on ne montre PAS ce bouton pour forcer l'adhérence au plan.
+        // Il sera géré par _buildExpiredRoutineState si la routine est expirée.
+        // Pour l'instant, on le cache si la routine est active.
+        // Center(
+        //   child: OutlinedButton.icon(
+        //     icon: const Icon(Icons.autorenew_outlined),
+        //     label: const Text("Generate New Routine Variation"),
+        //     onPressed: () =>
+        //         _triggerAiRoutineGeneration(onboardingData, currentRoutine),
+        //     style: OutlinedButton.styleFrom(
+        //         padding:
+        //             const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        //         side: BorderSide(color: theme.colorScheme.primary)),
+        //   ),
+        // ),
       ],
     );
   }

@@ -46,7 +46,7 @@ class HomeScreen extends StatelessWidget {
                   "Your AI-Powered Fitness Coach",
                   textAlign: TextAlign.center,
                   style: textTheme.headlineSmall?.copyWith(
-                    color: colorScheme.onSurface.withOpacity(0.8),
+                    color: colorScheme.onSurface.withAlpha((0.8 * 255).round()),
                   ),
                 ),
                 SizedBox(height: screenHeight * 0.12),
@@ -79,7 +79,8 @@ class HomeScreen extends StatelessWidget {
                     Text(
                       "Already have an account? ",
                       style: textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurface.withOpacity(0.75),
+                        color: colorScheme.onSurface
+                            .withAlpha((0.75 * 255).round()),
                       ),
                     ),
                     TextButton(

@@ -2,7 +2,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:gymgenius/models/onboarding_question.dart'; // Assurez-vous que ce chemin est correct
+import 'package:gymgenius/models/onboarding_question.dart';
 import 'package:intl/intl.dart';
 
 extension StringCasingExtension on String {
@@ -17,16 +17,10 @@ extension StringCasingExtension on String {
   }
 }
 
-// Mettre à jour l'ordre et ajouter 'hint'
 const List<({String key, String unit, String label, String hint})>
     statSubKeyEntries = [
   (key: 'age', unit: 'years', label: 'Age', hint: 'e.g., 25'),
-  (
-    key: 'height_m',
-    unit: 'm',
-    label: 'Height',
-    hint: 'e.g., 1.75'
-  ), // Height avant les poids
+  (key: 'height_m', unit: 'm', label: 'Height', hint: 'e.g., 1.75'),
   (key: 'weight_kg', unit: 'kg', label: 'Weight', hint: 'e.g., 70.5'),
   (
     key: 'target_weight_kg',
@@ -105,12 +99,13 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
   }
 
   void _primeEditingStateWithData(Map<String, dynamic> sourceData) {
-    _currentEditValues = {};
+    _currentEditValues = {}; // Réinitialiser pour éviter les anciennes valeurs
     _numericInputControllers.forEach((_, controller) => controller.dispose());
     _numericInputControllers.clear();
 
     for (var question in defaultOnboardingQuestions) {
       dynamic valueFromSource = sourceData[question.id];
+
       if (question.id == 'physical_stats' &&
           question.type == QuestionType.numericInput) {
         Map<String, dynamic> statsMap;
@@ -119,15 +114,18 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
         } else if (valueFromSource is Map) {
           statsMap = _convertMapToMapStringDynamic(valueFromSource);
         } else {
-          statsMap = {};
+          statsMap =
+              {}; // S'assurer que c'est une map vide si null ou type incorrect
         }
-        _currentEditValues[question.id] = statsMap;
+        _currentEditValues[question.id] =
+            statsMap; // Stocker la map (peut-être vide)
         for (var subKeyEntry in statSubKeyEntries) {
           final controllerKey = '${question.id}_${subKeyEntry.key}';
           _numericInputControllers[controllerKey] = TextEditingController(
               text: statsMap[subKeyEntry.key]?.toString() ?? '');
         }
       } else if (question.type == QuestionType.numericInput) {
+        // Pour d'autres entrées numériques (pas utilisé actuellement mais pour le futur)
         _currentEditValues[question.id] = valueFromSource;
         _numericInputControllers[question.id] =
             TextEditingController(text: valueFromSource?.toString() ?? '');
@@ -135,28 +133,34 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
         if (valueFromSource is List) {
           _currentEditValues[question.id] =
               List<String>.from(valueFromSource.map((e) => e.toString()));
-        } else if (valueFromSource is String) {
+        } else if (valueFromSource is String && valueFromSource.isNotEmpty) {
+          // Au cas où une seule valeur string serait stockée
           _currentEditValues[question.id] = [valueFromSource];
         } else {
-          _currentEditValues[question.id] = <String>[];
+          _currentEditValues[question.id] =
+              <String>[]; // Liste vide si null ou type incorrect
         }
       } else {
-        _currentEditValues[question.id] = valueFromSource;
+        // singleChoice
+        _currentEditValues[question.id] =
+            valueFromSource?.toString(); // Assurer que c'est une String ou null
       }
     }
   }
 
   Widget _buildPreferenceItem({
     required String itemKey,
-    required dynamic currentValueForWidget,
+    required dynamic
+        currentValueForWidget, // Peut être null, String, List<String>, ou Map
     required OnboardingQuestion question,
   }) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final String displayTitle = question.text.toCapitalizedDisplay();
+    final String displayTitle = question.text;
     final inputDecorationTheme = Theme.of(context).inputDecorationTheme;
 
     if (!_isEditingAll) {
+      // --- AFFICHAGE EN LECTURE SEULE ---
       String displayValue;
       if (currentValueForWidget == null ||
           (currentValueForWidget is List && currentValueForWidget.isEmpty) ||
@@ -172,23 +176,23 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
         final selectedOption = question.options.firstWhere(
             (opt) => opt.value == currentValueForWidget,
             orElse: () => AnswerOption(
-                value: '', text: currentValueForWidget.toString()));
+                value: '',
+                text: currentValueForWidget?.toString() ?? 'Not set'));
         displayValue = selectedOption.text;
-      } else if (question.type == QuestionType.multipleChoice) {
-        displayValue = (currentValueForWidget as List<dynamic>).map((val) {
+      } else if (question.type == QuestionType.multipleChoice &&
+          currentValueForWidget is List) {
+        displayValue = currentValueForWidget.map((val) {
           return question.options
               .firstWhere((opt) => opt.value == val,
                   orElse: () => AnswerOption(value: '', text: val.toString()))
               .text;
         }).join(', ');
+        if (displayValue.isEmpty) displayValue = 'Not set';
       } else if (question.id == 'physical_stats' &&
-          question.type == QuestionType.numericInput) {
-        Map<String, dynamic> statsViewMap = {};
-        if (currentValueForWidget is Map<String, dynamic>) {
-          statsViewMap = currentValueForWidget;
-        } else if (currentValueForWidget is Map) {
-          statsViewMap = _convertMapToMapStringDynamic(currentValueForWidget);
-        }
+          question.type == QuestionType.numericInput &&
+          currentValueForWidget is Map) {
+        Map<String, dynamic> statsViewMap =
+            _convertMapToMapStringDynamic(currentValueForWidget);
         displayValue = statSubKeyEntries
             .map((subKeyEntry) {
               final value = statsViewMap[subKeyEntry.key];
@@ -201,7 +205,7 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
             .join('  |  ');
         if (displayValue.isEmpty) displayValue = 'Not set';
       } else {
-        displayValue = currentValueForWidget.toString();
+        displayValue = currentValueForWidget?.toString() ?? 'Not set';
       }
       return ListTile(
         dense: true,
@@ -219,12 +223,13 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
             const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
       );
     } else {
+      // --- MODE ÉDITION ---
       Widget editingWidget;
       switch (question.type) {
         case QuestionType.singleChoice:
           editingWidget = DropdownButtonFormField<String>(
             key: ValueKey(
-                '${itemKey}_dropdown_edit_${_currentEditValues[itemKey]}'),
+                '${itemKey}_dropdown_edit_${_currentEditValues[itemKey]}'), // Clé pour reconstruire si la valeur change
             decoration: InputDecoration(
                 labelText: displayTitle,
                 isDense: true,
@@ -246,7 +251,7 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
           break;
         case QuestionType.multipleChoice:
           List<String> selectedValues = List<String>.from(
-              _currentEditValues[itemKey] as List<dynamic>? ?? []);
+              _currentEditValues[itemKey] as List<dynamic>? ?? <String>[]);
           editingWidget = Column(
             key: ValueKey('${itemKey}_multichoice_edit'),
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -306,22 +311,27 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
                 ...statSubKeyEntries.map((subKeyEntry) {
                   final statKey = subKeyEntry.key;
                   final controllerKey = '${itemKey}_$statKey';
-                  if (_currentEditValues[itemKey] == null ||
-                      _currentEditValues[itemKey] is! Map) {
-                    _currentEditValues[itemKey] = <String, dynamic>{};
-                  }
+
                   TextEditingController statController =
                       _numericInputControllers.putIfAbsent(controllerKey, () {
                     final Map<String, dynamic>? currentStatsMap =
-                        _currentEditValues[itemKey] as Map<String, dynamic>?;
+                        _currentEditValues[itemKey] is Map
+                            ? _currentEditValues[itemKey]
+                                as Map<String, dynamic>?
+                            : null;
                     return TextEditingController(
                         text: currentStatsMap?[statKey]?.toString() ?? '');
                   });
+
                   final Map<String, dynamic>? statsDataForController =
-                      _currentEditValues[itemKey] as Map<String, dynamic>?;
+                      _currentEditValues[itemKey] is Map
+                          ? _currentEditValues[itemKey] as Map<String, dynamic>?
+                          : null;
                   final currentValueInMap =
                       statsDataForController?[statKey]?.toString() ?? '';
+
                   if (statController.text != currentValueInMap) {
+                    // S'assurer que le contrôleur est synchro
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       if (mounted && statController.text != currentValueInMap) {
                         statController.text = currentValueInMap;
@@ -330,6 +340,7 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
                       }
                     });
                   }
+
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 6.0),
                     child: TextFormField(
@@ -365,6 +376,7 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
               ],
             );
           } else {
+            // Autres numeric inputs (pas utilisé actuellement)
             TextEditingController controller =
                 _numericInputControllers.putIfAbsent(
                     itemKey,
@@ -425,11 +437,13 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
       final bool enteringEditMode = !_isEditingAll;
       _isEditingAll = !_isEditingAll;
       if (enteringEditMode) {
+        // En entrant en mode édition, on initialise _currentEditValues avec les données originales
         _primeEditingStateWithData(
             _convertMapToMapStringDynamic(Map.from(_originalPreferences)));
       } else if (cancel) {
-        _primeEditingStateWithData(
-            _convertMapToMapStringDynamic(Map.from(_originalPreferences)));
+        // Si on annule, on réinitialise _currentEditValues (implicitement fait par le prochain build si _isEditingAll est false)
+        // et on s'assure que l'UI reflète _originalPreferences.
+        // Pas besoin de re-appeler _primeEditingStateWithData ici si on quitte le mode édition.
       }
     });
   }
@@ -439,61 +453,69 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
     setState(() => _isSavingAll = true);
 
     Map<String, dynamic> preferencesToSave = {};
+    // Initialiser avec null pour toutes les clés pour effacer les anciennes valeurs si elles ne sont plus définies
     for (var question in defaultOnboardingQuestions) {
-      final key = question.id;
-      dynamic valueToSave;
+      preferencesToSave[question.id] = null;
+    }
 
-      if (question.id == 'physical_stats' &&
-          question.type == QuestionType.numericInput) {
+    _currentEditValues.forEach((key, value) {
+      final question = defaultOnboardingQuestions.firstWhere((q) => q.id == key,
+          orElse: () => const OnboardingQuestion(
+              id: "unknown", text: "", type: QuestionType.singleChoice));
+      if (question.id == "unknown") return;
+
+      if (key == 'physical_stats' && value is Map) {
         Map<String, dynamic> statsMapToSave = {};
         final Map<String, dynamic>? currentPhysicalStats =
-            _currentEditValues[key] as Map<String, dynamic>?;
-
+            value as Map<String, dynamic>?;
+        bool hasAnyStatValue = false;
         for (var subKeyEntry in statSubKeyEntries) {
           final dynamic statValue = currentPhysicalStats?[subKeyEntry.key];
           if (statValue is String && statValue.trim().isNotEmpty) {
             statsMapToSave[subKeyEntry.key] = num.tryParse(statValue.trim());
+            if (statsMapToSave[subKeyEntry.key] != null) hasAnyStatValue = true;
           } else if (statValue is num) {
             statsMapToSave[subKeyEntry.key] = statValue;
+            hasAnyStatValue = true;
           } else {
             statsMapToSave[subKeyEntry.key] = null;
           }
         }
-        if (statsMapToSave.values.any((v) => v != null)) {
-          valueToSave = statsMapToSave;
-        } else {
-          valueToSave = null;
-        }
+        preferencesToSave[key] = hasAnyStatValue ? statsMapToSave : null;
       } else if (question.type == QuestionType.numericInput) {
-        final dynamic numValue = _currentEditValues[key];
+        final dynamic numValue = value;
         if (numValue is String && numValue.trim().isNotEmpty) {
-          valueToSave = num.tryParse(numValue.trim());
+          preferencesToSave[key] = num.tryParse(numValue.trim());
         } else if (numValue is num) {
-          valueToSave = numValue;
+          preferencesToSave[key] = numValue;
         } else {
-          valueToSave = null;
+          preferencesToSave[key] = null;
         }
+      } else if (value is List && value.isEmpty) {
+        preferencesToSave[key] = null;
+      } else if (value != null && value.toString().isNotEmpty) {
+        // Pour singleChoice et multipleChoice non vides
+        preferencesToSave[key] = value;
       } else {
-        valueToSave = _currentEditValues[key];
+        preferencesToSave[key] = null; // Explicitement null pour les autres cas
       }
-      if (valueToSave != null ||
-          (valueToSave is List && valueToSave.isNotEmpty)) {
-        preferencesToSave[key] = valueToSave;
-      } else if (valueToSave is List && valueToSave.isEmpty) {
-        preferencesToSave[key] = valueToSave;
-      }
-    }
+    });
+
+    // Assurer que 'completed' est présent et vrai
+    preferencesToSave['completed'] = true;
 
     try {
       final Map<String, dynamic> dataToSetInFirestore = {
         'onboardingData': preferencesToSave,
-        'onboardingCompleted': true,
+        'onboardingCompleted': true, // Drapeau de haut niveau
         'profileLastUpdatedAt': FieldValue.serverTimestamp(),
       };
 
       await _firestore.collection('users').doc(widget.user.uid).set(
             dataToSetInFirestore,
-            SetOptions(merge: true),
+            SetOptions(
+                merge:
+                    true), // Utiliser merge:true pour ne pas écraser d'autres champs user non liés à l'onboarding
           );
 
       if (!mounted) return;
@@ -502,6 +524,7 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
         backgroundColor: Colors.green.shade700,
         behavior: SnackBarBehavior.floating,
       ));
+      // Mettre à jour _originalPreferences pour refléter les données sauvegardées
       _originalPreferences =
           _convertMapToMapStringDynamic(Map.from(preferencesToSave));
       _isEditingAll = false;
@@ -521,19 +544,26 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
 
     return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>?>(
       key: ValueKey('profile_data_loader_$_dataLoadedFromFirestore'),
-      future:
-          _firestore.collection('users').doc(widget.user.uid).get().then((doc) {
-        if (doc.exists && doc.data() != null) {
-          return doc;
-        }
-        return null;
-      }).catchError((error) {
-        print("ProfileTabScreen: Error fetching user document: $error");
-        if (mounted) {
-          _showErrorSnackBar("Could not load profile data.");
-        }
-        return null;
-      }),
+      future: _dataLoadedFromFirestore &&
+              _isEditingAll // Ne pas re-fetch si on est en mode édition et que les données ont déjà été chargées
+          ? Future.value(
+              null) // Retourne une future déjà complétée pour ne pas recharger
+          : _firestore
+              .collection('users')
+              .doc(widget.user.uid)
+              .get()
+              .then((doc) {
+              if (doc.exists && doc.data() != null) {
+                return doc;
+              }
+              return null;
+            }).catchError((error) {
+              print("ProfileTabScreen: Error fetching user document: $error");
+              if (mounted) {
+                _showErrorSnackBar("Could not load profile data.");
+              }
+              return null;
+            }),
       builder: (BuildContext context,
           AsyncSnapshot<DocumentSnapshot<Map<String, dynamic>>?> snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting &&
@@ -544,6 +574,7 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
         Map<String, dynamic> loadedOnboardingDataFromFirestore = {};
         Map<String, dynamic>? userDataFromFirestore;
 
+        // Charger les données seulement si elles ne sont pas déjà chargées OU si snapshot contient de nouvelles données
         if (snapshot.hasData && snapshot.data != null) {
           userDataFromFirestore = snapshot.data!.data();
           if (userDataFromFirestore != null) {
@@ -552,27 +583,34 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
               loadedOnboardingDataFromFirestore =
                   _convertMapToMapStringDynamic(rawOnboardingData);
             }
-            if (!_dataLoadedFromFirestore ||
-                !_areMapsEqual(
-                    _originalPreferences, loadedOnboardingDataFromFirestore)) {
+            if (!_dataLoadedFromFirestore) {
+              // Premier chargement
               _originalPreferences =
                   Map.from(loadedOnboardingDataFromFirestore);
               WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted && !_isEditingAll) {
-                  _primeEditingStateWithData(Map.from(_originalPreferences));
-                }
-                if (mounted && !_dataLoadedFromFirestore) {
+                if (mounted) {
+                  if (!_isEditingAll)
+                    _primeEditingStateWithData(Map.from(_originalPreferences));
                   setState(() {
                     _dataLoadedFromFirestore = true;
                   });
-                } else if (mounted &&
-                    !_areMapsEqual(_originalPreferences,
-                        loadedOnboardingDataFromFirestore)) {
-                  if (!_isEditingAll) setState(() {});
                 }
               });
             }
           }
+        } else if (snapshot.connectionState == ConnectionState.done &&
+            !_dataLoadedFromFirestore &&
+            snapshot.data == null) {
+          // Le document n'existe pas ou est vide, mais le future est terminé
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              _originalPreferences = {}; // Pas de données
+              if (!_isEditingAll) _primeEditingStateWithData({});
+              setState(() {
+                _dataLoadedFromFirestore = true;
+              });
+            }
+          });
         } else if (snapshot.hasError && !_dataLoadedFromFirestore) {
           return Center(
               child: Padding(
@@ -599,9 +637,12 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
             ]),
           ));
         }
-        if (!_dataLoadedFromFirestore &&
-            snapshot.connectionState != ConnectionState.done) {
-          return const Center(child: CircularProgressIndicator());
+
+        // Si _dataLoadedFromFirestore n'est toujours pas vrai, on est en attente ou erreur gérée
+        if (!_dataLoadedFromFirestore) {
+          return const Center(
+              child:
+                  CircularProgressIndicator(key: Key("profile_initial_wait")));
         }
 
         String userEmail = widget.user.email ??
@@ -620,49 +661,23 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
         final Map<String, dynamic> sourceMapForUI =
             _isEditingAll ? _currentEditValues : _originalPreferences;
         List<Widget> preferenceWidgets = [];
+
         for (var question in defaultOnboardingQuestions) {
-          if (_isEditingAll && !_currentEditValues.containsKey(question.id)) {
-            dynamic initialValue = _originalPreferences[question.id];
-            if (question.type == QuestionType.multipleChoice) {
-              _currentEditValues[question.id] = initialValue is List
-                  ? List<String>.from(initialValue)
-                  : <String>[];
-            } else if (question.id == 'physical_stats') {
-              Map<String, dynamic> initialStats = {};
-              if (initialValue is Map) {
-                initialStats = Map<String, dynamic>.from(initialValue);
-              }
-              _currentEditValues[question.id] = initialStats;
-              for (var subKeyEntry in statSubKeyEntries) {
-                final controllerKey = '${question.id}_${subKeyEntry.key}';
-                _numericInputControllers.putIfAbsent(
-                    controllerKey,
-                    () => TextEditingController(
-                        text: initialStats[subKeyEntry.key]?.toString() ?? ''));
-              }
-            } else if (question.type == QuestionType.numericInput) {
-              _currentEditValues[question.id] = initialValue;
-              _numericInputControllers.putIfAbsent(
-                  question.id,
-                  () => TextEditingController(
-                      text: initialValue?.toString() ?? ''));
-            } else {
-              _currentEditValues[question.id] = initialValue;
-            }
-          }
           preferenceWidgets.add(_buildPreferenceItem(
               itemKey: question.id,
               currentValueForWidget: sourceMapForUI[question.id],
               question: question));
         }
 
-        bool noPreferencesSet = _originalPreferences.values.every((v) =>
-            v == null ||
-            (v is List && v.isEmpty) ||
-            (v is Map &&
-                v.keys.every((k) => v[k] == null || v[k].toString().isEmpty)));
+        bool noPreferencesSetCurrentlyDisplayed = sourceMapForUI.values.every(
+            (v) =>
+                v == null ||
+                (v is List && v.isEmpty) ||
+                (v is Map &&
+                    v.values.every((statVal) =>
+                        statVal == null || statVal.toString().isEmpty)));
 
-        if (noPreferencesSet &&
+        if (noPreferencesSetCurrentlyDisplayed &&
             !_isEditingAll &&
             !_isSavingAll &&
             _dataLoadedFromFirestore) {
@@ -872,8 +887,9 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
               try {
                 await FirebaseAuth.instance.signOut();
                 if (mounted) {
-                  Navigator.of(context).pushNamedAndRemoveUntil(
-                      '/home', (Route<dynamic> route) => false);
+                  Navigator.of(context, rootNavigator: true)
+                      .pushNamedAndRemoveUntil(
+                          '/home', (Route<dynamic> route) => false);
                 }
               } catch (e) {
                 print("Error during sign out or navigation: $e");
@@ -902,12 +918,10 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
         List<dynamic> sortedVal1 = List.from(val1);
         List<dynamic> sortedVal2 = List.from(val2);
         try {
+          // Tenter de trier, mais continuer si ce n'est pas comparable directement
           sortedVal1.sort((a, b) => a.toString().compareTo(b.toString()));
           sortedVal2.sort((a, b) => a.toString().compareTo(b.toString()));
-        } catch (e) {
-          print(
-              "Warning: Could not sort lists for comparison in _areMapsEqual: $e");
-        }
+        } catch (e) {/* Ignorer si le tri échoue */}
         for (int i = 0; i < sortedVal1.length; i++) {
           if (sortedVal1[i].toString() != sortedVal2[i].toString()) {
             return false;
@@ -916,6 +930,7 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
       } else if (val1 is Map<String, dynamic> && val2 is Map<String, dynamic>) {
         if (!_areMapsEqual(val1, val2)) return false;
       } else if (val1 is Map && val2 is Map) {
+        // Fallback pour Map<dynamic, dynamic>
         if (!_areMapsEqual(_convertMapToMapStringDynamic(val1),
             _convertMapToMapStringDynamic(val2))) return false;
       } else if (val1?.toString() != val2?.toString()) {
@@ -937,6 +952,8 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
         return Icons.bar_chart_outlined;
       case 'frequency':
         return Icons.event_repeat_outlined;
+      case 'session_duration_minutes':
+        return Icons.timer_outlined; // <<--- AJOUTÉ
       case 'workout_days':
         return Icons.calendar_today_outlined;
       case 'equipment':
@@ -944,7 +961,7 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
       case 'focus_areas':
         return Icons.center_focus_strong_outlined;
       default:
-        return Icons.checklist_rtl_outlined;
+        return Icons.help_outline; // Icône par défaut
     }
   }
 }
