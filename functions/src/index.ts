@@ -84,8 +84,8 @@ interface PreviousRoutineData {
   name?: string;
   durationInWeeks?: number;
   dailyWorkouts?: { [day: string]: Array<{ [key: string]: any }>; };
-  generatedAt?: string | number;
-  expiresAt?: string | number;
+  generatedAt?: string | number | admin.firestore.Timestamp; // Updated to include Timestamp
+  expiresAt?: string | number | admin.firestore.Timestamp;   // Updated to include Timestamp
 }
 
 interface AiRoutineRequestPayload {
@@ -114,11 +114,21 @@ interface AiGeneratedRoutineParts {
 
 const DAYS_OF_WEEK = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 
+interface AggregatedPerformanceData {
+  exerciseName: string;
+  averageReps?: number;
+  maxWeightLiftedKg?: number;
+  completedRate?: number;
+  targetReps?: string;
+  targetWeight?: string;
+}
+
+
 export const generateAiRoutine = onCall<AiRoutineRequestPayload, Promise<AiGeneratedRoutineParts>>(
   {
     secrets: [geminiApiKey],
     memory: "1GiB",
-    timeoutSeconds: 120,
+    timeoutSeconds: 150,
   },
   async (request: CallableRequest<AiRoutineRequestPayload>): Promise<AiGeneratedRoutineParts> => {
     const localGeminiModel = ensureGeminiClientInitialized();
@@ -126,15 +136,119 @@ export const generateAiRoutine = onCall<AiRoutineRequestPayload, Promise<AiGener
       throw new HttpsError("unauthenticated", "The function must be called by an authenticated user.");
     }
     const userId = request.auth.uid;
-    logger.info(`User ${userId} authenticated. Requesting AI routine (v2) using Gemini model: ${GEMINI_MODEL_NAME}.`);
+    logger.info(`User ${userId} authenticated. Requesting AI routine.`);
     const payload = request.data;
-    logger.debug("Received payload for generateAiRoutine:", { userId, payload });
-
-    if (!payload.onboardingData || typeof payload.onboardingData !== "object" || Object.keys(payload.onboardingData).length === 0) {
-      throw new HttpsError("invalid-argument", "Valid 'onboardingData' object is required to generate a routine.");
-    }
     const onboarding = payload.onboardingData;
     const previousRoutine = payload.previousRoutineData;
+
+    if (!onboarding || typeof onboarding !== "object" || Object.keys(onboarding).length === 0) {
+      throw new HttpsError("invalid-argument", "Valid 'onboardingData' object is required.");
+    }
+
+    let aggregatedPerformanceSummary: AggregatedPerformanceData[] = [];
+    if (previousRoutine?.id) {
+      logger.info(`Previous routine ID found: ${previousRoutine.id}. Fetching workout logs for user ${userId}.`);
+      try {
+        let queryBase = admin.firestore()
+          .collection("workout_logs")
+          .where("userId", "==", userId)
+          .where("routineId", "==", previousRoutine.id);
+
+        // Tentative de filtrage par date pour les 2 dernières semaines de la routine précédente
+        if (previousRoutine.expiresAt) {
+          let expiryDate: Date;
+          if (previousRoutine.expiresAt instanceof admin.firestore.Timestamp) {
+            expiryDate = previousRoutine.expiresAt.toDate();
+          } else if (typeof previousRoutine.expiresAt === "string") {
+            expiryDate = new Date(previousRoutine.expiresAt);
+          } else if (typeof previousRoutine.expiresAt === "number") {
+            expiryDate = new Date(previousRoutine.expiresAt);
+          } else {
+            // Fallback si expiresAt n'est pas un format attendu, on ne filtre pas par date pour cette routine
+            logger.warn(`Unparseable previousRoutine.expiresAt format: ${typeof previousRoutine.expiresAt}. Proceeding without strict date filtering for logs.`);
+            expiryDate = new Date(); // Ne sera pas utilisé si le type n'est pas bon
+          }
+
+          // Vérifier si expiryDate est une date valide avant de l'utiliser
+          if (!isNaN(expiryDate.getTime())) {
+            const twoWeeksBeforeExpiry = new Date(expiryDate.getTime() - (14 * 24 * 60 * 60 * 1000));
+            // Les champs startTime/endTime dans les logs sont des strings ISO.
+            // Firestore peut comparer des strings ISO pour les dates.
+            queryBase = queryBase.where("startTime", ">=", twoWeeksBeforeExpiry.toISOString());
+            logger.info(`Log query will filter logs starting from or after: ${twoWeeksBeforeExpiry.toISOString()}`);
+          }
+        }
+
+        const logsSnapshot = await queryBase.orderBy("startTime", "desc").limit(30).get(); // Limite généreuse
+
+        if (!logsSnapshot.empty) {
+          logger.info(`Found ${logsSnapshot.docs.length} workout logs for the relevant period of routine ${previousRoutine.id}.`);
+          const performanceByExercise: {
+            [exerciseIdOrName: string]: {
+              name: string,
+              reps: number[],
+              weights: number[],
+              completionCount: number,
+              sessionCount: number,
+              targetReps?: string,
+              targetWeight?: string,
+            }
+          } = {};
+
+          for (const logDoc of logsSnapshot.docs) {
+            const logData = logDoc.data();
+            if (logData.exercises && Array.isArray(logData.exercises)) {
+              for (const loggedExercise of logData.exercises) {
+                const key = (loggedExercise.exerciseId as string || loggedExercise.exerciseName as string);
+                if (!key) continue;
+                if (!performanceByExercise[key]) {
+                  performanceByExercise[key] = {
+                    name: loggedExercise.exerciseName as string,
+                    reps: [], weights: [], completionCount: 0, sessionCount: 0,
+                    targetReps: loggedExercise.targetReps as string | undefined,
+                    targetWeight: loggedExercise.targetWeight as string | undefined,
+                  };
+                }
+                performanceByExercise[key].sessionCount++;
+                if (loggedExercise.isCompleted === true) {
+                  performanceByExercise[key].completionCount++;
+                }
+                if (loggedExercise.loggedSets && Array.isArray(loggedExercise.loggedSets)) {
+                  for (const set of loggedExercise.loggedSets) {
+                    const repsPerformed = parseInt(set.performedReps as string, 10);
+                    if (!isNaN(repsPerformed)) performanceByExercise[key].reps.push(repsPerformed);
+                    const weightString = set.performedWeightKg as string;
+                    if (weightString && weightString.toLowerCase() !== "n/a" && weightString.toLowerCase() !== "bodyweight") {
+                      const weightKg = parseFloat(weightString);
+                      if (!isNaN(weightKg) && weightKg > 0) performanceByExercise[key].weights.push(weightKg);
+                    }
+                  }
+                }
+              }
+            }
+          }
+          for (const key in performanceByExercise) {
+            const data = performanceByExercise[key];
+            let avgReps: number | undefined = data.reps.length > 0 ? data.reps.reduce((a, b) => a + b, 0) / data.reps.length : undefined;
+            let maxWeight: number | undefined = data.weights.length > 0 ? Math.max(...data.weights) : undefined;
+            const completionRate = data.sessionCount > 0 ? (data.completionCount / data.sessionCount) * 100 : undefined;
+            aggregatedPerformanceSummary.push({
+              exerciseName: data.name,
+              averageReps: avgReps ? parseFloat(avgReps.toFixed(1)) : undefined,
+              maxWeightLiftedKg: maxWeight,
+              completedRate: completionRate ? parseFloat(completionRate.toFixed(0)) : undefined,
+              targetReps: data.targetReps,
+              targetWeight: data.targetWeight,
+            });
+          }
+          logger.info("Aggregated performance summary:", aggregatedPerformanceSummary);
+        } else {
+          logger.info(`No workout logs found for the relevant period of routine ${previousRoutine.id}.`);
+        }
+      } catch (error) {
+        logger.error("Error fetching or processing workout logs:", error);
+      }
+    }
 
     let actualWorkoutDaysCount = 0;
     let useSpecifiedDays = false;
@@ -172,23 +286,13 @@ export const generateAiRoutine = onCall<AiRoutineRequestPayload, Promise<AiGener
 
     if (onboarding.session_duration_minutes) {
       promptSections.push(`- CRITICAL CONSTRAINT - Available time per session: User selected category '${onboarding.session_duration_minutes}'. You MUST tailor the workout volume to this.`);
-      let exerciseCountInstruction = "You MUST select 4-6 exercises."; // Default
+      let exerciseCountInstruction = "You MUST select 4-6 exercises.";
       switch (onboarding.session_duration_minutes) {
-        case "short_30_max":
-          exerciseCountInstruction = "You MUST select EXACTLY 3-4 exercises. Focus on compound movements or high intensity.";
-          break;
-        case "medium_45":
-          exerciseCountInstruction = "You MUST select EXACTLY 4-5 exercises.";
-          break;
-        case "standard_60":
-          exerciseCountInstruction = "You MUST select EXACTLY 5-6 exercises.";
-          break;
-        case "long_75_90":
-          exerciseCountInstruction = "You MUST select EXACTLY 6-8 exercises. This duration allows for more volume, including accessory work.";
-          break;
-        case "very_long_90_plus":
-          exerciseCountInstruction = "You MUST select EXACTLY 7-9 exercises. This can include comprehensive warm-ups (though warm-up is not part of the exercise list itself), multiple primary lifts, and sufficient accessory/isolation work. Ensure the workout remains productive.";
-          break;
+        case "short_30_max": exerciseCountInstruction = "You MUST select EXACTLY 3-4 exercises. Focus on compound movements or high intensity."; break;
+        case "medium_45": exerciseCountInstruction = "You MUST select EXACTLY 4-5 exercises."; break;
+        case "standard_60": exerciseCountInstruction = "You MUST select EXACTLY 5-6 exercises."; break;
+        case "long_75_90": exerciseCountInstruction = "You MUST select EXACTLY 6-8 exercises. This duration allows for more volume, including accessory work."; break;
+        case "very_long_90_plus": exerciseCountInstruction = "You MUST select EXACTLY 7-9 exercises. This can include multiple primary lifts and sufficient accessory/isolation work. Ensure the workout remains productive."; break;
       }
       promptSections.push(`  - EXERCISE COUNT PER WORKOUT DAY: ${exerciseCountInstruction}`);
       promptSections.push("  - This exercise count is a strict requirement for each scheduled workout day. You must also consider exercise execution time and rest_between_sets_seconds to ensure the total workout fits the user's available time. Prioritize effective exercises.");
@@ -212,10 +316,8 @@ export const generateAiRoutine = onCall<AiRoutineRequestPayload, Promise<AiGener
       promptSections.push("  - CRITICAL: You MUST select exercises that strictly use ONLY the equipment listed. If 'bodyweight' is listed, it can always be used. Do not assume access to unlisted items.");
       promptSections.push("  - If 'homemade_weights' is listed, you can suggest exercises where improvised weights (like sandbags, water bottles) can be used, and mention this possibility in the exercise description.");
       promptSections.push("  - If 'gym_machines_selectorized' is listed, assume access to common selectorized machines (e.g., leg press, chest press, lat pulldown, shoulder press machine, leg curl, leg extension). Specify which type of machine if relevant (e.g., 'Lat Pulldown Machine').");
-      promptSections.push("  - Be creative to provide a balanced workout with the given equipment. If an ideal exercise for a muscle group requires unlisted equipment, find the best possible alternative using ONLY the listed equipment.");
     } else {
       promptSections.push("- Available Equipment: Bodyweight Only. ALL exercises MUST be strictly bodyweight.");
-      promptSections.push("  - IMPORTANT: All exercises MUST be bodyweight or use minimal, common household items as props (e.g., chair for dips, wall for wall-sits) if no equipment is listed.");
     }
 
     if (onboarding.focus_areas?.length) promptSections.push(`- Specific Body Part Focus: ${onboarding.focus_areas.join(", ")}`);
@@ -228,12 +330,28 @@ export const generateAiRoutine = onCall<AiRoutineRequestPayload, Promise<AiGener
       if (onboarding.physical_stats.target_weight_kg != null) promptSections.push(`  - Target Weight: ${onboarding.physical_stats.target_weight_kg} kg`);
     }
 
-    if (previousRoutine?.name) {
-      promptSections.push("\n--- Previous Routine Context ---");
-      promptSections.push(`- Previous Plan Name: ${previousRoutine.name}`);
+    if (aggregatedPerformanceSummary.length > 0) {
+      promptSections.push("\n--- User Performance on Previous Routine (Use this for progression) ---");
+      promptSections.push("Consider the following summary of the user's performance on key exercises from their previous routine (last ~2 weeks) to tailor the new plan. Adapt weights, reps, or exercise variations based on this feedback:");
+      for (const perf of aggregatedPerformanceSummary) {
+        let perfString = `- Exercise: "${perf.exerciseName}" (Target: ${perf.targetReps || "N/A"} @ ${perf.targetWeight || "N/A"})`;
+        if (perf.averageReps !== undefined) perfString += `, Actual Avg Reps/Set: ${perf.averageReps}`;
+        if (perf.maxWeightLiftedKg !== undefined) perfString += `, Actual Max Weight: ${perf.maxWeightLiftedKg}kg`;
+        if (perf.completedRate !== undefined) perfString += `, Completion Rate for this exercise in past sessions: ${perf.completedRate}%`;
+        promptSections.push(perfString);
+      }
+      promptSections.push("Based on this performance data:");
+      promptSections.push("  - If user consistently met or exceeded rep targets with good form (indicated by high completion rate), consider increasing the suggested weight or target reps for similar exercises.");
+      promptSections.push("  - If user struggled with an exercise (low avg reps, low completion rate), consider reducing weight/reps, suggesting an easier variation, or replacing it if it seems too difficult for their current level with available equipment.");
+      promptSections.push("  - If max weight lifted is significantly higher than target, suggest a higher starting weight for the new routine.");
+      promptSections.push("  - Aim for progressive overload. The new routine should be challenging but achievable.");
+    } else if (previousRoutine?.id) {
+      promptSections.push("\n--- Previous Routine Context (General) ---");
+      promptSections.push(`- Previous Plan Name: ${previousRoutine.name || "Unnamed"}`);
       if (previousRoutine.durationInWeeks != null) promptSections.push(`- Previous Plan Duration: ${previousRoutine.durationInWeeks} weeks`);
-      promptSections.push("Ensure the new routine offers appropriate progression or variation.");
+      promptSections.push("User had a previous routine, but no detailed performance logs were found or processed for the recent period. Base progression on general principles and the nature of the previous plan if provided. Aim for a slight increase in challenge if user experience is not 'beginner'.");
     }
+
 
     promptSections.push("\n--- Output Structure & Instructions (REVIEW CRITICAL CONSTRAINTS ABOVE) ---");
     promptSections.push("1. Generate 'name' (string) for the routine (e.g., 'Strength Builder Phase 1', 'Fat Loss & Tone').");
@@ -279,7 +397,7 @@ export const generateAiRoutine = onCall<AiRoutineRequestPayload, Promise<AiGener
     const apiRequestFullRoutine: GenerateContentRequest = {
       contents: [{ role: "user", parts: [{ text: finalPromptFullRoutine }] }],
       generationConfig: {
-        temperature: 0.5, // Baisser légèrement la température pour plus de directivité
+        temperature: 0.4,
         responseMimeType: "application/json",
       },
       safetySettings: [
@@ -320,7 +438,6 @@ export const generateAiRoutine = onCall<AiRoutineRequestPayload, Promise<AiGener
         logger.error("Parsed routine has invalid top-level structure:", { userId, parsedRoutine });
         throw new Error("AI generated invalid structure (name, duration, or dailyWorkouts).");
       }
-      // Normalisation des clés de jour en minuscules AVANT la validation
       const normalizedDailyWorkouts: { [day: string]: AiExercise[] } = {};
       for (const day of DAYS_OF_WEEK) {
         const lowerCaseDay = day.toLowerCase();
@@ -331,7 +448,7 @@ export const generateAiRoutine = onCall<AiRoutineRequestPayload, Promise<AiGener
             logger.warn(`Exercises for day '${lowerCaseDay}' is not an array in AI response, defaulting to empty.`, { userId, dayData: parsedRoutine.dailyWorkouts[lowerCaseDay] });
             normalizedDailyWorkouts[lowerCaseDay] = [];
           }
-        } else if (Object.prototype.hasOwnProperty.call(parsedRoutine.dailyWorkouts, day)) { // Au cas où l'IA aurait utilisé une majuscule
+        } else if (Object.prototype.hasOwnProperty.call(parsedRoutine.dailyWorkouts, day)) {
           if (Array.isArray(parsedRoutine.dailyWorkouts[day])) {
             normalizedDailyWorkouts[lowerCaseDay] = parsedRoutine.dailyWorkouts[day];
           } else {
@@ -340,17 +457,15 @@ export const generateAiRoutine = onCall<AiRoutineRequestPayload, Promise<AiGener
           }
         }
         else {
-          normalizedDailyWorkouts[lowerCaseDay] = []; // Assurer que tous les jours sont présents
+          normalizedDailyWorkouts[lowerCaseDay] = [];
         }
       }
       parsedRoutine.dailyWorkouts = normalizedDailyWorkouts;
 
-
       for (const day of DAYS_OF_WEEK) {
-        // La clé 'day' est déjà en minuscules grâce à la normalisation ci-dessus.
-        if (!Array.isArray(parsedRoutine.dailyWorkouts[day])) { // Double vérification après normalisation
+        if (!Array.isArray(parsedRoutine.dailyWorkouts[day])) {
           logger.error(`Normalized exercises for day '${day}' is still not an array. This is unexpected.`, { userId, dayData: parsedRoutine.dailyWorkouts[day] });
-          parsedRoutine.dailyWorkouts[day] = []; // Sécurité
+          parsedRoutine.dailyWorkouts[day] = [];
         }
 
         for (const exercise of parsedRoutine.dailyWorkouts[day]) {
