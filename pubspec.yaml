@@ -19,16 +19,29 @@ dependencies:
   uuid: ^4.5.1
   cloud_functions: ^5.5.0
   audioplayers: ^6.4.0
+  logger: ^2.5.0
+  provider: ^6.1.5
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_launcher_icons: ^0.14.3
+  flutter_lints: ^5.0.0
 
 flutter:
   uses-material-design: true
 
   assets:
     - assets/sounds/
+    - assets/launcher_icon/
+
+flutter_launcher_icons:
+  android: true # Génère pour Android. Peut aussi être "launcher_icon" pour un nom spécifique.
+  ios: true # Génère pour iOS.
+  image_path: "assets/launcher_icon/launcher_icon.png" # Chemin vers votre image source.
+  min_sdk_android: 21 # Requis pour les icônes adaptatives, sinon facultatif.
+  remove_alpha_ios: true # Recommandé si votre PNG a de la transparence.
+
 
   # Ajoutez cette section pour les images et les polices
   #   - assets/images/ # Exemple : déclare tout un dossier d'images

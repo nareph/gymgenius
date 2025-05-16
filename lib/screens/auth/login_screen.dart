@@ -1,7 +1,9 @@
 // lib/screens/auth/login_screen.dart
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:gymgenius/services/logger_service.dart';
 
+// LoginScreen: Allows existing users to sign in to their accounts.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -10,46 +12,45 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _formKey = GlobalKey<FormState>(); // Key for the form
+  final _formKey = GlobalKey<FormState>(); // Key for validating the form
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _isLoading = false; // For the loading indicator
-  bool _isPasswordObscured = true; // For password visibility toggle
+  bool _isLoading =
+      false; // To show a loading indicator during async operations
+  bool _isPasswordObscured = true; // To toggle password visibility
+
+  @override
+  void dispose() {
+    // Dispose controllers when the widget is removed from the widget tree
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   // --- Login Function ---
+  // Handles the email and password sign-in process.
   Future<void> _loginWithEmail() async {
-    // Validate the form
     if (!(_formKey.currentState?.validate() ?? false)) {
       return;
     }
-
-    // Hide keyboard
     FocusScope.of(context).unfocus();
-
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
       await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
-      // Redirect to the main app screen upon successful login
       if (mounted) {
-        // It's usually better for AuthWrapper to handle this navigation based on auth state changes
-        // However, if you want explicit navigation here:
         Navigator.pushNamedAndRemoveUntil(
           context,
-          '/main_app', // Should be the route name for your main dashboard
-          (Route<dynamic> route) => false, // Removes all previous routes
+          '/main_app',
+          (Route<dynamic> route) => false,
         );
       }
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException catch (e, stackTrace) {
       if (mounted) {
-        String errorMessage =
-            "Login failed. Please check your credentials."; // Default
-        // TODO: Localize all these error messages
+        String errorMessage = "Login failed. Please check your credentials.";
         if (e.code == 'user-not-found' ||
             e.code == 'wrong-password' ||
             e.code == 'invalid-credential') {
@@ -61,104 +62,97 @@ class _LoginScreenState extends State<LoginScreen> {
         } else if (e.code == 'network-request-failed') {
           errorMessage =
               "Network error. Please check your connection and try again.";
+        } else {
+          Log.error(
+              "LoginScreen FirebaseAuthException: ${e.code} - ${e.message}",
+              error: e,
+              stackTrace: stackTrace);
         }
         _showErrorSnackBar(errorMessage);
       }
-    } catch (e) {
-      // Catch other potential errors
+    } catch (e, stacktrace) {
       if (mounted) {
-        print("Login error: $e"); // Log for debugging
-        _showErrorSnackBar(
-            "An unexpected error occurred. Please try again."); // TODO: Localize
+        Log.error("LoginScreen unexpected error",
+            error: e, stackTrace: stacktrace);
+        _showErrorSnackBar("An unexpected error occurred. Please try again.");
       }
     } finally {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        setState(() => _isLoading = false);
       }
     }
   }
 
   // --- Forgot Password Function ---
+  // Sends a password reset email to the user.
   Future<void> _sendPasswordResetEmail() async {
-    // Simple validation for email (can be more robust)
-    // We only need the email field for password reset
-    if (_emailController.text.trim().isEmpty ||
+    final String email = _emailController.text.trim();
+    if (email.isEmpty ||
         !RegExp(r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9]+\.[a-zA-Z]+")
-            .hasMatch(_emailController.text.trim())) {
+            .hasMatch(email)) {
       _showErrorSnackBar(
-          "Please enter a valid email address to reset your password."); // TODO: Localize
+          "Please enter a valid email address to reset your password.");
       return;
     }
 
-    FocusScope.of(context).unfocus(); // Hide keyboard
-
-    setState(() {
-      _isLoading = true; // Use the same loading indicator
-    });
+    FocusScope.of(context).unfocus();
+    setState(() => _isLoading = true);
 
     try {
-      await FirebaseAuth.instance.sendPasswordResetEmail(
-        email: _emailController.text.trim(),
-      );
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
       if (mounted) {
-        // Show a success message
+        // Display a generic success message for security reasons.
+        // This does not confirm if the email account actually exists in the system.
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              "Password reset email sent to ${_emailController.text.trim()}. Please check your inbox (and spam folder).", // TODO: Localize
+              "If your email address is in our system, you will receive an email with instructions to reset your password shortly. Please check your inbox (and spam folder).",
               style: TextStyle(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurfaceVariant), // Using a less alarming color for success
+                  color: Theme.of(context).colorScheme.onSecondaryContainer),
             ),
             backgroundColor: Theme.of(context)
                 .colorScheme
-                .surfaceContainerHighest, // Using a less alarming background
+                .secondaryContainer, // Neutral or light success color
             behavior: SnackBarBehavior.floating,
             margin: const EdgeInsets.all(16),
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            duration:
-                const Duration(seconds: 5), // Longer duration for this message
+            duration: const Duration(seconds: 6),
           ),
         );
       }
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException catch (e, s) {
       if (mounted) {
         String errorMessage =
-            "Failed to send password reset email. Please try again."; // TODO: Localize
-        if (e.code == 'user-not-found') {
-          // It's often better not to reveal if an email exists for security reasons
-          // So, a generic message might be preferred for 'user-not-found' in production
-          errorMessage =
-              "If this email is registered, a password reset link has been sent."; // TODO: Localize
-        } else if (e.code == 'invalid-email') {
-          errorMessage =
-              "The email address is badly formatted."; // TODO: Localize
+            "Failed to process password reset request. Please try again.";
+        // Note: 'user-not-found' is typically not thrown by sendPasswordResetEmail for security.
+        if (e.code == 'invalid-email') {
+          errorMessage = "The email address is badly formatted.";
         } else if (e.code == 'network-request-failed') {
           errorMessage =
-              "Network error. Please check your connection and try again."; // TODO: Localize
+              "Network error. Please check your connection and try again.";
+        } else {
+          Log.error(
+              "LoginScreen PasswordReset FirebaseAuthException: ${e.code} - ${e.message}",
+              error: e,
+              stackTrace: s);
         }
         _showErrorSnackBar(errorMessage);
       }
-    } catch (e) {
+    } catch (e, stacktrace) {
       if (mounted) {
-        print("Password Reset error: $e"); // Log for debugging
-        _showErrorSnackBar(
-            "An unexpected error occurred. Please try again."); // TODO: Localize
+        Log.error("LoginScreen PasswordReset unexpected error",
+            error: e, stackTrace: stacktrace);
+        _showErrorSnackBar("An unexpected error occurred. Please try again.");
       }
     } finally {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        setState(() => _isLoading = false);
       }
     }
   }
 
-  // Helper to show error SnackBars
+  // Helper method to display error messages in a SnackBar.
   void _showErrorSnackBar(String message) {
     if (!mounted) return;
     final colorScheme = Theme.of(context).colorScheme;
@@ -173,18 +167,10 @@ class _LoginScreenState extends State<LoginScreen> {
         backgroundColor: colorScheme.error,
         duration: const Duration(seconds: 3),
         behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(16), // Add some margin for floating
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8)), // Rounded corners
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
   }
 
   @override
@@ -210,18 +196,17 @@ class _LoginScreenState extends State<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  "Welcome Back!", // TODO: Localize
+                  "Welcome Back!",
                   textAlign: TextAlign.center,
                   style: textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold, color: colorScheme.primary),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  "Log in to continue your fitness journey", // TODO: Localize
+                  "Log in to continue your fitness journey",
                   textAlign: TextAlign.center,
                   style: textTheme.bodyLarge?.copyWith(
-                    color: colorScheme.onSurface
-                        .withAlpha((255 * 0.7).round()), // FIXED withOpacity
+                    color: colorScheme.onSurface.withAlpha((255 * 0.7).round()),
                   ),
                 ),
                 const SizedBox(height: 40),
@@ -229,18 +214,18 @@ class _LoginScreenState extends State<LoginScreen> {
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
-                    labelText: "Email", // TODO: Localize
+                    labelText: "Email",
                     prefixIcon: Icon(Icons.email_outlined,
                         color: colorScheme.onSurfaceVariant),
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'Please enter your email'; // TODO: Localize
+                      return 'Please enter your email';
                     }
                     if (!RegExp(
                             r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9]+\.[a-zA-Z]+")
                         .hasMatch(value)) {
-                      return 'Please enter a valid email address'; // TODO: Localize
+                      return 'Please enter a valid email address';
                     }
                     return null;
                   },
@@ -252,7 +237,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   controller: _passwordController,
                   obscureText: _isPasswordObscured,
                   decoration: InputDecoration(
-                    labelText: "Password", // TODO: Localize
+                    labelText: "Password",
                     prefixIcon: Icon(Icons.lock_outline,
                         color: colorScheme.onSurfaceVariant),
                     suffixIcon: IconButton(
@@ -271,7 +256,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter your password'; // TODO: Localize
+                      return 'Please enter your password';
                     }
                     return null;
                   },
@@ -284,11 +269,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
-                    onPressed: _isLoading
-                        ? null
-                        : _sendPasswordResetEmail, // Connect to the new function
+                    onPressed: _isLoading ? null : _sendPasswordResetEmail,
                     child: Text(
-                      "Forgot Password?", // TODO: Localize
+                      "Forgot Password?",
                       style: TextStyle(color: colorScheme.secondary),
                     ),
                   ),
@@ -297,36 +280,32 @@ class _LoginScreenState extends State<LoginScreen> {
                 _isLoading
                     ? Center(
                         child: CircularProgressIndicator(
-                          color: colorScheme.primary,
-                        ),
-                      )
+                            color: colorScheme.primary))
                     : ElevatedButton(
                         onPressed: _loginWithEmail,
                         style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             textStyle: textTheme.labelLarge
                                 ?.copyWith(fontWeight: FontWeight.bold)),
-                        child: const Text("LOG IN"), // TODO: Localize
+                        child: const Text("LOG IN"),
                       ),
                 const SizedBox(height: 30),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      "Don't have an account?", // TODO: Localize
+                      "Don't have an account?",
                       style: textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurface.withAlpha(
-                            (255 * 0.7).round()), // FIXED withOpacity
+                        color: colorScheme.onSurface
+                            .withAlpha((255 * 0.7).round()),
                       ),
                     ),
                     TextButton(
                       onPressed: () {
-                        // Ensure you have a '/signup' route or use direct navigation.
-                        // If SignUpScreen needs onboarding data, it should be optional or handled.
                         Navigator.pushReplacementNamed(context, '/signup');
                       },
                       child: Text(
-                        "Sign Up", // TODO: Localize
+                        "Sign Up",
                         style: textTheme.bodyMedium?.copyWith(
                           color: colorScheme.primary,
                           fontWeight: FontWeight.bold,

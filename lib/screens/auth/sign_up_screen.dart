@@ -2,12 +2,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:gymgenius/models/onboarding.dart'; // Importer OnboardingData
-import 'package:gymgenius/models/onboarding_question.dart'; // Pour defaultOnboardingQuestions pour l'affichage
+import 'package:gymgenius/models/onboarding.dart';
+import 'package:gymgenius/models/onboarding_question.dart';
+import 'package:gymgenius/services/logger_service.dart';
 
 class SignUpScreen extends StatefulWidget {
-  final Map<String, dynamic>?
-      onboardingData; // Reçu de OnboardingScreen (state.answers du Bloc)
+  final Map<String, dynamic>? onboardingData;
 
   const SignUpScreen({super.key, this.onboardingData});
 
@@ -49,27 +49,20 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
       if (user != null) {
         bool finalOnboardingCompletedFlag = false;
-        OnboardingData
-            onboardingDataToSave; // Utiliser l'objet OnboardingData typé
+        OnboardingData onboardingDataToSave;
 
         if (widget.onboardingData != null &&
             widget.onboardingData!.isNotEmpty) {
           final Map<String, dynamic> rawOnboardingMap = widget.onboardingData!;
-          // OnboardingBloc s'assure que 'completed' est dans ce map
           finalOnboardingCompletedFlag =
               rawOnboardingMap['completed'] as bool? ?? false;
 
-          // Si 'completed' n'est pas dans le map venant du bloc (ne devrait pas arriver si le bloc est correct),
-          // on le force ici.
           if (rawOnboardingMap['completed'] == null) {
             rawOnboardingMap['completed'] = true;
             finalOnboardingCompletedFlag = true;
           }
-          // Créer l'objet OnboardingData à partir de la map
           onboardingDataToSave = OnboardingData.fromMap(rawOnboardingMap);
         } else {
-          // Cas où SignUpScreen est accédé directement.
-          // onboardingDataToSave sera un objet avec completed: false
           onboardingDataToSave = OnboardingData(completed: false);
           finalOnboardingCompletedFlag = false;
         }
@@ -79,47 +72,51 @@ class _SignUpScreenState extends State<SignUpScreen> {
           'uid': user.uid,
           'createdAt': FieldValue.serverTimestamp(),
           'displayName': user.email?.split('@')[0] ?? 'New User',
-          'onboardingData': onboardingDataToSave
-              .toMap(), // Sauvegarder l'objet OnboardingData sérialisé
+          'onboardingData': onboardingDataToSave.toMap(),
           'onboardingCompleted': finalOnboardingCompletedFlag,
         };
 
+        Log.debug(
+            "SignUpScreen: Creating user profile in Firestore for ${user.uid}");
         await FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
             .set(userProfileData);
+        Log.debug("SignUpScreen: User profile created successfully");
 
         if (mounted) {
           Navigator.pushNamedAndRemoveUntil(
               context, '/main_app', (route) => false);
         }
       } else {
+        Log.error(
+            "SignUpScreen: User creation succeeded but user object is null");
         if (mounted) {
           _showErrorSnackBar("Sign up failed. User data unavailable.");
         }
       }
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException catch (e, stackTrace) {
+      String errorMessage = "An error occurred during sign up.";
+      if (e.code == 'email-already-in-use') {
+        errorMessage =
+            "This email is already registered. Please log in or use a different email.";
+      } else if (e.code == 'weak-password') {
+        errorMessage =
+            "The password provided is too weak. Please use a stronger password (min. 6 characters).";
+      } else if (e.code == 'invalid-email') {
+        errorMessage = "The email address is not valid.";
+      } else if (e.code == 'network-request-failed') {
+        errorMessage =
+            "Network error. Please check your connection and try again.";
+      }
+      Log.error("SignUpScreen FirebaseAuthException: ${e.code} - ${e.message}",
+          error: e, stackTrace: stackTrace);
       if (mounted) {
-        String errorMessage = "An error occurred during sign up.";
-        if (e.code == 'email-already-in-use') {
-          errorMessage =
-              "This email is already registered. Please log in or use a different email.";
-        } else if (e.code == 'weak-password') {
-          errorMessage =
-              "The password provided is too weak. Please use a stronger password (min. 6 characters).";
-        } else if (e.code == 'invalid-email') {
-          errorMessage = "The email address is not valid.";
-        } else if (e.code == 'network-request-failed') {
-          errorMessage =
-              "Network error. Please check your connection and try again.";
-        } else {
-          print(
-              "FirebaseAuthException during sign up: ${e.code} - ${e.message}");
-        }
         _showErrorSnackBar(errorMessage);
       }
-    } catch (e, s) {
-      print("Unexpected sign up error: $e\nStacktrace: $s");
+    } catch (e, stackTrace) {
+      Log.error("SignUpScreen Unexpected sign up error",
+          error: e, stackTrace: stackTrace);
       if (mounted) {
         _showErrorSnackBar(
             "An unexpected error occurred. Please try again later.");
@@ -157,10 +154,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
       return "No preferences selected yet.";
     }
 
-    // Utiliser defaultOnboardingQuestions pour l'ordre et les libellés
     for (var question in defaultOnboardingQuestions) {
-      final key = question
-          .id; // ex: "goal", "physical_stats", "session_duration_minutes"
+      final key = question.id;
       final value = displayableData[key];
 
       if (value == null || (value is List && value.isEmpty)) {
@@ -171,22 +166,21 @@ class _SignUpScreenState extends State<SignUpScreen> {
       if (displayKey.endsWith("?")) {
         displayKey = displayKey.substring(0, displayKey.length - 1);
       }
-      // Raccourcir les longs textes de question pour l'affichage résumé
-      if (displayKey.length > 40) {
-        displayKey = "${displayKey.substring(0, 37)}...";
-      }
 
       if (key == 'physical_stats' && value is Map<String, dynamic>) {
         final stats = PhysicalStats.fromMap(value);
         if (stats.isNotEmpty) {
           buffer.writeln("- $displayKey:");
           if (stats.age != null) buffer.writeln("  - Age: ${stats.age} years");
-          if (stats.weightKg != null)
+          if (stats.weightKg != null) {
             buffer.writeln("  - Weight: ${stats.weightKg} kg");
-          if (stats.heightM != null)
+          }
+          if (stats.heightM != null) {
             buffer.writeln("  - Height: ${stats.heightM} m");
-          if (stats.targetWeightKg != null)
+          }
+          if (stats.targetWeightKg != null) {
             buffer.writeln("  - Target Weight: ${stats.targetWeightKg} kg");
+          }
         }
       } else if (value is List) {
         final selectedOptionTexts = value.map((val) {
@@ -205,7 +199,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               question.options.firstWhere((opt) => opt.value == value).text;
           buffer.writeln("- $displayKey: $selectedOptionText");
         } catch (e) {
-          buffer.writeln("- $displayKey: $value"); // Fallback
+          buffer.writeln("- $displayKey: $value");
         }
       } else {
         buffer.writeln("- $displayKey: $value");
@@ -329,11 +323,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         color: colorScheme.onSurfaceVariant),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _isPasswordObscured
-                            ? Icons.visibility_off_outlined
-                            : Icons.visibility_outlined,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
+                          _isPasswordObscured
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                          color: colorScheme.onSurfaceVariant),
                       onPressed: () => setState(
                           () => _isPasswordObscured = !_isPasswordObscured),
                     ),
@@ -360,11 +353,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         color: colorScheme.onSurfaceVariant),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _isConfirmPasswordObscured
-                            ? Icons.visibility_off_outlined
-                            : Icons.visibility_outlined,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
+                          _isConfirmPasswordObscured
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                          color: colorScheme.onSurfaceVariant),
                       onPressed: () => setState(() =>
                           _isConfirmPasswordObscured =
                               !_isConfirmPasswordObscured),
@@ -396,11 +388,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           textStyle: textTheme.labelLarge
                               ?.copyWith(fontWeight: FontWeight.bold),
                         ),
-                        child: Text(
-                          hasMeaningfulOnboardingData
-                              ? "CREATE ACCOUNT & GET STARTED"
-                              : "SIGN UP",
-                        ),
+                        child: Text(hasMeaningfulOnboardingData
+                            ? "CREATE ACCOUNT & GET STARTED"
+                            : "SIGN UP"),
                       ),
                 const SizedBox(height: 30),
                 Row(
@@ -414,9 +404,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       ),
                     ),
                     TextButton(
-                      onPressed: () {
-                        Navigator.pushReplacementNamed(context, '/login');
-                      },
+                      onPressed: () =>
+                          Navigator.pushReplacementNamed(context, '/login'),
                       child: Text(
                         "Log In",
                         style: textTheme.bodyMedium?.copyWith(

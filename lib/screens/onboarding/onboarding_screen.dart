@@ -3,12 +3,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:gymgenius/models/onboarding.dart';
-import 'package:gymgenius/models/onboarding_question.dart';
-import 'package:gymgenius/screens/auth/sign_up_screen.dart';
-import 'package:gymgenius/screens/onboarding/bloc/onboarding_bloc.dart';
-import 'package:gymgenius/screens/onboarding/views/question_view.dart';
-import 'package:gymgenius/screens/onboarding/views/stats_input_view.dart';
+import 'package:gymgenius/models/onboarding.dart'; // For OnboardingData model
+import 'package:gymgenius/models/onboarding_question.dart'; // For OnboardingQuestion list
+import 'package:gymgenius/screens/auth/sign_up_screen.dart'; // To navigate after pre-signup onboarding
+import 'package:gymgenius/screens/onboarding/bloc/onboarding_bloc.dart'; // The BLoC for managing onboarding state
+import 'package:gymgenius/screens/onboarding/views/question_view.dart'; // View for single/multiple choice questions
+import 'package:gymgenius/screens/onboarding/views/stats_input_view.dart'; // View for numeric stats input
+import 'package:gymgenius/services/logger_service.dart'; // Import the logger service
 
 class OnboardingScreen extends StatefulWidget {
   final bool isPostLoginCompletion;
@@ -24,8 +25,7 @@ class OnboardingScreen extends StatefulWidget {
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
-  final List<OnboardingQuestion> _questions =
-      defaultOnboardingQuestions; // Utilise la liste mise à jour
+  final List<OnboardingQuestion> _questions = defaultOnboardingQuestions;
   int _currentPage = 0;
 
   @override
@@ -54,23 +54,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final Map<String, dynamic> currentAnswersFromBloc = bloc.state.answers;
 
     if (widget.isPostLoginCompletion) {
-      print(
-          "OnboardingScreen: Completing/Skipping post-login. Saving data and navigating to /main_app.");
-      _saveOnboardingDataForLoggedInUser(
-          currentAnswersFromBloc); // Le BLoC n'est pas impliqué dans la sauvegarde ici
-
+      Log.debug(
+          "OnboardingScreen: Completing/Skipping post-login. Saving data and navigating to /main_app. Answers: $currentAnswersFromBloc");
+      _saveOnboardingDataForLoggedInUser(currentAnswersFromBloc);
       if (mounted) {
         Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/main_app',
-          (Route<dynamic> route) => false,
-        );
+            context, '/main_app', (Route<dynamic> route) => false);
       }
     } else {
-      print(
-          "OnboardingScreen: Completing/Skipping pre-signup. Triggering BLoC CompleteOnboarding.");
-      bloc.add(
-          CompleteOnboarding()); // Le BlocListener s'occupera de la navigation vers SignUpScreen
+      Log.debug(
+          "OnboardingScreen: Completing/Skipping pre-signup. Triggering BLoC CompleteOnboarding. Current answers: ${bloc.state.answers}");
+      bloc.add(CompleteOnboarding());
     }
   }
 
@@ -80,51 +74,23 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      print(
-          "Error: _saveOnboardingDataForLoggedInUser called but user is null.");
+      Log.error(
+          "OnboardingScreen Error: _saveOnboardingDataForLoggedInUser called but user is null.");
       return;
     }
 
     OnboardingData dataToSave;
 
-    if (answersMap.isEmpty && !widget.isPostLoginCompletion) {
-      // Si pré-signup et skip total
-      dataToSave = OnboardingData(
-          completed:
-              true); // 'completed' sera mis à true par le BLoC pour pré-signup
+    if (answersMap.isEmpty && widget.isPostLoginCompletion) {
+      Log.debug(
+          "OnboardingScreen Info: _saveOnboardingDataForLoggedInUser received empty answersMap (post-login skip). Marking as completed.");
+      dataToSave = OnboardingData(completed: true);
     } else {
-      PhysicalStats? physicalStats;
-      if (answersMap.containsKey('physical_stats') &&
-          answersMap['physical_stats'] is Map) {
-        final statsMap = answersMap['physical_stats'] as Map<String, dynamic>;
-        physicalStats =
-            PhysicalStats.fromMap(statsMap); // Utilisation de fromMap
-      }
-
-      dataToSave = OnboardingData(
-        goal: answersMap['goal'] as String?,
-        gender: answersMap['gender'] as String?,
-        experience: answersMap['experience'] as String?,
-        frequency: answersMap['frequency'] as String?,
-        sessionDurationPreference:
-            answersMap['session_duration_minutes'] as String?, // <<--- AJOUTÉ
-        workoutDays: answersMap['workout_days'] != null
-            ? List<String>.from(answersMap['workout_days'])
-            : null,
-        equipment: answersMap['equipment'] != null
-            ? List<String>.from(answersMap['equipment'])
-            : null,
-        focusAreas: answersMap['focus_areas'] != null
-            ? List<String>.from(answersMap['focus_areas'])
-            : null,
-        physicalStats: physicalStats,
-        completed:
-            true, // Pour le flux post-login, on marque toujours comme complété ici
-      );
+      dataToSave = OnboardingData.fromMap(answersMap).copyWith(completed: true);
     }
 
     try {
-      print(
+      Log.debug(
           "OnboardingScreen: Saving OnboardingData for logged-in user ${user.uid}: ${dataToSave.toMap()}");
       await FirebaseFirestore.instance.collection('users').doc(user.uid).set(
         {
@@ -134,11 +100,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         },
         SetOptions(merge: true),
       );
-      print(
+      Log.debug(
           "OnboardingScreen: OnboardingData saved successfully for user ${user.uid}.");
-    } catch (e) {
-      print(
-          "OnboardingScreen: Error saving OnboardingData for user ${user.uid}: $e");
+    } catch (e, stackTrace) {
+      Log.error(
+          "OnboardingScreen: Error saving OnboardingData for user ${user.uid}: $e",
+          error: e,
+          stackTrace: stackTrace);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -180,8 +148,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             child: TextButton(
               onPressed: _triggerCompletionOrSkip,
               style: TextButton.styleFrom(
-                foregroundColor:
-                    colorScheme.onSurface.withAlpha((0.8 * 255).round()),
+                foregroundColor: colorScheme.onSurface.withAlpha((204).round()),
                 textStyle:
                     textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
               ).merge(Theme.of(context).textButtonTheme.style),
@@ -194,8 +161,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         listener: (context, state) {
           if (!widget.isPostLoginCompletion &&
               state.status == OnboardingStatus.complete) {
-            print(
-                "BlocListener (Pre-SignUp): Navigating to SignUpScreen with answers: ${state.answers}.");
+            Log.debug(
+                "OnboardingScreen BlocListener (Pre-SignUp): Navigating to SignUpScreen with answers: ${state.answers}.");
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
@@ -254,7 +221,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       decoration: BoxDecoration(
         color: _currentPage == index
             ? colorScheme.primary
-            : colorScheme.onSurface.withAlpha((0.25 * 255).round()),
+            : colorScheme.onSurface.withAlpha((64).round()),
         borderRadius: BorderRadius.circular(5),
       ),
     );

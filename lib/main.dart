@@ -3,9 +3,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart'; // For kDebugMode and defaultTargetPlatform
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart'; // For BlocProvider
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gymgenius/providers/workout_session_manager.dart';
 import 'package:gymgenius/screens/auth/login_screen.dart';
 import 'package:gymgenius/screens/auth/sign_up_screen.dart';
@@ -13,43 +13,48 @@ import 'package:gymgenius/screens/home_screen.dart';
 import 'package:gymgenius/screens/main_dashboard_screen.dart';
 import 'package:gymgenius/screens/onboarding/bloc/onboarding_bloc.dart';
 import 'package:gymgenius/screens/onboarding/onboarding_screen.dart';
+import 'package:gymgenius/services/logger_service.dart';
 import 'package:gymgenius/theme/app_theme.dart';
 import 'package:provider/provider.dart';
 
-import 'firebase_options.dart'; // Ensure you have this generated file
+import 'firebase_options.dart';
 
 const bool _useEmulators = kDebugMode;
 
 Future<void> _configureFirebaseEmulators() async {
-  // Choose the correct host based on your testing environment (emulator vs physical device)
-  // For Android Emulator: '10.0.2.2'
-  // For iOS Simulator/Web/Desktop/Physical Device on same network: Use your local network IP
-  // final String host = defaultTargetPlatform == TargetPlatform.android ? '10.0.2.2' : 'localhost';
-  final String host =
-      '192.168.8.46'; // Replace with YOUR specific IP if needed for physical device testing
+  final String host = '192.168.8.46'; // Replace with your local IP address
 
-  print('--- Configuring Firebase Emulators to connect to: $host ---');
+  // Host configuration:
+  // - Android Emulator: '10.0.2.2' (special address to reach host machine)
+  // - iOS Simulator/Web/Desktop/Physical Device on same network: Use your machine's local network IP.
+  //   You can find this IP using 'ipconfig' (Windows) or 'ifconfig' (macOS/Linux).
+  // const String host = defaultTargetPlatform == TargetPlatform.android ? '10.0.2.2' : 'localhost';
+  // IMPORTANT: Replace with YOUR specific local IP if testing on a physical device or if 'localhost' doesn't work for other emulators.
+  Log.info('--- Configuring Firebase Emulators to connect to host: $host ---');
   try {
     await FirebaseAuth.instance.useAuthEmulator(host, 9099);
-    print('FirebaseAuth emulator configured on $host:9099');
+    Log.debug('FirebaseAuth emulator configured on $host:9099');
+
     FirebaseFirestore.instance.settings = Settings(
       host: '$host:8080',
-      sslEnabled: false, // Emulators typically don't use SSL
-      persistenceEnabled:
-          false, // Disable persistence when using emulators to avoid conflicts
+      sslEnabled: false,
+      persistenceEnabled: false,
     );
-    print('FirebaseFirestore emulator configured on $host:8080');
+    Log.debug('FirebaseFirestore emulator configured on $host:8080');
+
     FirebaseFunctions.instance.useFunctionsEmulator(host, 5001);
-    print('FirebaseFunctions emulator configured on $host:5001');
-    print('--- Firebase Emulators configured successfully ---');
+    Log.debug('FirebaseFunctions emulator configured on $host:5001');
+
+    Log.info('Firebase Emulators configured successfully');
   } catch (e, stack) {
-    print('Error configuring Firebase emulators: $e');
-    print(stack);
+    Log.error('Error configuring Firebase emulators',
+        error: e, stackTrace: stack);
   }
 }
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
@@ -57,7 +62,7 @@ Future<void> main() async {
   if (_useEmulators) {
     await _configureFirebaseEmulators();
   } else {
-    print("--- Using Production Firebase Services ---");
+    Log.info("--- Using Production Firebase Services ---");
   }
 
   runApp(const MyApp());
@@ -68,32 +73,25 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Provide WorkoutSessionManager to the entire widget tree below
     return ChangeNotifierProvider(
       create: (context) => WorkoutSessionManager(),
       child: MaterialApp(
         title: 'GymGenius',
-        theme: AppTheme.darkTheme, // Assuming you have defined this theme
-        debugShowCheckedModeBanner:
-            false, // Hide debug banner in release builds
-        home: const AuthWrapper(), // Use AuthWrapper as the entry point
+        theme: AppTheme.darkTheme,
+        debugShowCheckedModeBanner: false,
+        home: const AuthWrapper(),
         routes: {
-          // Define named routes for easy navigation
-          '/home': (context) => const HomeScreen(), // Initial public screen
+          '/home': (context) => const HomeScreen(),
           '/login': (context) => const LoginScreen(),
           '/signup': (context) {
-            // Allow passing onboarding data to SignUpScreen if needed
             final args = ModalRoute.of(context)?.settings.arguments
                 as Map<String, dynamic>?;
             return SignUpScreen(onboardingData: args?['onboardingData']);
           },
-          // '/onboarding': // This route might not be directly needed if handled by AuthWrapper/HomeScreen
-          '/main_app': (context) =>
-              const MainDashboardScreen(), // The main app screen after login
+          '/main_app': (context) => const MainDashboardScreen(),
         },
         onUnknownRoute: (settings) {
-          // Handle cases where a route name is not found
-          print("Unknown route accessed: ${settings.name}");
+          Log.warning("Unknown route accessed: ${settings.name}");
           return MaterialPageRoute(builder: (_) => const UnknownRouteScreen());
         },
       ),
@@ -101,15 +99,14 @@ class MyApp extends StatelessWidget {
   }
 }
 
-/// AuthWrapper Widget: Listens to Firebase auth state changes and directs the user
-/// to the appropriate screen (Login, Onboarding, or Main App).
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
-  /// Checks if the user has completed the onboarding process by checking
-  /// the existence and content of 'onboardingData' in their Firestore document.
   Future<bool> _isOnboardingComplete(String userId) async {
-    if (userId.isEmpty) return false; // Cannot check for empty user ID
+    if (userId.isEmpty) {
+      Log.warning("_isOnboardingComplete called with empty userId");
+      return false;
+    }
 
     try {
       final doc = await FirebaseFirestore.instance
@@ -119,102 +116,85 @@ class AuthWrapper extends StatelessWidget {
 
       if (doc.exists && doc.data() != null) {
         final userData = doc.data()!;
-        final onboardingData = userData['onboardingData'];
-
-        // Define "complete": data exists as a map and is not empty.
-        // You could add more specific checks here, e.g., ensuring 'goal' is present.
-        if (onboardingData is Map && onboardingData.isNotEmpty) {
-          // Example: return onboardingData.containsKey('goal') && onboardingData['goal'] != null;
+        final bool completedFlag =
+            userData['onboardingCompleted'] as bool? ?? false;
+        if (completedFlag) {
+          Log.debug("User $userId has 'onboardingCompleted: true'");
           return true;
+        } else {
+          Log.debug(
+              "User $userId has 'onboardingCompleted: false' or flag is missing");
+          return false;
         }
       }
-      // Document doesn't exist or onboardingData is missing/empty/not a map
+      Log.debug("User document for $userId does not exist");
       return false;
     } catch (e, stack) {
-      print("Error checking onboarding status for user $userId: $e");
-      print(stack);
-      // Decide fallback behavior on error. Returning false (incomplete) is safer.
+      Log.error("Error checking onboarding status for user $userId",
+          error: e, stackTrace: stack);
       return false;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // StreamBuilder listens to authentication state changes
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, authSnapshot) {
-        // --- 1. Handle Connection States & Errors ---
         if (authSnapshot.connectionState == ConnectionState.waiting) {
-          print("AuthWrapper: Waiting for auth state...");
-          // Show loading indicator while checking auth state
+          Log.debug("Auth stream is waiting");
           return const Scaffold(
               body: Center(child: CircularProgressIndicator()));
         }
         if (authSnapshot.hasError) {
-          print("AuthWrapper StreamBuilder error: ${authSnapshot.error}");
-          // Show an error screen or navigate to a safe fallback (like HomeScreen)
+          Log.error("Auth stream error", error: authSnapshot.error);
           return const Scaffold(
-            body: Center(child: Text("Authentication error. Please restart.")),
-          );
+              body: Center(
+                  child:
+                      Text("Authentication error. Please restart the app.")));
         }
 
-        // --- 2. Handle User State ---
         if (authSnapshot.hasData && authSnapshot.data != null) {
-          // --- 2a. User is Authenticated ---
           final User user = authSnapshot.data!;
-          print(
-              "AuthWrapper: User is authenticated (UID: ${user.uid}). Checking onboarding status...");
+          Log.debug(
+              "User authenticated (UID: ${user.uid}). Checking onboarding completion");
 
-          // Now check if onboarding is complete for this authenticated user
           return FutureBuilder<bool>(
-            // Use ValueKey with UID to ensure FutureBuilder refetches if the user changes
             key: ValueKey('onboarding_check_${user.uid}'),
             future: _isOnboardingComplete(user.uid),
             builder: (context, onboardingSnapshot) {
-              // --- Handle Onboarding Check States ---
               if (onboardingSnapshot.connectionState ==
                   ConnectionState.waiting) {
-                print("AuthWrapper: Waiting for onboarding status...");
+                Log.debug(
+                    "Onboarding status check is waiting for UID: ${user.uid}");
                 return const Scaffold(
                     body: Center(child: CircularProgressIndicator()));
               }
               if (onboardingSnapshot.hasError) {
-                print(
-                    "AuthWrapper: Error checking onboarding status: ${onboardingSnapshot.error}");
-                // Fallback: Allow user into the main app despite the error checking onboarding.
-                print(
-                    "AuthWrapper: Onboarding check failed, proceeding to MainDashboardScreen as fallback.");
-                return const MainDashboardScreen(); // Navigate to main app
+                Log.error(
+                    "Error checking onboarding status for UID ${user.uid}",
+                    error: onboardingSnapshot.error);
+                Log.debug(
+                    "Onboarding check failed, proceeding to MainDashboardScreen as fallback");
+                return const MainDashboardScreen();
               }
 
-              // --- Onboarding Status Determined ---
               if (onboardingSnapshot.data == true) {
-                // ---- ONBOARDING COMPLETE ----
-                print(
-                    "AuthWrapper: Onboarding complete for UID: ${user.uid}. Navigating to MainDashboardScreen.");
-                return const MainDashboardScreen(); // Go to the main application
+                Log.info(
+                    "Onboarding complete for UID: ${user.uid}. Navigating to MainDashboardScreen");
+                return const MainDashboardScreen();
               } else {
-                // ---- ONBOARDING INCOMPLETE ----
-                print(
-                    "AuthWrapper: Onboarding NOT complete for UID: ${user.uid}. Navigating to OnboardingScreen (post-login context).");
-                // Provide the OnboardingBloc and navigate to OnboardingScreen,
-                // explicitly telling it this is for post-login completion.
+                Log.info(
+                    "Onboarding not complete for UID: ${user.uid}. Navigating to OnboardingScreen");
                 return BlocProvider(
-                  create: (blocContext) => OnboardingBloc(),
-                  child: const OnboardingScreen(
-                    // **** THIS IS THE CRUCIAL FLAG ****
-                    isPostLoginCompletion: true,
-                  ),
+                  create: (_) => OnboardingBloc(),
+                  child: const OnboardingScreen(isPostLoginCompletion: true),
                 );
               }
             },
           );
         } else {
-          // --- 2b. User is NOT Authenticated ---
-          print(
-              "AuthWrapper: User is not authenticated. Navigating to HomeScreen.");
-          // Show the initial public screen (e.g., landing page with login/signup options)
+          Log.debug("User is not authenticated. Navigating to HomeScreen");
           return const HomeScreen();
         }
       },
@@ -222,7 +202,6 @@ class AuthWrapper extends StatelessWidget {
   }
 }
 
-/// A simple screen displayed when a route is not found.
 class UnknownRouteScreen extends StatelessWidget {
   const UnknownRouteScreen({super.key});
 

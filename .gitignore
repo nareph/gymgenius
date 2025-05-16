@@ -122,9 +122,17 @@ android/app/.cxx/
 windows/flutter/generated_*
 linux/flutter/generated_*
 macos/Flutter/GeneratedPlugin*
+/ios/Runner.xcodeproj/project.pbxproj
+/ios/Runner/Assets.xcassets/AppIcon.appiconset/
+/android/app/src/main/res/mipmap-*/ic_launcher.png
+/pubspec.lock
 
 # Logs
 flutter_log.txt
 
 # Firebase exports
 /firebase-data/
+
+/ios/Runner.xcodeproj/project.pbxproj
+/ios/Runner/Assets.xcassets/AppIcon.appiconset/
+/android/app/src/main/res/mipmap-*/ic_launcher.png

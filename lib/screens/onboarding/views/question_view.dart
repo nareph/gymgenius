@@ -1,12 +1,14 @@
 // lib/screens/onboarding/views/question_view.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:gymgenius/models/onboarding_question.dart';
-import 'package:gymgenius/screens/onboarding/bloc/onboarding_bloc.dart';
+import 'package:gymgenius/models/onboarding_question.dart'; // For OnboardingQuestion model
+import 'package:gymgenius/screens/onboarding/bloc/onboarding_bloc.dart'; // For OnboardingBloc
 
+// QuestionView: A widget to display single-choice or multiple-choice onboarding questions.
 class QuestionView extends StatefulWidget {
-  final OnboardingQuestion question;
-  final VoidCallback onNext;
+  final OnboardingQuestion question; // The question data to display
+  final VoidCallback
+      onNext; // Callback to proceed to the next question or complete onboarding
 
   const QuestionView({
     super.key,
@@ -19,30 +21,41 @@ class QuestionView extends StatefulWidget {
 }
 
 class _QuestionViewState extends State<QuestionView> {
+  // Local state to manage selected values for multiple-choice questions.
+  // Using a Set ensures no duplicate values.
   Set<String> _selectedValues = {};
 
   @override
   void initState() {
     super.initState();
+    // Load any existing answer for this question from the BLoC after the first frame.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
+        // Ensure the widget is still in the tree
         _loadInitialAnswer();
       }
     });
   }
 
+  // Loads an existing answer from the OnboardingBloc's state.
+  // This is useful if the user navigates back and forth or if pre-filling data.
   void _loadInitialAnswer() {
     final bloc = context.read<OnboardingBloc>();
     final existingAnswer = bloc.state.answers[widget.question.id];
 
     if (widget.question.type == QuestionType.multipleChoice &&
         existingAnswer is List) {
+      // For multiple choice, pre-fill the _selectedValues Set.
       setState(() {
         _selectedValues = Set<String>.from(existingAnswer.whereType<String>());
       });
     }
+    // For single choice, selection is typically transient (button press advances).
+    // If visual pre-selection of a single-choice button were needed, logic would go here.
   }
 
+  // Handles selection for single-choice questions.
+  // Updates the BLoC and calls the onNext callback to proceed.
   void _handleSingleChoiceSelection(String selectedValue) {
     context.read<OnboardingBloc>().add(
           UpdateAnswer(
@@ -50,9 +63,11 @@ class _QuestionViewState extends State<QuestionView> {
             answerValue: selectedValue,
           ),
         );
-    widget.onNext();
+    widget.onNext(); // Proceed to the next step immediately
   }
 
+  // Handles selection changes for multiple-choice questions.
+  // Updates the local _selectedValues state and the BLoC.
   void _handleMultiChoiceSelection(String value, bool isSelected) {
     setState(() {
       if (isSelected) {
@@ -61,10 +76,12 @@ class _QuestionViewState extends State<QuestionView> {
         _selectedValues.remove(value);
       }
     });
+    // Update the BLoC state with the new list of selected values.
     context.read<OnboardingBloc>().add(
           UpdateAnswer(
             questionId: widget.question.id,
-            answerValue: _selectedValues.toList(),
+            answerValue:
+                _selectedValues.toList(), // Convert Set to List for BLoC state
           ),
         );
   }
@@ -78,12 +95,12 @@ class _QuestionViewState extends State<QuestionView> {
 
     return Padding(
       padding: EdgeInsets.symmetric(
-          horizontal: screenWidth * 0.08,
-          vertical: screenHeight * 0.03), // Réduction du padding vertical
+          horizontal: screenWidth * 0.08, vertical: screenHeight * 0.03),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Display the question text.
           Text(
             widget.question.text,
             textAlign: TextAlign.center,
@@ -91,16 +108,14 @@ class _QuestionViewState extends State<QuestionView> {
               color: colorScheme.onSurface,
             ),
           ),
-          SizedBox(height: screenHeight * 0.03), // Réduction de l'espacement
+          SizedBox(height: screenHeight * 0.03),
 
+          // Conditionally render answer options based on the question type.
           if (widget.question.type == QuestionType.singleChoice)
-            // Envelopper les options singleChoice dans un Expanded + SingleChildScrollView si elles peuvent aussi déborder
             Expanded(
               child: SingleChildScrollView(
-                // Permet de scroller si beaucoup d'options
                 child: Column(
-                  mainAxisAlignment:
-                      MainAxisAlignment.center, // Pour centrer si peu d'options
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: widget.question.options
                       .map((option) => Padding(
                             padding: const EdgeInsets.symmetric(vertical: 7.0),
@@ -116,18 +131,15 @@ class _QuestionViewState extends State<QuestionView> {
               ),
             )
           else if (widget.question.type == QuestionType.multipleChoice)
-            // --- MODIFICATION ICI pour QuestionType.multipleChoice ---
             Expanded(
-              // Pour que cette section prenne l'espace restant
               child: Column(
                 children: [
                   Expanded(
-                    // Pour que le SingleChildScrollView prenne l'espace dans la Column
                     child: SingleChildScrollView(
-                      // Rendre la zone des chips scrollable
                       child: Wrap(
-                        spacing: 10.0,
-                        runSpacing: 12.0,
+                        spacing: 10.0, // Horizontal spacing between chips
+                        runSpacing:
+                            12.0, // Vertical spacing between lines of chips
                         alignment: WrapAlignment.center,
                         children: widget.question.options.map((option) {
                           final bool isSelected =
@@ -155,7 +167,7 @@ class _QuestionViewState extends State<QuestionView> {
                                     ? [
                                         BoxShadow(
                                           color: colorScheme.primary
-                                              .withOpacity(0.3),
+                                              .withAlpha((0.3 * 255).round()),
                                           blurRadius: 6,
                                           offset: const Offset(0, 2),
                                         )
@@ -180,10 +192,8 @@ class _QuestionViewState extends State<QuestionView> {
                       ),
                     ),
                   ),
-                  // --- "Next" Button for Multiple Choice (en dehors du SingleChildScrollView) ---
-                  SizedBox(
-                      height:
-                          screenHeight * 0.03), // Espace avant le bouton Next
+                  // "Next" button for multiple-choice questions, enabled only if at least one option is selected.
+                  SizedBox(height: screenHeight * 0.03),
                   ElevatedButton(
                     onPressed:
                         _selectedValues.isNotEmpty ? widget.onNext : null,

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:gymgenius/models/routine.dart'; // For RoutineExercise
 import 'package:gymgenius/providers/workout_session_manager.dart'; // For WorkoutSessionManager, LoggedExerciseData
 import 'package:gymgenius/screens/exercise_logging_screen.dart'; // Screen to log sets for an exercise
+import 'package:gymgenius/services/logger_service.dart'; // Import the logger service
 import 'package:provider/provider.dart'; // For consuming WorkoutSessionManager
 
 class ActiveWorkoutSessionScreen extends StatelessWidget {
@@ -12,24 +13,22 @@ class ActiveWorkoutSessionScreen extends StatelessWidget {
 
   Future<void> _handleEndWorkout(
       BuildContext context, WorkoutSessionManager manager) async {
-    print(
-        "ActiveWorkoutScreen _handleEndWorkout: Initiating end workout process. Manager active before endWorkout(): ${manager.isWorkoutActive}");
-
+    Log.debug(
+        "ActiveWorkoutScreen: Initiating end workout process. Manager active before endWorkout(): ${manager.isWorkoutActive}");
     final scaffoldMessenger = ScaffoldMessenger.of(context);
+
     Map<String, dynamic>? workoutLogPayload = manager.endWorkout();
 
     if (workoutLogPayload == null) {
-      print(
-          "ActiveWorkoutScreen _handleEndWorkout: manager.endWorkout() returned null. No log to save.");
-      // Même si aucun log n'est à sauvegarder, la session est terminée.
-      // Le prochain build du Consumer devrait gérer la navigation.
+      Log.debug(
+          "ActiveWorkoutScreen: manager.endWorkout() returned null. No log to save. Session is ended.");
       return;
     }
 
     final User? currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) {
-      print(
-          "ActiveWorkoutScreen _handleEndWorkout: Error - Current user is null. Workout log cannot be saved.");
+      Log.error(
+          "ActiveWorkoutScreen Error: Current user is null. Workout log cannot be saved.");
       if (scaffoldMessenger.context.mounted) {
         scaffoldMessenger.showSnackBar(
           SnackBar(
@@ -40,21 +39,21 @@ class ActiveWorkoutSessionScreen extends StatelessWidget {
           ),
         );
       }
-      return; // La session est terminée, le Consumer gérera la navigation.
+      return;
     }
 
     workoutLogPayload['userId'] = currentUser.uid;
     workoutLogPayload['savedAt'] = FieldValue.serverTimestamp();
 
-    print(
-        "ActiveWorkoutScreen _handleEndWorkout: Workout log data prepared: $workoutLogPayload");
+    Log.debug(
+        "ActiveWorkoutScreen: Workout log data prepared: $workoutLogPayload");
 
     try {
       await FirebaseFirestore.instance
           .collection('workout_logs')
           .add(workoutLogPayload);
-      print(
-          "ActiveWorkoutScreen _handleEndWorkout: Workout log saved successfully to Firestore.");
+      Log.debug(
+          "ActiveWorkoutScreen: Workout log saved successfully to Firestore.");
 
       if (scaffoldMessenger.context.mounted) {
         scaffoldMessenger.showSnackBar(
@@ -67,8 +66,10 @@ class ActiveWorkoutSessionScreen extends StatelessWidget {
         );
       }
     } catch (e, s) {
-      print(
-          "ActiveWorkoutScreen _handleEndWorkout: Error saving workout log to Firestore: $e\n$s");
+      Log.error(
+          "ActiveWorkoutScreen: Error saving workout log to Firestore: $e",
+          error: e,
+          stackTrace: s);
       if (scaffoldMessenger.context.mounted) {
         scaffoldMessenger.showSnackBar(
           SnackBar(
@@ -81,8 +82,6 @@ class ActiveWorkoutSessionScreen extends StatelessWidget {
         );
       }
     }
-    // Après avoir tenté de sauvegarder, la session est considérée comme terminée.
-    // Le prochain build du Consumer gérera la navigation.
   }
 
   void _navigateToExerciseLogging(BuildContext context,
@@ -91,164 +90,114 @@ class ActiveWorkoutSessionScreen extends StatelessWidget {
 
     bool success = manager.selectExercise(exerciseIndexInList);
     if (!success) {
-      print(
-          "ActiveWorkoutScreen _navigateToExerciseLogging: Error - manager.selectExercise failed for index $exerciseIndexInList.");
+      Log.error(
+          "ActiveWorkoutScreen Error: manager.selectExercise failed for index $exerciseIndexInList.");
       return;
     }
 
     final RoutineExercise? exerciseToLog = manager.currentExercise;
-
     if (exerciseToLog == null) {
-      print(
-          "ActiveWorkoutScreen _navigateToExerciseLogging: Error - manager.currentExercise is null after select for index $exerciseIndexInList.");
+      Log.error(
+          "ActiveWorkoutScreen Error: manager.currentExercise is null after select for index $exerciseIndexInList.");
       return;
     }
-    print(
-        "ActiveWorkoutScreen _navigateToExerciseLogging: Navigating to ELS for ${exerciseToLog.name} (index $exerciseIndexInList). Manager's currentSetIndex for logging: ${manager.currentSetIndexForLogging}");
+
+    Log.debug(
+        "ActiveWorkoutScreen: Navigating to ELS for ${exerciseToLog.name} (index $exerciseIndexInList). Sets to log for it: ${manager.currentSetIndexForLogging}");
 
     Navigator.push(
       currentContext,
       MaterialPageRoute(
-        // Il est bon de donner un nom de route pour le débogage et le test si nécessaire
         settings: const RouteSettings(name: "/exercise_logging"),
         builder: (_) => ExerciseLoggingScreen(
           exercise: exerciseToLog,
           onExerciseCompleted: () {
-            print(
-                "ActiveWorkoutScreen: ELS onExerciseCompleted callback for ${exerciseToLog.name}.");
-            // La logique de déplacement vers le prochain exercice est gérée dans le .then() ci-dessous.
+            Log.debug(
+                "ActiveWorkoutScreen: ExerciseLoggingScreen's onExerciseCompleted callback for ${exerciseToLog.name}.");
           },
         ),
       ),
     ).then((_) {
-      // Ce code s'exécute APRÈS le pop de ExerciseLoggingScreen
-      final String postPopExerciseName = manager.currentExercise?.name ??
-          manager.currentLoggedExerciseData?.originalExercise.name ??
-          'unknown (manager state after pop)';
-      print(
-          "ActiveWorkoutScreen .then() after ELS pop. ELS was for (approx): $postPopExerciseName.");
-      print(
-          "ActiveWorkoutScreen .then(): Manager state - isWorkoutActive: ${manager.isWorkoutActive}, currentExIndex: ${manager.currentExerciseIndex}, currentExName: ${manager.currentExercise?.name}");
+      Log.debug(
+          "ActiveWorkoutScreen .then() after ELS pop. Manager state - isWorkoutActive: ${manager.isWorkoutActive}, currentExIndex: ${manager.currentExerciseIndex}");
 
       if (manager.isWorkoutActive) {
-        print(
-            "ActiveWorkoutScreen .then(): Attempting manager.moveToNextExercise() from index ${manager.currentExerciseIndex}");
-        bool moved = manager
-            .moveToNextExercise(); // Tente de passer à l'exercice suivant
+        bool moved = manager.moveToNextExercise();
 
         if (allExercisesEffectivelyCompleted(manager)) {
-          print(
-              "ActiveWorkoutScreen .then(): All exercises confirmed completed after ELS pop and moveToNext attempt.");
-          // L'UI se mettra à jour pour montrer "Workout Complete! Press Finish."
+          Log.debug(
+              "ActiveWorkoutScreen .then(): All exercises are now marked as completed.");
         } else if (moved) {
-          print(
-              "ActiveWorkoutScreen .then(): Successfully moved to next exercise: ${manager.currentExercise?.name}");
+          Log.debug(
+              "ActiveWorkoutScreen .then(): Successfully moved to next exercise: ${manager.currentExercise?.name ?? 'N/A'}.");
         } else {
-          // N'a pas bougé, raisons possibles :
-          // - L'exercice actuel n'est pas encore terminé (ne devrait pas arriver si ELS a bien marqué complet)
-          // - C'était le dernier exercice
-          // - Le prochain exercice était déjà complété (rare, mais possible si l'utilisateur a navigué manuellement)
-          final currentLoggedData = manager.currentLoggedExerciseData;
-          if (manager.currentExercise != null &&
-              (currentLoggedData?.isCompleted ?? false)) {
-            print(
-                "ActiveWorkoutScreen .then(): Did not move. Current exercise ${manager.currentExercise?.name} is complete. Likely at end or subsequent are complete.");
-          } else if (manager.currentExercise != null) {
-            print(
-                "ActiveWorkoutScreen .then(): Did not move. Current exercise ${manager.currentExercise?.name} is NOT complete.");
-          } else {
-            print(
-                "ActiveWorkoutScreen .then(): Did not move, and no current exercise. Workout might be finishing or all exercises are now marked complete.");
-          }
+          Log.debug(
+              "ActiveWorkoutScreen .then(): Did not move to a new exercise.");
         }
       } else {
-        print(
-            "ActiveWorkoutScreen .then(): Workout is NO LONGER active after ELS pop. Consumer should handle navigation.");
-        // Le Consumer dans build() devrait détecter cela et naviguer.
+        Log.debug(
+            "ActiveWorkoutScreen .then(): Workout is NO LONGER active. Navigation will be handled by Consumer.");
       }
     });
   }
 
   bool allExercisesEffectivelyCompleted(WorkoutSessionManager manager) {
-    if (!manager.isWorkoutActive || manager.loggedExercisesData.isEmpty) {
+    if (!manager.isWorkoutActive || manager.plannedExercises.isEmpty) {
       return false;
     }
-    // Vérifie si tous les exercices planifiés ont une entrée correspondante dans loggedExercisesData
-    // et que cette entrée est marquée comme complétée.
-    if (manager.plannedExercises.length != manager.loggedExercisesData.length)
+    if (manager.loggedExercisesData.length != manager.plannedExercises.length) {
       return false;
+    }
     return manager.loggedExercisesData.every((exData) => exData.isCompleted);
   }
 
   String _formatDuration(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, '0');
     final hours = duration.inHours;
-    final minutes = twoDigits(duration.inMinutes.remainder(60));
-    final seconds = twoDigits(duration.inSeconds.remainder(60));
+    final minutes = duration.inMinutes.remainder(60);
+    final seconds = duration.inSeconds.remainder(60);
     if (hours > 0) {
-      return "$hours:$minutes:$seconds";
+      return "${twoDigits(hours)}:${twoDigits(minutes)}:${twoDigits(seconds)}";
     }
-    return "$minutes:$seconds";
+    return "${twoDigits(minutes)}:${twoDigits(seconds)}";
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
 
     return Consumer<WorkoutSessionManager>(
       builder: (consumerContext, manager, child) {
         final currentRoute = ModalRoute.of(consumerContext);
-        // Il est important de vérifier si cet écran spécifique est la route actuelle.
-        // settings.name peut être null si la route n'a pas été nommée via pushNamed.
-        // Si vous naviguez toujours vers cet écran avec MaterialPageRoute sans settings,
-        // alors isCurrent est la vérification la plus fiable.
         final bool isThisScreenCurrentlyVisible =
             currentRoute?.isCurrent ?? false;
 
-        print(
-            "ActiveWorkoutScreen Consumer BUILD - Route Name: ${currentRoute?.settings.name}, isCurrent: $isThisScreenCurrentlyVisible, isWorkoutActive: ${manager.isWorkoutActive}");
+        Log.debug(
+            "ActiveWorkoutScreen Consumer BUILD - Route: ${currentRoute?.settings.name}, isCurrent: $isThisScreenCurrentlyVisible, isWorkoutActive: ${manager.isWorkoutActive}");
 
         if (!manager.isWorkoutActive) {
-          print(
-              "ActiveWorkoutScreen Consumer: Workout NO LONGER active. Last workout name was '${manager.currentWorkoutName}'.");
-
-          // Pour éviter des navigations multiples si le widget est reconstruit plusieurs fois
-          // après que la session soit devenue inactive.
-          // On vérifie si cet écran est toujours celui au premier plan.
+          Log.debug(
+              "ActiveWorkoutScreen Consumer: Workout is NOT active. Last workout name: '${manager.currentWorkoutName}'.");
           if (isThisScreenCurrentlyVisible) {
-            print(
-                "ActiveWorkoutScreen Consumer: This screen IS current. Scheduling navigation to main app.");
-
+            Log.debug(
+                "ActiveWorkoutScreen Consumer: This screen IS current. Scheduling navigation to main app via '/main_app'.");
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              // S'assurer que le contexte est toujours valide avant de naviguer
               if (consumerContext.mounted) {
-                // Naviguer vers l'écran principal et supprimer toutes les routes au-dessus.
-                // Utiliser la route nommée '/main_app' que vous avez définie dans main.dart
                 Navigator.of(consumerContext).pushNamedAndRemoveUntil(
-                  '/main_app',
-                  (Route<dynamic> route) =>
-                      false, // Supprime toutes les routes précédentes
-                );
-                print(
-                    "ActiveWorkoutScreen Consumer (callback): Navigated to '/main_app' and removed previous routes.");
-              } else {
-                print(
-                    "ActiveWorkoutScreen Consumer (callback): Context not mounted, navigation skipped.");
+                    '/main_app', (Route<dynamic> route) => false);
+                Log.debug(
+                    "ActiveWorkoutScreen Consumer (callback): Navigated to '/main_app'.");
               }
             });
-          } else {
-            print(
-                "ActiveWorkoutScreen Consumer: This screen is NOT current. Navigation to main_app deferred or handled elsewhere.");
           }
-
-          // Afficher un indicateur pendant que la navigation post-frame est programmée.
           return Scaffold(
               appBar: AppBar(
                   title: Text(manager.currentWorkoutName.isNotEmpty
                       ? "${manager.currentWorkoutName} Ended"
                       : "Workout Ended"),
-                  automaticallyImplyLeading: false), // Pas de bouton retour ici
+                  automaticallyImplyLeading: false),
               body: const Center(
                   child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -259,7 +208,6 @@ class ActiveWorkoutSessionScreen extends StatelessWidget {
                   ])));
         }
 
-        // Le reste du widget build pour quand la session est active
         if (manager.plannedExercises.isEmpty) {
           return Scaffold(
               appBar: AppBar(
@@ -273,7 +221,7 @@ class ActiveWorkoutSessionScreen extends StatelessWidget {
                     child: Center(
                         child: Text(
                             _formatDuration(manager.currentWorkoutDuration),
-                            style: theme.textTheme.titleMedium?.copyWith(
+                            style: textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
                                 color: colorScheme.primary))),
                   ),
@@ -285,12 +233,12 @@ class ActiveWorkoutSessionScreen extends StatelessWidget {
                   child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.warning_amber_rounded,
+                        const Icon(Icons.playlist_remove_rounded,
                             size: 60, color: Colors.orangeAccent),
                         const SizedBox(height: 20),
-                        const Text("This workout plan is empty.",
+                        Text("This workout plan is empty.",
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 18)),
+                            style: textTheme.titleLarge),
                         const SizedBox(height: 30),
                         ElevatedButton.icon(
                           icon: const Icon(Icons.stop_circle_outlined),
@@ -300,11 +248,8 @@ class ActiveWorkoutSessionScreen extends StatelessWidget {
                               foregroundColor: colorScheme.onErrorContainer,
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 30, vertical: 15)),
-                          onPressed: () async {
-                            // _handleEndWorkout va mettre manager.isWorkoutActive à false
-                            // ce qui déclenchera la logique de navigation au prochain build.
-                            await _handleEndWorkout(consumerContext, manager);
-                          },
+                          onPressed: () async =>
+                              await _handleEndWorkout(consumerContext, manager),
                         )
                       ]),
                 ),
@@ -315,20 +260,14 @@ class ActiveWorkoutSessionScreen extends StatelessWidget {
             ? manager.currentWorkoutName
             : "Workout Session";
 
-        int visuallyHighlightedIndex = -1;
-        final firstUncompletedIndex =
+        int visuallyHighlightedIndex =
             manager.loggedExercisesData.indexWhere((ex) => !ex.isCompleted);
-
-        if (firstUncompletedIndex != -1) {
-          visuallyHighlightedIndex = firstUncompletedIndex;
-        } else if (manager.loggedExercisesData.length <
-            manager.plannedExercises.length) {
-          // Si tous les loggés sont complets, mais qu'il reste des exercices planifiés non loggés
+        if (visuallyHighlightedIndex == -1 &&
+            manager.loggedExercisesData.length <
+                manager.plannedExercises.length) {
           visuallyHighlightedIndex = manager.loggedExercisesData.length;
-        } else {
-          // Tous les planifiés ont été loggés et sont complets
-          visuallyHighlightedIndex =
-              manager.plannedExercises.length; // Indique que tout est fait
+        } else if (visuallyHighlightedIndex == -1) {
+          visuallyHighlightedIndex = manager.plannedExercises.length;
         }
 
         bool allDone = allExercisesEffectivelyCompleted(manager);
@@ -340,14 +279,13 @@ class ActiveWorkoutSessionScreen extends StatelessWidget {
           currentNextUpText =
               "Next Up: ${manager.plannedExercises[visuallyHighlightedIndex].name}";
         } else {
-          // Ce cas ne devrait pas arriver si la logique de visuallyHighlightedIndex est correcte
-          currentNextUpText = "Ready to start logging!";
+          currentNextUpText = "Ready to log!";
         }
 
         return Scaffold(
           appBar: AppBar(
             title: Text(currentWorkoutTitle,
-                style: theme.textTheme.titleLarge
+                style: textTheme.titleLarge
                     ?.copyWith(fontWeight: FontWeight.bold)),
             automaticallyImplyLeading: false,
             actions: [
@@ -355,7 +293,7 @@ class ActiveWorkoutSessionScreen extends StatelessWidget {
                 padding: const EdgeInsets.only(right: 16.0),
                 child: Center(
                     child: Text(_formatDuration(manager.currentWorkoutDuration),
-                        style: theme.textTheme.titleMedium?.copyWith(
+                        style: textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: colorScheme.primary))),
               ),
@@ -366,39 +304,38 @@ class ActiveWorkoutSessionScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(
                     vertical: 12.0, horizontal: 16.0),
-                color: colorScheme.surfaceContainerHighest
-                    .withAlpha((0.3 * 255).round()),
+                color:
+                    colorScheme.surfaceContainerHighest.withAlpha((77).round()),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Expanded(
                         child: Text(currentNextUpText,
-                            style: theme.textTheme.titleMedium
+                            style: textTheme.titleMedium
                                 ?.copyWith(fontWeight: FontWeight.w600),
                             overflow: TextOverflow.ellipsis,
                             maxLines: 1)),
                     const SizedBox(width: 10),
                     Text(
                         "${manager.completedExercisesCount} / ${manager.totalExercises} done",
-                        style: theme.textTheme.bodyMedium
+                        style: textTheme.bodyMedium
                             ?.copyWith(color: colorScheme.onSurfaceVariant)),
                   ],
                 ),
               ),
               Expanded(
                 child: ListView.builder(
-                  padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
                   itemCount: manager.plannedExercises.length,
                   itemBuilder: (listContext, index) {
                     final RoutineExercise plannedExerciseDetails =
                         manager.plannedExercises[index];
-                    final LoggedExerciseData loggedDataForThisExercise = (index <
-                            manager.loggedExercisesData.length)
-                        ? manager.loggedExercisesData[index]
-                        : LoggedExerciseData(
-                            originalExercise:
-                                plannedExerciseDetails); // Crée un LoggedExerciseData vide si pas encore loggé
+                    final LoggedExerciseData loggedDataForThisExercise =
+                        (index < manager.loggedExercisesData.length)
+                            ? manager.loggedExercisesData[index]
+                            : LoggedExerciseData(
+                                originalExercise: plannedExerciseDetails);
 
                     final bool isCompleted =
                         loggedDataForThisExercise.isCompleted;
@@ -432,17 +369,17 @@ class ActiveWorkoutSessionScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(10.0),
                         side: BorderSide(
                           color: isCompleted
-                              ? Colors.green.withAlpha((0.6 * 255).round())
+                              ? Colors.green.withAlpha((153).round())
                               : (isVisuallyCurrentExercise
-                                  ? colorScheme.primary
-                                      .withAlpha((0.8 * 255).round())
-                                  : Colors.grey.shade300
-                                      .withAlpha((0.5 * 255).round())),
-                          width: isVisuallyCurrentExercise ? 2.0 : 1.0,
+                                  ? colorScheme.primary.withAlpha((204).round())
+                                  : colorScheme.outlineVariant
+                                      .withAlpha((100).round())),
+                          width: isVisuallyCurrentExercise ? 2.0 : 1.2,
                         ),
                       ),
                       color: isCompleted
-                          ? Colors.grey.shade200.withAlpha((0.5 * 255).round())
+                          ? colorScheme.surfaceContainer
+                              .withAlpha((100).round())
                           : null,
                       child: ListTile(
                         contentPadding: const EdgeInsets.symmetric(
@@ -450,12 +387,12 @@ class ActiveWorkoutSessionScreen extends StatelessWidget {
                         leading: CircleAvatar(
                           radius: 18,
                           backgroundColor: isCompleted
-                              ? Colors.green
+                              ? Colors.green.shade600
                               : (isVisuallyCurrentExercise
                                   ? colorScheme.primary
                                   : colorScheme.secondaryContainer),
                           child: isCompleted
-                              ? const Icon(Icons.check,
+                              ? const Icon(Icons.check_rounded,
                                   color: Colors.white, size: 20)
                               : Text("${index + 1}",
                                   style: TextStyle(
@@ -467,49 +404,48 @@ class ActiveWorkoutSessionScreen extends StatelessWidget {
                         ),
                         title: Text(
                           plannedExerciseDetails.name,
-                          style: theme.textTheme.titleMedium?.copyWith(
+                          style: textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w500,
                             decoration:
                                 isCompleted ? TextDecoration.lineThrough : null,
+                            decorationColor: isCompleted
+                                ? colorScheme.onSurfaceVariant
+                                    .withAlpha((153).round())
+                                : null,
                             color: isCompleted
-                                ? theme.textTheme.bodySmall?.color
-                                    ?.withAlpha((0.5 * 255).round())
-                                : theme.textTheme.bodyLarge?.color,
+                                ? colorScheme.onSurfaceVariant
+                                    .withAlpha((153).round())
+                                : textTheme.bodyLarge?.color,
                           ),
                         ),
                         subtitle: Text(
                           setsRepsInfo,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.textTheme.bodySmall?.color?.withAlpha(
-                                isCompleted
-                                    ? (0.4 * 255).round()
-                                    : (0.7 * 255).round()),
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant.withAlpha(
+                                isCompleted ? (128).round() : (204).round()),
                             decoration:
                                 isCompleted ? TextDecoration.lineThrough : null,
                           ),
                         ),
                         trailing: isCompleted
-                            ? null // Ou une icône "Edit" si vous voulez permettre de modifier un exercice complété
+                            ? null
                             : Icon(
                                 isVisuallyCurrentExercise
-                                    ? Icons
-                                        .play_circle_fill // Ou edit si c'est l'exercice en cours de log
-                                    : Icons.play_circle_outline,
+                                    ? Icons.edit_note_rounded
+                                    : Icons.play_circle_outline_rounded,
                                 color: colorScheme.primary,
                                 size: 28),
                         onTap: isCompleted
-                            ? null // Ou permettre de modifier si souhaité
-                            : () {
-                                _navigateToExerciseLogging(
-                                    listContext, manager, index);
-                              },
+                            ? null
+                            : () => _navigateToExerciseLogging(
+                                listContext, manager, index),
                       ),
                     );
                   },
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
+                padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 20.0),
                 child: ElevatedButton.icon(
                   icon: Icon(
                       allDone
@@ -545,8 +481,6 @@ class ActiveWorkoutSessionScreen extends StatelessWidget {
                     ).then((confirmed) async {
                       if (confirmed == true) {
                         await _handleEndWorkout(consumerContext, manager);
-                        // La session est maintenant inactive. Le prochain build du Consumer
-                        // déclenchera la navigation vers '/main_app'.
                       }
                     });
                   },
@@ -556,8 +490,8 @@ class ActiveWorkoutSessionScreen extends StatelessWidget {
                           : colorScheme.errorContainer,
                       foregroundColor:
                           allDone ? Colors.white : colorScheme.onErrorContainer,
-                      minimumSize: const Size(double.infinity, 50),
-                      textStyle: theme.textTheme.labelLarge
+                      minimumSize: const Size(double.infinity, 52),
+                      textStyle: textTheme.labelLarge
                           ?.copyWith(fontWeight: FontWeight.bold, fontSize: 16),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12))),
