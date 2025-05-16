@@ -22,13 +22,11 @@ import 'firebase_options.dart';
 const bool _useEmulators = kDebugMode;
 
 Future<void> _configureFirebaseEmulators() async {
-  final String host = '192.168.8.46'; // Replace with your local IP address
-
   // Host configuration:
   // - Android Emulator: '10.0.2.2' (special address to reach host machine)
   // - iOS Simulator/Web/Desktop/Physical Device on same network: Use your machine's local network IP.
   //   You can find this IP using 'ipconfig' (Windows) or 'ifconfig' (macOS/Linux).
-  // const String host = defaultTargetPlatform == TargetPlatform.android ? '10.0.2.2' : 'localhost';
+   String host = defaultTargetPlatform == TargetPlatform.android ? '10.0.2.2' : 'localhost';
   // IMPORTANT: Replace with YOUR specific local IP if testing on a physical device or if 'localhost' doesn't work for other emulators.
   Log.info('--- Configuring Firebase Emulators to connect to host: $host ---');
   try {

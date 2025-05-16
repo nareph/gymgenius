@@ -1,15 +1,10 @@
 # GymGenius - Your AI-Powered Fitness Coach
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-<!-- Optional: Add build status, code coverage, etc. badges here if you set them up -->
-<!-- e.g., [![Build Status](https://travis-ci.org/yourusername/gymgenius.svg?branch=main)](https://travis-ci.org/yourusername/gymgenius) -->
 
 **GymGenius is a mobile application designed to be your personal AI fitness coach, crafting personalized workout routines tailored to your goals, experience, and available equipment.**
 
 Say goodbye to generic workout plans! GymGenius understands your unique fitness profile and guides you through structured, effective training sessions, helping you achieve your fitness aspirations.
-
-<!-- Optional: Add a GIF or a prominent screenshot of the app here -->
-<!-- ![GymGenius App Screenshot/GIF](link_to_your_image.gif) -->
 
 ## ✨ Features
 
@@ -43,7 +38,7 @@ Say goodbye to generic workout plans! GymGenius understands your unique fitness 
 
 1.  **Clone the repository:**
     ```bash
-    git clone https://your-repository-url/gymgenius.git 
+    git clone https://github.com/nareph/gymgenius.git 
     cd gymgenius
     ```
 
