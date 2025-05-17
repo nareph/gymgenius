@@ -81,10 +81,11 @@ class _ExerciseLoggingScreenState extends State<ExerciseLoggingScreen>
   int _parseDurationFromInputs() {
     final minutes = int.tryParse(_minutesController.text.trim()) ?? 0;
     final seconds = int.tryParse(_secondsController.text.trim()) ?? 0;
-    if (minutes < 0 || seconds < 0 || seconds > 59)
+    if (minutes < 0 || seconds < 0 || seconds > 59) {
       return _userSetTargetDurationSeconds > 0
           ? _userSetTargetDurationSeconds
           : 0;
+    }
     return (minutes * 60) + seconds;
   }
 
@@ -208,9 +209,10 @@ class _ExerciseLoggingScreenState extends State<ExerciseLoggingScreen>
       final String secText = _secondsController.text.trim();
 
       if (minText.isEmpty && secText.isEmpty) {
-        if (mounted)
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text("Please enter a duration.")));
+        }
         return;
       }
 
@@ -218,9 +220,10 @@ class _ExerciseLoggingScreenState extends State<ExerciseLoggingScreen>
       final int seconds = int.tryParse(secText) ?? 0;
 
       if (minutes < 0 || seconds < 0 || seconds > 59) {
-        if (mounted)
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
               content: Text("Invalid duration. Seconds must be 0-59.")));
+        }
         return;
       }
       final int newTargetDurationFromInput = (minutes * 60) + seconds;
@@ -729,8 +732,9 @@ class _ExerciseLoggingScreenState extends State<ExerciseLoggingScreen>
                               validator: (value) {
                                 if (value != null && value.isNotEmpty) {
                                   final s = int.tryParse(value);
-                                  if (s == null || s < 0 || s > 59)
+                                  if (s == null || s < 0 || s > 59) {
                                     return '0-59';
+                                  }
                                 }
                                 return null;
                               },

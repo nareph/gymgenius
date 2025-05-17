@@ -123,9 +123,10 @@ class _TrackingTabScreenState extends State<TrackingTabScreen> {
         } else {
           Log.debug(
               "TrackingTabScreen: No currentRoutine found in user document.");
-          if (mounted)
+          if (mounted) {
             setState(() =>
                 _plannedEvents = {}); // Clear planned events if no routine
+          }
         }
       } else {
         Log.debug(
@@ -143,8 +144,7 @@ class _TrackingTabScreenState extends State<TrackingTabScreen> {
   void _generatePlannedEventsForRoutine(WeeklyRoutine routine) {
     final Map<DateTime, List<String>> newPlannedEvents = {};
     // Ensure routine has a valid start date and duration.
-    if (routine.generatedAt == null ||
-        routine.durationInWeeks <= 0 ||
+    if (routine.durationInWeeks <= 0 ||
         routine.dailyWorkouts.isEmpty) {
       Log.debug(
           "TrackingTabScreen: Invalid routine data for generating planned events (generatedAt, duration, or dailyWorkouts missing).");
@@ -240,7 +240,7 @@ class _TrackingTabScreenState extends State<TrackingTabScreen> {
         if (selectedDayLogsNeedRefresh ||
             (wasSelectedDayCompleted != isSelectedDayNowCompleted)) {
           Log.debug(
-              "TrackingTabScreen (LogListener): Selected day ${_selectedDay} logs require refresh.");
+              "TrackingTabScreen (LogListener): Selected day $_selectedDay logs require refresh.");
           _loadLogsForSelectedDay(_selectedDay!);
         }
       }
@@ -650,7 +650,7 @@ class _TrackingTabScreenState extends State<TrackingTabScreen> {
                                                               .onSurfaceVariant),
                                                 ),
                                               );
-                                            }).toList(),
+                                            }),
                                           ],
                                         ),
                                       );

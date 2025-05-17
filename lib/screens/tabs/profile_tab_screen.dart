@@ -54,7 +54,7 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
   // Stores the original preference values fetched from Firestore. Used for comparison and reverting.
   Map<String, dynamic> _originalPreferences = {};
   // Manages TextEditingControllers for numeric input fields, keyed by question/sub-question ID.
-  Map<String, TextEditingController> _numericInputControllers = {};
+  final Map<String, TextEditingController> _numericInputControllers = {};
   // Flag to track if initial data has been loaded from Firestore.
   bool _dataLoadedFromFirestore = false;
 
@@ -978,7 +978,7 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
     );
   }
 
-  bool _areMapsEqual(Map<String, dynamic> map1, Map<String, dynamic> map2) {
+/*   bool _areMapsEqual(Map<String, dynamic> map1, Map<String, dynamic> map2) {
     if (map1.length != map2.length) return false;
     for (var key in map1.keys) {
       if (!map2.containsKey(key)) return false;
@@ -1000,13 +1000,15 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
         if (!_areMapsEqual(val1, val2)) return false;
       } else if (val1 is Map && val2 is Map) {
         if (!_areMapsEqual(_convertMapToMapStringDynamic(val1),
-            _convertMapToMapStringDynamic(val2))) return false;
+            _convertMapToMapStringDynamic(val2))) {
+          return false;
+        }
       } else if (val1?.toString() != val2?.toString()) {
         return false;
       }
     }
     return true;
-  }
+  } */
 
   IconData _getIconForOnboardingKey(String key) {
     switch (key) {

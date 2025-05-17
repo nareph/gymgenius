@@ -144,7 +144,7 @@ class WorkoutSessionManager with ChangeNotifier {
 
   Future<void> playExerciseTimeUpSound() async {
     if (!_exerciseTimeUpSoundPlayed) {
-      await _playSound('exercise_end.mp3');
+      await _playSound('rest_end.mp3');
       _exerciseTimeUpSoundPlayed = true;
     }
   }
