@@ -11,8 +11,7 @@ class DayLogDetailsView extends StatelessWidget {
 
   // The Firestore field in 'workout_logs' collection that stores the workout completion timestamp.
   // This is used for querying logs by date.
-  final String _dateFieldForWorkoutLogQuery =
-      'savedAt'; // Or 'startTime' if that's more appropriate for the workout date
+  final String _dateFieldForWorkoutLogQuery = 'savedAt';
 
   const DayLogDetailsView({
     super.key,
@@ -24,7 +23,6 @@ class DayLogDetailsView extends StatelessWidget {
   });
 
   String _formatDurationFromSeconds(int totalSeconds) {
-    // Same logic as original file
     final duration = Duration(seconds: totalSeconds);
     String twoDigits(int n) => n.toString().padLeft(2, '0');
     final hours = duration.inHours;
