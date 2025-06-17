@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:gymgenius/services/logger_service.dart';
 
 /// Configures the application to use local Firebase emulators.
@@ -25,10 +26,12 @@ Future<void> configureFirebaseEmulators() async {
   // The line below automatically detects the platform to choose the correct address.
   // MODIFY IT if you are testing on a physical device.
 
-  // final String host = defaultTargetPlatform == TargetPlatform.android ? '10.0.2.2' : 'localhost';
+  final String host = defaultTargetPlatform == TargetPlatform.android
+      ? '10.0.2.2'
+      : 'localhost';
 
   // !! FOR PHYSICAL DEVICE TESTING, UNCOMMENT AND ADAPT THE FOLLOWING LINE:
-  final String host = '192.168.8.46'; // Replace with YOUR local IP address
+  //final String host = '192.168.8.46'; // Replace with YOUR local IP address
 
   Log.info('--- CONFIGURING FIREBASE EMULATORS ---');
   Log.info('Debug mode enabled. Connecting to host: $host');
