@@ -26,6 +26,20 @@ class OnboardingQuestion {
   });
 }
 
+/// Each entry specifies a key, unit, and UI labels for a specific physical statistic.
+const List<({String key, String unit, String label, String hint})>
+    statSubKeyEntries = [
+  (key: 'age', unit: 'years', label: 'Age', hint: 'e.g., 25'),
+  (key: 'height_m', unit: 'm', label: 'Height', hint: 'e.g., 1.75'),
+  (key: 'weight_kg', unit: 'kg', label: 'Weight', hint: 'e.g., 70.5'),
+  (
+    key: 'target_weight_kg',
+    unit: 'kg',
+    label: 'Target Weight',
+    hint: 'e.g., 65 (optional)'
+  ),
+];
+
 // --- Updated and added questions ---
 final List<OnboardingQuestion> defaultOnboardingQuestions = [
   // 1. Goal

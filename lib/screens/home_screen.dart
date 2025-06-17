@@ -1,15 +1,23 @@
-// lib/screens/home_screen.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:gymgenius/screens/onboarding/bloc/onboarding_bloc.dart';
+import 'package:gymgenius/screens/auth/login_screen.dart';
 import 'package:gymgenius/screens/onboarding/onboarding_screen.dart';
 import 'package:gymgenius/services/logger_service.dart';
 
+/// HomeScreen: The initial landing screen for unauthenticated users.
+///
+/// It provides two main actions:
+/// 1. "GET STARTED": Navigates to the onboarding/sign-up flow.
+/// 2. "Log In": Navigates to the login screen for existing users.
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
+  static Route<void> route() {
+    return MaterialPageRoute<void>(builder: (_) => const HomeScreen());
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Responsive UI values based on screen size.
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
     final textTheme = Theme.of(context).textTheme;
@@ -35,6 +43,7 @@ class HomeScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // App Logo
                 Image.asset(
                   'assets/launcher_icon/launcher_icon.png',
                   height: screenHeight * 0.15,
@@ -49,6 +58,8 @@ class HomeScreen extends StatelessWidget {
                   },
                 ),
                 SizedBox(height: screenHeight * 0.02),
+
+                // App Title
                 Text(
                   "GYMGENIUS",
                   textAlign: TextAlign.center,
@@ -58,29 +69,27 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ),
                 SizedBox(height: screenHeight * 0.01),
+
+                // App Tagline
                 Text(
                   "Your AI-Powered Fitness Coach",
                   textAlign: TextAlign.center,
                   style: textTheme.headlineSmall?.copyWith(
-                    color: colorScheme.onSurface.withAlpha(217),
+                    color: colorScheme.onSurface.withAlpha(217), // ~85% opacity
                   ),
                 ),
                 SizedBox(height: screenHeight * 0.1),
+
+                // "Get Started" Button
                 ElevatedButton(
                   onPressed: () {
                     Log.debug('User tapped GET STARTED button');
-                    Navigator.push(
-                      context,
+                    // Navigate to OnboardingScreen, which now manages its own providers.
+                    // Using pushReplacement provides a better UX as the user can't go "back" to the splash screen.
+                    Navigator.of(context).pushReplacement(
                       MaterialPageRoute(
-                        builder: (_) => BlocProvider(
-                          create: (blocContext) {
-                            Log.debug('Creating new OnboardingBloc instance');
-                            return OnboardingBloc();
-                          },
-                          child: const OnboardingScreen(
-                            isPostLoginCompletion: false,
-                          ),
-                        ),
+                        builder: (_) => const OnboardingScreen(
+                            isPostLoginCompletion: false),
                       ),
                     );
                   },
@@ -90,19 +99,26 @@ class HomeScreen extends StatelessWidget {
                   child: const Text("GET STARTED"),
                 ),
                 SizedBox(height: screenHeight * 0.025),
+
+                // "Log In" Button
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
                       "Already have an account? ",
                       style: textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurface.withAlpha(204),
+                        color: colorScheme.onSurface
+                            .withAlpha(204), // ~80% opacity
                       ),
                     ),
                     TextButton(
                       onPressed: () {
                         Log.debug('User tapped Log In button');
-                        Navigator.pushNamed(context, '/login');
+                        // Use pushReplacement to maintain a clean navigation stack.
+                        Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(
+                              builder: (_) => const LoginScreen()),
+                        );
                       },
                       child: Text(
                         "Log In",

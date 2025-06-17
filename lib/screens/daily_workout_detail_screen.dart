@@ -12,18 +12,18 @@ class DailyWorkoutDetailScreen extends StatefulWidget {
   // Changed to StatefulWidget for future flexibility (e.g., exercise replacement)
   final String dayTitle;
   final List<RoutineExercise>
-      initialExercises; // <<--- RENOMMÉ (était exercises)
+      initialExercises; 
   final String? routineIdForLog;
   final String dayKeyForLog;
-  final OnboardingData onboardingData; // <<--- AJOUTÉ
+  final OnboardingData onboardingData; 
 
   const DailyWorkoutDetailScreen({
     super.key,
     required this.dayTitle,
-    required this.initialExercises, // <<--- RENOMMÉ
+    required this.initialExercises, 
     this.routineIdForLog,
     required this.dayKeyForLog,
-    required this.onboardingData, // <<--- AJOUTÉ
+    required this.onboardingData, 
   });
 
   @override

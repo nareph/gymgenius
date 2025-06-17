@@ -19,19 +19,15 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     });
 
     on<CompleteOnboarding>((event, emit) {
-      // Créer une copie des réponses actuelles pour y ajouter 'completed': true
-      final Map<String, dynamic> completedAnswers = Map<String, dynamic>.from(state.answers);
-      completedAnswers['completed'] = true; // <<--- AJOUT CRUCIAL
+      final Map<String, dynamic> completedAnswers =
+          Map<String, dynamic>.from(state.answers);
+      completedAnswers['completed'] = true;
 
       debugPrint(
           "OnboardingBloc: CompleteOnboarding event received. Current answers: ${state.answers}. Answers to be emitted: $completedAnswers");
 
-      // Émettre un état indiquant que le processus d'onboarding est terminé,
-      // ET que les réponses incluent maintenant 'completed': true.
-      // Le BlocListener dans OnboardingScreen utilisera state.answers (qui est maintenant completedAnswers)
-      // pour le passer à SignUpScreen.
       emit(state.copyWith(
-        answers: completedAnswers, // <<--- Utiliser les réponses mises à jour
+        answers: completedAnswers,
         status: OnboardingStatus.complete,
       ));
       debugPrint(

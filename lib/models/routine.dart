@@ -1,5 +1,6 @@
 // lib/models/routine.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:gymgenius/services/logger_service.dart';
 import 'package:uuid/uuid.dart';
 
 final _uuid = Uuid();
@@ -11,7 +12,7 @@ class RoutineExercise {
   final String reps;
   final String weightSuggestionKg;
   final int restBetweenSetsSeconds;
-  final String description; // Utilisé pour les instructions de réalisation
+  final String description;
   final bool usesWeight;
   final bool isTimed;
   final int? targetDurationSeconds;
@@ -23,7 +24,7 @@ class RoutineExercise {
     required this.reps,
     this.weightSuggestionKg = 'N/A',
     this.restBetweenSetsSeconds = 60,
-    this.description = '', // Default à une chaîne vide
+    this.description = '',
     this.usesWeight = true,
     this.isTimed = false,
     this.targetDurationSeconds,
@@ -37,8 +38,7 @@ class RoutineExercise {
       reps: map['reps'] as String? ?? '8-12',
       weightSuggestionKg: map['weightSuggestionKg'] as String? ?? 'N/A',
       restBetweenSetsSeconds: map['restBetweenSetsSeconds'] as int? ?? 60,
-      description:
-          map['description'] as String? ?? '', // Default à une chaîne vide
+      description: map['description'] as String? ?? '',
       usesWeight: map['usesWeight'] as bool? ?? true,
       isTimed: map['isTimed'] as bool? ?? false,
       targetDurationSeconds: map['targetDurationSeconds'] as int?,
@@ -131,7 +131,7 @@ class WeeklyRoutine {
         try {
           return Timestamp.fromDate(DateTime.parse(value));
         } catch (e) {
-          print("Error parsing timestamp string '$value': $e");
+          Log.debug("Error parsing timestamp string '$value': $e");
           return isExpiry
               ? Timestamp.fromDate(
                   DateTime.now().add(Duration(days: duration * 7)))
@@ -153,7 +153,6 @@ class WeeklyRoutine {
     );
   }
 
-  // Pour l'enregistrement dans Firestore (avec des vrais Timestamps)
   Map<String, dynamic> toMapForFirestore() {
     return {
       'id': id,
@@ -167,7 +166,6 @@ class WeeklyRoutine {
     };
   }
 
-  // Pour l'appel à la Cloud Function (Timestamps convertis en String)
   Map<String, dynamic> toMapForCloudFunction() {
     return {
       'id': id,

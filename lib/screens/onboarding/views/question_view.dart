@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gymgenius/models/onboarding_question.dart'; // For OnboardingQuestion model
-import 'package:gymgenius/screens/onboarding/bloc/onboarding_bloc.dart'; // For OnboardingBloc
+import 'package:gymgenius/blocs/onboarding/onboarding_bloc.dart'; // For OnboardingBloc
 
 // QuestionView: A widget to display single-choice or multiple-choice onboarding questions.
 class QuestionView extends StatefulWidget {

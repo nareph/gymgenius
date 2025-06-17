@@ -21,7 +21,7 @@ class AppTheme {
       surface: Colors.grey
           .shade900, // Background color for surfaces like cards, bottom sheets
       onSurface: Colors.white
-          .withOpacity(0.9), // Text/icon color on main background
+          .withValues(alpha: 0.9), // Text/icon color on main background
       error: Colors.redAccent
           .shade400, // Error color (e.g., for error messages, invalid fields)
       onError: Colors.black, // Text/icon color on error background
@@ -87,11 +87,11 @@ class AppTheme {
           height: 1.4), // Added line height
       bodyMedium: TextStyle(
           fontSize: 14,
-          color: colorScheme.onSurface.withOpacity(0.85),
+          color: colorScheme.onSurface.withValues(alpha: 0.85),
           height: 1.4), // Slightly more opaque
       bodySmall: TextStyle(
           fontSize: 12,
-          color: colorScheme.onSurface.withOpacity(0.75),
+          color: colorScheme.onSurface.withValues(alpha: 0.75),
           height: 1.3),
 
       // --- MAIN ADJUSTMENT FOR BUTTONS ---
@@ -115,7 +115,8 @@ class AppTheme {
       // --- OPTIONAL ADJUSTMENT FOR SMALLER LABELS ---
       labelSmall: TextStyle(
         fontSize: 11, // Adjusted to 11 (from your 12, original was 13)
-        color: colorScheme.onSurface.withOpacity(0.8), // Slightly less opaque
+        color: colorScheme.onSurface
+            .withValues(alpha: 0.8), // Slightly less opaque
         letterSpacing: 0.25,
       ),
     );
@@ -137,11 +138,11 @@ class AppTheme {
             // letterSpacing: 0.75 // You can further customize letter spacing here if needed
             ),
         elevation: 2,
-        shadowColor: Colors.black.withOpacity(0.2), // Subtle shadow
+        shadowColor: Colors.black.withValues(alpha: 0.2), // Subtle shadow
         disabledBackgroundColor: colorScheme.onSurface
-            .withOpacity(0.12), // Standard disabled background
+            .withValues(alpha: 0.12), // Standard disabled background
         disabledForegroundColor: colorScheme.onSurface
-            .withOpacity(0.38), // Standard disabled foreground
+            .withValues(alpha: 0.38), // Standard disabled foreground
       ),
     );
 
@@ -162,7 +163,7 @@ class AppTheme {
     final InputDecorationTheme inputDecorationTheme = InputDecorationTheme(
       filled: true,
       fillColor: colorScheme.surfaceContainerHighest
-          .withOpacity(0.5), // Example: slightly transparent surface
+          .withValues(alpha: 0.5), // Example: slightly transparent surface
       contentPadding:
           const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
       border: OutlineInputBorder(
@@ -173,7 +174,8 @@ class AppTheme {
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12.0),
         borderSide: BorderSide(
-            color: colorScheme.outlineVariant.withOpacity(0.5), width: 1.0),
+            color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+            width: 1.0),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12.0),
@@ -189,8 +191,8 @@ class AppTheme {
       ),
       labelStyle:
           textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
-      hintStyle: textTheme.bodyMedium
-          ?.copyWith(color: colorScheme.onSurfaceVariant.withOpacity(0.7)),
+      hintStyle: textTheme.bodyMedium?.copyWith(
+          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7)),
       prefixIconColor: colorScheme.onSurfaceVariant,
       suffixIconColor: colorScheme.onSurfaceVariant,
       errorStyle:
@@ -218,7 +220,7 @@ class AppTheme {
         BottomNavigationBarThemeData(
       backgroundColor: colorScheme.surfaceContainerHighest, // Or surface
       selectedItemColor: colorScheme.primary,
-      unselectedItemColor: colorScheme.onSurfaceVariant.withOpacity(0.7),
+      unselectedItemColor: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
       selectedLabelStyle:
           textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600),
       unselectedLabelStyle: textTheme.labelSmall,
@@ -242,7 +244,7 @@ class AppTheme {
       textButtonTheme: textButtonTheme,
       inputDecorationTheme: inputDecorationTheme,
       bottomNavigationBarTheme: bottomNavigationBarTheme,
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         // Default Card styling
         elevation: 1.0,
         shape:
@@ -264,7 +266,7 @@ class AppTheme {
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)),
         side: BorderSide.none,
       ),
-      dialogTheme: DialogTheme(
+      dialogTheme: DialogThemeData(
         // Default Dialog styling
         backgroundColor: colorScheme.surfaceContainerHigh,
         shape:

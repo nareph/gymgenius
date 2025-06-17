@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // For InputFormatters
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gymgenius/models/onboarding_question.dart'; // For OnboardingQuestion
-import 'package:gymgenius/screens/onboarding/bloc/onboarding_bloc.dart'; // For OnboardingBloc
+import 'package:gymgenius/blocs/onboarding/onboarding_bloc.dart'; // For OnboardingBloc
 
 // StatsInputView: A widget specifically for collecting physical statistics
 // (age, height, weight, target weight) during onboarding.

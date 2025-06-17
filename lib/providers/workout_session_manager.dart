@@ -2,79 +2,10 @@
 import 'dart:async';
 
 import 'package:audioplayers/audioplayers.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:gymgenius/models/routine.dart';
+import 'package:gymgenius/models/workout_log.dart';
 import 'package:gymgenius/services/logger_service.dart';
-
-class LoggedSetData {
-  final int setNumber;
-  final String performedReps;
-  final String performedWeightKg;
-  final DateTime loggedAt;
-
-  LoggedSetData({
-    required this.setNumber,
-    required this.performedReps,
-    required this.performedWeightKg,
-    required this.loggedAt,
-  });
-
-  Map<String, dynamic> toMap() {
-    return {
-      'setNumber': setNumber,
-      'performedReps': performedReps,
-      'performedWeightKg': performedWeightKg,
-      'loggedAt': Timestamp.fromDate(loggedAt),
-    };
-  }
-}
-
-class LoggedExerciseData {
-  final RoutineExercise originalExercise;
-  final List<LoggedSetData> loggedSets;
-  bool isCompleted;
-
-  LoggedExerciseData({
-    required this.originalExercise,
-    this.loggedSets = const [],
-    this.isCompleted = false,
-  });
-
-  LoggedExerciseData addSet(LoggedSetData set) {
-    return LoggedExerciseData(
-      originalExercise: originalExercise,
-      loggedSets: List.from(loggedSets)..add(set),
-      isCompleted: isCompleted,
-    );
-  }
-
-  LoggedExerciseData markAsCompleted(bool completedStatus) {
-    return LoggedExerciseData(
-      originalExercise: originalExercise,
-      loggedSets: loggedSets,
-      isCompleted: completedStatus,
-    );
-  }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'exerciseId': originalExercise.id,
-      'exerciseName': originalExercise.name,
-      'targetSets': originalExercise.sets,
-      'targetReps': originalExercise.reps,
-      'targetWeight': originalExercise.weightSuggestionKg,
-      'targetRest': originalExercise.restBetweenSetsSeconds,
-      'description': originalExercise.description,
-      'usesWeight': originalExercise.usesWeight,
-      'isTimed': originalExercise.isTimed,
-      if (originalExercise.targetDurationSeconds != null)
-        'targetDurationSeconds': originalExercise.targetDurationSeconds,
-      'loggedSets': loggedSets.map((s) => s.toMap()).toList(),
-      'isCompleted': isCompleted,
-    };
-  }
-}
 
 class WorkoutSessionManager with ChangeNotifier {
   final AudioPlayer _audioPlayer = AudioPlayer();

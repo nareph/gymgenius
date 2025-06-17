@@ -1,17 +1,22 @@
-// lib/screens/onboarding/onboarding_screen.dart
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:gymgenius/models/onboarding.dart'; // For OnboardingData model
-import 'package:gymgenius/models/onboarding_question.dart'; // For OnboardingQuestion list
-import 'package:gymgenius/screens/auth/sign_up_screen.dart'; // To navigate after pre-signup onboarding
-import 'package:gymgenius/screens/onboarding/bloc/onboarding_bloc.dart'; // The BLoC for managing onboarding state
-import 'package:gymgenius/screens/onboarding/views/question_view.dart'; // View for single/multiple choice questions
-import 'package:gymgenius/screens/onboarding/views/stats_input_view.dart'; // View for numeric stats input
-import 'package:gymgenius/services/logger_service.dart'; // Import the logger service
+import 'package:gymgenius/models/onboarding_question.dart';
+import 'package:gymgenius/repositories/profile_repository.dart';
+import 'package:gymgenius/screens/auth/sign_up_screen.dart';
+import 'package:gymgenius/screens/main_dashboard_screen.dart';
+import 'package:gymgenius/blocs/onboarding/onboarding_bloc.dart';
+import 'package:gymgenius/screens/onboarding/views/question_view.dart';
+import 'package:gymgenius/screens/onboarding/views/stats_input_view.dart';
+import 'package:gymgenius/viewmodels/onboarding_viewmodel.dart';
+import 'package:provider/provider.dart';
 
-class OnboardingScreen extends StatefulWidget {
+/// OnboardingScreen: Guides the user through a series of questions to set up their profile.
+///
+/// This widget acts as a provider scope for its specific BLoC and ViewModel.
+/// It can be used in two contexts:
+/// 1. Pre-signup: Gathers initial data before account creation.
+/// 2. Post-login: Allows a logged-in user to complete their profile.
+class OnboardingScreen extends StatelessWidget {
   final bool isPostLoginCompletion;
 
   const OnboardingScreen({
@@ -19,209 +24,127 @@ class OnboardingScreen extends StatefulWidget {
     this.isPostLoginCompletion = false,
   });
 
-  @override
-  State<OnboardingScreen> createState() => _OnboardingScreenState();
-}
-
-class _OnboardingScreenState extends State<OnboardingScreen> {
-  final PageController _pageController = PageController();
-  final List<OnboardingQuestion> _questions = defaultOnboardingQuestions;
-  int _currentPage = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _pageController.addListener(() {
-      final page = _pageController.page?.round() ?? 0;
-      if (page != _currentPage) {
-        if (mounted) {
-          setState(() {
-            _currentPage = page;
-          });
-        }
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-
-  void _triggerCompletionOrSkip() {
-    final bloc = context.read<OnboardingBloc>();
-    final Map<String, dynamic> currentAnswersFromBloc = bloc.state.answers;
-
-    if (widget.isPostLoginCompletion) {
-      Log.debug(
-          "OnboardingScreen: Completing/Skipping post-login. Saving data and navigating to /main_app. Answers: $currentAnswersFromBloc");
-      _saveOnboardingDataForLoggedInUser(currentAnswersFromBloc);
-      if (mounted) {
-        Navigator.pushNamedAndRemoveUntil(
-            context, '/main_app', (Route<dynamic> route) => false);
-      }
-    } else {
-      Log.debug(
-          "OnboardingScreen: Completing/Skipping pre-signup. Triggering BLoC CompleteOnboarding. Current answers: ${bloc.state.answers}");
-      bloc.add(CompleteOnboarding());
-    }
-  }
-
-  Future<void> _saveOnboardingDataForLoggedInUser(
-      Map<String, dynamic> answersMap) async {
-    if (!widget.isPostLoginCompletion) return;
-
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      Log.error(
-          "OnboardingScreen Error: _saveOnboardingDataForLoggedInUser called but user is null.");
-      return;
-    }
-
-    OnboardingData dataToSave;
-
-    if (answersMap.isEmpty && widget.isPostLoginCompletion) {
-      Log.debug(
-          "OnboardingScreen Info: _saveOnboardingDataForLoggedInUser received empty answersMap (post-login skip). Marking as completed.");
-      dataToSave = OnboardingData(completed: true);
-    } else {
-      dataToSave = OnboardingData.fromMap(answersMap).copyWith(completed: true);
-    }
-
-    try {
-      Log.debug(
-          "OnboardingScreen: Saving OnboardingData for logged-in user ${user.uid}: ${dataToSave.toMap()}");
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).set(
-        {
-          'onboardingData': dataToSave.toMap(),
-          'onboardingCompleted': true,
-          'profileLastUpdatedAt': FieldValue.serverTimestamp(),
-        },
-        SetOptions(merge: true),
-      );
-      Log.debug(
-          "OnboardingScreen: OnboardingData saved successfully for user ${user.uid}.");
-    } catch (e, stackTrace) {
-      Log.error(
-          "OnboardingScreen: Error saving OnboardingData for user ${user.uid}: $e",
-          error: e,
-          stackTrace: stackTrace);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text(
-                'Could not save profile preferences. Please try again later.'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-      }
-    }
-  }
-
-  void _nextPage() {
-    final isLastQuestionPage = _currentPage == _questions.length - 1;
-    if (!isLastQuestionPage) {
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 350),
-        curve: Curves.easeOutCubic,
-      );
-    } else {
-      _triggerCompletionOrSkip();
-    }
+  /// Static method to create a route that provides all necessary dependencies
+  /// for the post-login completion flow. This is called by the AuthWrapper.
+  static Route<void> route() {
+    return MaterialPageRoute<void>(
+      builder: (_) {
+        // We wrap the screen with its required providers.
+        // OnboardingScreen itself handles providing these, so we just instantiate it.
+        return const OnboardingScreen(isPostLoginCompletion: true);
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
+    // This widget now sets up the necessary providers for the OnboardingView.
+    // This keeps the dependency setup logic encapsulated within the feature itself.
+    return BlocProvider(
+      create: (_) => OnboardingBloc(),
+      child: ChangeNotifierProvider(
+        create: (context) => OnboardingViewModel(
+          isPostLogin: isPostLoginCompletion,
+          profileRepository: context.read<ProfileRepository>(),
+          onboardingBloc: context.read<OnboardingBloc>(),
+          onPreSignupComplete: (answers) {
+            // Callback for pre-signup flow: navigates to the SignUp screen.
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => SignUpScreen(onboardingData: answers)),
+            );
+          },
+          onPostLoginComplete: () {
+            // Callback for post-login flow: navigates to the main dashboard.
+            // This is the manual but pragmatic solution for this specific flow.
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const MainDashboardScreen()),
+              (route) => false,
+            );
+          },
+        ),
+        child: const OnboardingView(),
+      ),
+    );
+  }
+}
+
+/// The core UI of the onboarding screen, now stateless and driven by the ViewModel.
+class OnboardingView extends StatelessWidget {
+  const OnboardingView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final viewModel = context.watch<OnboardingViewModel>();
+    final questions = defaultOnboardingQuestions;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.isPostLoginCompletion
+        title: Text(viewModel.isPostLogin
             ? "Complete Your Profile"
             : "Your Fitness Profile"),
-        automaticallyImplyLeading: widget.isPostLoginCompletion,
+        automaticallyImplyLeading: viewModel.isPostLogin,
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8.0),
             child: TextButton(
-              onPressed: _triggerCompletionOrSkip,
-              style: TextButton.styleFrom(
-                foregroundColor: colorScheme.onSurface.withAlpha((204).round()),
-                textStyle:
-                    textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
-              ).merge(Theme.of(context).textButtonTheme.style),
+              onPressed: viewModel.completeOnboarding,
               child: const Text("SKIP"),
             ),
           ),
         ],
       ),
-      body: BlocListener<OnboardingBloc, OnboardingState>(
-        listener: (context, state) {
-          if (!widget.isPostLoginCompletion &&
-              state.status == OnboardingStatus.complete) {
-            Log.debug(
-                "OnboardingScreen BlocListener (Pre-SignUp): Navigating to SignUpScreen with answers: ${state.answers}.");
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (_) => SignUpScreen(onboardingData: state.answers),
-              ),
-            );
-          }
-        },
-        child: Column(
-          children: [
-            Expanded(
-              child: PageView.builder(
-                controller: _pageController,
-                itemCount: _questions.length,
-                physics: const NeverScrollableScrollPhysics(),
-                itemBuilder: (context, index) {
-                  final currentQuestion = _questions[index];
-                  if (currentQuestion.type == QuestionType.numericInput &&
-                      currentQuestion.id == 'physical_stats') {
-                    return StatsInputView(
-                      question: currentQuestion,
-                      onNext: _nextPage,
-                    );
-                  } else {
-                    return QuestionView(
-                      question: currentQuestion,
-                      onNext: _nextPage,
-                    );
-                  }
-                },
+      body: Column(
+        children: [
+          Expanded(
+            child: PageView.builder(
+              controller: viewModel.pageController,
+              itemCount: questions.length,
+              physics: const NeverScrollableScrollPhysics(),
+              itemBuilder: (context, index) {
+                final currentQuestion = questions[index];
+                if (currentQuestion.id == 'physical_stats') {
+                  return StatsInputView(
+                    question: currentQuestion,
+                    onNext: () => viewModel.nextPage(questions.length),
+                  );
+                } else {
+                  return QuestionView(
+                    question: currentQuestion,
+                    onNext: () => viewModel.nextPage(questions.length),
+                  );
+                }
+              },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 35.0, top: 20.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(
+                questions.length,
+                (index) =>
+                    _buildDotIndicator(index, viewModel.currentPage, context),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 35.0, top: 20.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(
-                  _questions.length,
-                  (index) => _buildDotIndicator(index, context),
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildDotIndicator(int index, BuildContext context) {
+  Widget _buildDotIndicator(int index, int currentPage, BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
       margin: const EdgeInsets.symmetric(horizontal: 4.0),
       height: 10,
-      width: _currentPage == index ? 28 : 10,
+      width: currentPage == index ? 28 : 10,
       decoration: BoxDecoration(
-        color: _currentPage == index
+        color: currentPage == index
             ? colorScheme.primary
-            : colorScheme.onSurface.withAlpha((64).round()),
+            : colorScheme.onSurface.withAlpha(64),
         borderRadius: BorderRadius.circular(5),
       ),
     );

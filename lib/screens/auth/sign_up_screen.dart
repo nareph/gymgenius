@@ -1,151 +1,162 @@
 // lib/screens/auth/sign_up_screen.dart
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:gymgenius/models/onboarding.dart';
-import 'package:gymgenius/models/onboarding_question.dart';
-import 'package:gymgenius/services/logger_service.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:formz/formz.dart';
+import 'package:gymgenius/blocs/signup/signup_bloc.dart';
+import 'package:gymgenius/models/onboarding.dart'; // For PhysicalStats
+import 'package:gymgenius/models/onboarding_question.dart'; // For questions
+import 'package:gymgenius/repositories/auth_repository.dart';
+import 'package:gymgenius/screens/auth/login_screen.dart';
 
-class SignUpScreen extends StatefulWidget {
+class SignUpScreen extends StatelessWidget {
   final Map<String, dynamic>? onboardingData;
 
   const SignUpScreen({super.key, this.onboardingData});
 
   @override
-  State<SignUpScreen> createState() => _SignUpScreenState();
-}
-
-class _SignUpScreenState extends State<SignUpScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
-  bool _isLoading = false;
-  bool _isPasswordObscured = true;
-  bool _isConfirmPasswordObscured = true;
-
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _signUpWithEmail() async {
-    if (!(_formKey.currentState?.validate() ?? false)) {
-      return;
-    }
-    FocusScope.of(context).unfocus();
-    setState(() => _isLoading = true);
-
-    try {
-      final credential =
-          await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
-      final user = credential.user;
-
-      if (user != null) {
-        bool finalOnboardingCompletedFlag = false;
-        OnboardingData onboardingDataToSave;
-
-        if (widget.onboardingData != null &&
-            widget.onboardingData!.isNotEmpty) {
-          final Map<String, dynamic> rawOnboardingMap = widget.onboardingData!;
-          finalOnboardingCompletedFlag =
-              rawOnboardingMap['completed'] as bool? ?? false;
-
-          if (rawOnboardingMap['completed'] == null) {
-            rawOnboardingMap['completed'] = true;
-            finalOnboardingCompletedFlag = true;
-          }
-          onboardingDataToSave = OnboardingData.fromMap(rawOnboardingMap);
-        } else {
-          onboardingDataToSave = OnboardingData(completed: false);
-          finalOnboardingCompletedFlag = false;
-        }
-
-        final Map<String, dynamic> userProfileData = {
-          'email': user.email,
-          'uid': user.uid,
-          'createdAt': FieldValue.serverTimestamp(),
-          'displayName': user.email?.split('@')[0] ?? 'New User',
-          'onboardingData': onboardingDataToSave.toMap(),
-          'onboardingCompleted': finalOnboardingCompletedFlag,
-        };
-
-        Log.debug(
-            "SignUpScreen: Creating user profile in Firestore for ${user.uid}");
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .set(userProfileData);
-        Log.debug("SignUpScreen: User profile created successfully");
-
-        if (mounted) {
-          Navigator.pushNamedAndRemoveUntil(
-              context, '/main_app', (route) => false);
-        }
-      } else {
-        Log.error(
-            "SignUpScreen: User creation succeeded but user object is null");
-        if (mounted) {
-          _showErrorSnackBar("Sign up failed. User data unavailable.");
-        }
-      }
-    } on FirebaseAuthException catch (e, stackTrace) {
-      String errorMessage = "An error occurred during sign up.";
-      if (e.code == 'email-already-in-use') {
-        errorMessage =
-            "This email is already registered. Please log in or use a different email.";
-      } else if (e.code == 'weak-password') {
-        errorMessage =
-            "The password provided is too weak. Please use a stronger password (min. 6 characters).";
-      } else if (e.code == 'invalid-email') {
-        errorMessage = "The email address is not valid.";
-      } else if (e.code == 'network-request-failed') {
-        errorMessage =
-            "Network error. Please check your connection and try again.";
-      }
-      Log.error("SignUpScreen FirebaseAuthException: ${e.code} - ${e.message}",
-          error: e, stackTrace: stackTrace);
-      if (mounted) {
-        _showErrorSnackBar(errorMessage);
-      }
-    } catch (e, stackTrace) {
-      Log.error("SignUpScreen Unexpected sign up error",
-          error: e, stackTrace: stackTrace);
-      if (mounted) {
-        _showErrorSnackBar(
-            "An unexpected error occurred. Please try again later.");
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  void _showErrorSnackBar(String message) {
-    if (!mounted) return;
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          message,
-          style: textTheme.bodyMedium?.copyWith(color: colorScheme.onError),
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          (onboardingData != null && onboardingData!.isNotEmpty)
+              ? "Final Step"
+              : "Create Account",
         ),
-        backgroundColor: colorScheme.error,
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+      ),
+      body: BlocProvider(
+        create: (context) => SignUpBloc(
+          authRepository: context.read<AuthRepository>(),
+        ),
+        child: SignUpForm(onboardingData: onboardingData),
       ),
     );
   }
+}
 
-  String _formatOnboardingDataForDisplay(Map<String, dynamic> data) {
+class SignUpForm extends StatefulWidget {
+  final Map<String, dynamic>? onboardingData;
+  const SignUpForm({super.key, this.onboardingData});
+
+  @override
+  State<SignUpForm> createState() => _SignUpFormState();
+}
+
+class _SignUpFormState extends State<SignUpForm> {
+  // Local UI state for password visibility.
+  bool _isPasswordObscured = true;
+  bool _isConfirmPasswordObscured = true;
+
+  // Controller for the confirmation password field to check for equality.
+  final _passwordController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Listen to the BLoC's password changes to update the local controller.
+    context.read<SignUpBloc>().stream.listen((state) {
+      if (_passwordController.text != state.password.value) {
+        _passwordController.text = state.password.value;
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocListener<SignUpBloc, SignUpState>(
+      listener: (context, state) {
+        if (state.status.isFailure) {
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(
+              SnackBar(content: Text(state.errorMessage ?? 'Sign-Up Failed')),
+            );
+        }
+        // Navigation is handled globally by AuthBloc and AuthWrapper,
+        // so no navigation logic is needed here on success.
+      },
+      child: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(30.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _Header(hasOnboardingData: widget.onboardingData != null),
+              if (widget.onboardingData != null)
+                _OnboardingSummary(data: widget.onboardingData!),
+              const SizedBox(height: 20),
+              _EmailInput(),
+              const SizedBox(height: 20),
+              _PasswordInput(
+                  isObscured: _isPasswordObscured,
+                  onToggle: () => setState(
+                      () => _isPasswordObscured = !_isPasswordObscured)),
+              const SizedBox(height: 20),
+              _ConfirmPasswordInput(
+                passwordController: _passwordController,
+                isObscured: _isConfirmPasswordObscured,
+                onToggle: () => setState(() =>
+                    _isConfirmPasswordObscured = !_isConfirmPasswordObscured),
+              ),
+              const SizedBox(height: 35),
+              _SignUpButton(onboardingData: widget.onboardingData),
+              const SizedBox(height: 30),
+              const _LoginRedirectButton(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// --- UI Sub-Widgets for Clarity ---
+
+class _Header extends StatelessWidget {
+  final bool hasOnboardingData;
+  const _Header({required this.hasOnboardingData});
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
+    return Column(
+      children: [
+        Text(
+          hasOnboardingData
+              ? "Create Your Account"
+              : "Get Started with GymGenius",
+          textAlign: TextAlign.center,
+          style: textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.bold, color: colorScheme.primary),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          hasOnboardingData
+              ? "Your preferences will be saved with your new account."
+              : "Enter your details below to create your account.",
+          textAlign: TextAlign.center,
+          style: textTheme.bodyLarge,
+        ),
+        const SizedBox(height: 15),
+      ],
+    );
+  }
+}
+
+class _OnboardingSummary extends StatelessWidget {
+  final Map<String, dynamic> data;
+  const _OnboardingSummary({required this.data});
+
+  String _formatOnboardingDataForDisplay() {
     final displayableData = Map<String, dynamic>.from(data);
     displayableData.remove('completed');
 
@@ -214,213 +225,156 @@ class _SignUpScreenState extends State<SignUpScreen> {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
-    final bool hasMeaningfulOnboardingData = widget.onboardingData != null &&
-        widget.onboardingData!.keys
-            .any((k) => k != 'completed' && widget.onboardingData![k] != null);
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-            hasMeaningfulOnboardingData ? "Final Step" : "Create Account",
-            style: textTheme.titleLarge),
-        centerTitle: true,
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        leading: ModalRoute.of(context)?.canPop == true
-            ? BackButton(color: colorScheme.onSurface)
-            : null,
+    return Container(
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 25),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colorScheme.outlineVariant.withAlpha(128)),
       ),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 30.0, vertical: 20.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  hasMeaningfulOnboardingData
-                      ? "Create Your Account"
-                      : "Get Started with GymGenius",
-                  textAlign: TextAlign.center,
-                  style: textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold, color: colorScheme.primary),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  hasMeaningfulOnboardingData
-                      ? "Your preferences will be saved with your new account."
-                      : "Enter your details below to create your account.",
-                  textAlign: TextAlign.center,
-                  style: textTheme.bodyLarge?.copyWith(
-                    color: colorScheme.onSurface.withAlpha((0.7 * 255).round()),
-                  ),
-                ),
-                SizedBox(height: hasMeaningfulOnboardingData ? 15 : 30),
-                if (hasMeaningfulOnboardingData) ...[
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    margin: const EdgeInsets.only(bottom: 25),
-                    decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerLowest,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                          color: colorScheme.outlineVariant
-                              .withAlpha((0.5 * 255).round())),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Summary of Your Preferences:",
-                          style: textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: colorScheme.onSurface),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          _formatOnboardingDataForDisplay(
-                              widget.onboardingData!),
-                          style: textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                            height: 1.4,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-                TextFormField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: InputDecoration(
-                    labelText: "Email Address",
-                    prefixIcon: Icon(Icons.email_outlined,
-                        color: colorScheme.onSurfaceVariant),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Please enter your email';
-                    }
-                    if (!RegExp(
-                            r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9]+\.[a-zA-Z]+")
-                        .hasMatch(value)) {
-                      return 'Please enter a valid email address';
-                    }
-                    return null;
-                  },
-                  autovalidateMode: AutovalidateMode.onUserInteraction,
-                  textInputAction: TextInputAction.next,
-                ),
-                const SizedBox(height: 20),
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: _isPasswordObscured,
-                  decoration: InputDecoration(
-                    labelText: "Password (min. 6 characters)",
-                    prefixIcon: Icon(Icons.lock_outline,
-                        color: colorScheme.onSurfaceVariant),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                          _isPasswordObscured
-                              ? Icons.visibility_off_outlined
-                              : Icons.visibility_outlined,
-                          color: colorScheme.onSurfaceVariant),
-                      onPressed: () => setState(
-                          () => _isPasswordObscured = !_isPasswordObscured),
-                    ),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter a password';
-                    }
-                    if (value.length < 6) {
-                      return 'Password must be at least 6 characters long';
-                    }
-                    return null;
-                  },
-                  autovalidateMode: AutovalidateMode.onUserInteraction,
-                  textInputAction: TextInputAction.next,
-                ),
-                const SizedBox(height: 20),
-                TextFormField(
-                  controller: _confirmPasswordController,
-                  obscureText: _isConfirmPasswordObscured,
-                  decoration: InputDecoration(
-                    labelText: "Confirm Password",
-                    prefixIcon: Icon(Icons.lock_outline,
-                        color: colorScheme.onSurfaceVariant),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                          _isConfirmPasswordObscured
-                              ? Icons.visibility_off_outlined
-                              : Icons.visibility_outlined,
-                          color: colorScheme.onSurfaceVariant),
-                      onPressed: () => setState(() =>
-                          _isConfirmPasswordObscured =
-                              !_isConfirmPasswordObscured),
-                    ),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please confirm your password';
-                    }
-                    if (value != _passwordController.text) {
-                      return 'Passwords do not match';
-                    }
-                    return null;
-                  },
-                  autovalidateMode: AutovalidateMode.onUserInteraction,
-                  textInputAction: TextInputAction.done,
-                  onFieldSubmitted: (_) =>
-                      _isLoading ? null : _signUpWithEmail(),
-                ),
-                const SizedBox(height: 35),
-                _isLoading
-                    ? Center(
-                        child: CircularProgressIndicator(
-                            color: colorScheme.primary))
-                    : ElevatedButton(
-                        onPressed: _signUpWithEmail,
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          textStyle: textTheme.labelLarge
-                              ?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                        child: Text(hasMeaningfulOnboardingData
-                            ? "CREATE ACCOUNT & GET STARTED"
-                            : "SIGN UP"),
-                      ),
-                const SizedBox(height: 30),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      "Already have an account?",
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurface
-                            .withAlpha((0.7 * 255).round()),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () =>
-                          Navigator.pushReplacementNamed(context, '/login'),
-                      child: Text(
-                        "Log In",
-                        style: textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text("Summary of Your Preferences:", style: textTheme.titleMedium),
+          const SizedBox(height: 10),
+          Text(_formatOnboardingDataForDisplay(), style: textTheme.bodyMedium),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmailInput extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<SignUpBloc, SignUpState>(
+      buildWhen: (p, c) => p.email != c.email,
+      builder: (context, state) {
+        return TextField(
+          onChanged: (email) =>
+              context.read<SignUpBloc>().add(SignUpEmailChanged(email)),
+          keyboardType: TextInputType.emailAddress,
+          decoration: InputDecoration(
+            labelText: 'Email Address',
+            errorText: state.email.displayError != null
+                ? 'Please enter a valid email'
+                : null,
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _PasswordInput extends StatelessWidget {
+  final bool isObscured;
+  final VoidCallback onToggle;
+  const _PasswordInput({required this.isObscured, required this.onToggle});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<SignUpBloc, SignUpState>(
+      buildWhen: (p, c) => p.password != c.password,
+      builder: (context, state) {
+        return TextField(
+          onChanged: (password) =>
+              context.read<SignUpBloc>().add(SignUpPasswordChanged(password)),
+          obscureText: isObscured,
+          decoration: InputDecoration(
+            labelText: 'Password (min. 6 characters)',
+            errorText: state.password.displayError != null
+                ? 'Password must be at least 6 characters'
+                : null,
+            suffixIcon: IconButton(
+              icon: Icon(isObscured
+                  ? Icons.visibility_off_outlined
+                  : Icons.visibility_outlined),
+              onPressed: onToggle,
             ),
           ),
+        );
+      },
+    );
+  }
+}
+
+class _ConfirmPasswordInput extends StatelessWidget {
+  final TextEditingController passwordController;
+  final bool isObscured;
+  final VoidCallback onToggle;
+
+  const _ConfirmPasswordInput({
+    required this.passwordController,
+    required this.isObscured,
+    required this.onToggle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      // Using TextFormField for its validator
+      obscureText: isObscured,
+      decoration: InputDecoration(
+        labelText: 'Confirm Password',
+        suffixIcon: IconButton(
+          icon: Icon(isObscured
+              ? Icons.visibility_off_outlined
+              : Icons.visibility_outlined),
+          onPressed: onToggle,
         ),
       ),
+      validator: (value) {
+        if (value != passwordController.text) {
+          return 'Passwords do not match';
+        }
+        return null;
+      },
+      autovalidateMode: AutovalidateMode.onUserInteraction,
+    );
+  }
+}
+
+class _SignUpButton extends StatelessWidget {
+  final Map<String, dynamic>? onboardingData;
+  const _SignUpButton({this.onboardingData});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<SignUpBloc, SignUpState>(
+      builder: (context, state) {
+        return state.status.isInProgress
+            ? const Center(child: CircularProgressIndicator())
+            : ElevatedButton(
+                onPressed: state.isValid
+                    ? () => context
+                        .read<SignUpBloc>()
+                        .add(SignUpSubmitted(onboardingData: onboardingData))
+                    : null,
+                child: const Text('CREATE ACCOUNT'),
+              );
+      },
+    );
+  }
+}
+
+class _LoginRedirectButton extends StatelessWidget {
+  const _LoginRedirectButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const Text("Already have an account?"),
+        TextButton(
+          onPressed: () => Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+            (route) => false,
+          ),
+          child: const Text("Log In"),
+        ),
+      ],
     );
   }
 }
