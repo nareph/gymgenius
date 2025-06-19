@@ -1,10 +1,8 @@
 plugins {
     id "com.android.application"
     id "kotlin-android"
-    // AJOUT : Appliquer le plugin Google Services
-    id 'com.google.gms.google-services' // Peut être placé ici ou avec apply plugin à la fin
-    // Le plugin Flutter doit être appliqué après les plugins Android et Kotlin.
     id "dev.flutter.flutter-gradle-plugin"
+    id "com.google.gms.google-services"
 }
 
 def localProperties = new Properties()
@@ -26,18 +24,17 @@ if (flutterVersionName == null) {
 }
 
 android {
-    // Récupère la valeur depuis gradle.properties si elle existe, sinon utilise la valeur par défaut
-    namespace = "com.nareph.gymgenius" // Assurez-vous que cela correspond à Firebase Console
-    compileSdk = Integer.parseInt(findProperty('flutter.compileSdkVersion') ?: '35')
-    ndkVersion = findProperty('flutter.ndkVersion') ?: "25.1.8937393" // Ou utilisez la valeur de gradle.properties
+    namespace = "com.nareph.gymgenius"
+    compileSdk = 35
+    ndkVersion = "27.0.12077973"
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = '1.8' // Simplifié
+        jvmTarget = '17'
     }
 
     sourceSets {
@@ -45,31 +42,27 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.nareph.gymgenius" // Assurez-vous que cela correspond à Firebase Console
-        // Utilise la valeur de gradle.properties si elle existe, sinon 21
-        minSdk = Integer.parseInt(findProperty('flutter.minSdkVersion') ?: '23')
-        // Utilise la valeur de gradle.properties si elle existe, sinon 35
-        targetSdk = Integer.parseInt(findProperty('flutter.targetSdkVersion') ?: '35')
+        applicationId = "com.nareph.gymgenius"
+        minSdk = 23
+        targetSdk = 35
         versionCode = flutterVersionCode.toInteger()
         versionName = flutterVersionName
-        // AJOUT : Recommandé pour certaines dépendances Firebase/AndroidX
         multiDexEnabled true
     }
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.debug // Pour le développement uniquement
-            // Vous devrez configurer une signature correcte pour la publication
-             minifyEnabled true // Activer la minification
-             shrinkResources true // Activer la suppression des ressources non utilisées
-             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig = signingConfigs.debug
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
         debug {
-             // Pas besoin de spécifier signingConfig explicitement, debug est par défaut
+            // Configuration par défaut pour debug
         }
     }
-     // AJOUT : Peut être nécessaire pour éviter les conflits de dépendances
-     packagingOptions {
+
+    packagingOptions {
         exclude 'META-INF/AL2.0'
         exclude 'META-INF/LGPL2.1'
     }
@@ -80,20 +73,15 @@ flutter {
 }
 
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version" // Assurez-vous que $kotlin_version est défini (souvent dans build.gradle projet)
-    // AJOUT : Dépendances Firebase BoM (Bill of Materials) - Recommandé
-    implementation platform('com.google.firebase:firebase-bom:33.1.1') // Utilisez la dernière version BOM
-
-    // AJOUT : Dépendances Firebase spécifiques (sans spécifier de version car géré par BoM)
-    implementation 'com.google.firebase:firebase-auth' // Pour Firebase Auth
-    implementation 'com.google.firebase:firebase-analytics' // Si vous utilisez Analytics (souvent implicite ou recommandé)
-
-    // AJOUT : Dépendance MultiDex
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    
+    // Firebase BoM pour gérer les versions automatiquement
+    implementation platform('com.google.firebase:firebase-bom:33.7.0')
+    
+    // Dépendances Firebase (versions gérées par BoM)
+    implementation 'com.google.firebase:firebase-auth'
+    implementation 'com.google.firebase:firebase-analytics'
+    
+    // MultiDex pour gérer les applications avec beaucoup de méthodes
     implementation 'androidx.multidex:multidex:2.0.1'
-
-    // Vous pouvez ajouter d'autres dépendances natives ici si nécessaire
 }
-
-// AJOUT : Appliquer le plugin Google Services à la toute fin (méthode alternative/classique)
-// Si vous ne l'avez pas ajouté dans le bloc `plugins { ... }` au début, décommentez la ligne ci-dessous.
-// apply plugin: 'com.google.gms.google-services'
