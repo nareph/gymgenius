@@ -31,7 +31,9 @@ if (isEmulator) {
 }
 
 let genAI: GoogleGenerativeAI | null = null;
-const GEMINI_MODEL_NAME = "gemini-1.5-flash-latest";
+//const GEMINI_MODEL_NAME = "gemini-1.5-flash-latest";
+//const GEMINI_MODEL_NAME = "gemini-2.0-flash-exp";
+const GEMINI_MODEL_NAME = "gemini-2.5-flash";
 let geminiModel: ReturnType<GoogleGenerativeAI["getGenerativeModel"]> | null = null;
 
 function ensureGeminiClientInitialized(): ReturnType<GoogleGenerativeAI["getGenerativeModel"]> {
@@ -84,8 +86,8 @@ interface PreviousRoutineData {
   name?: string;
   durationInWeeks?: number;
   dailyWorkouts?: { [day: string]: Array<{ [key: string]: any }>; };
-  generatedAt?: string | number | admin.firestore.Timestamp; // Updated to include Timestamp
-  expiresAt?: string | number | admin.firestore.Timestamp;   // Updated to include Timestamp
+  generatedAt?: string | number | admin.firestore.Timestamp;
+  expiresAt?: string | number | admin.firestore.Timestamp;
 }
 
 interface AiRoutineRequestPayload {
@@ -112,6 +114,12 @@ interface AiGeneratedRoutineParts {
   dailyWorkouts: { [day: string]: AiExercise[]; };
 }
 
+interface MuscleSplit {
+  name: string;
+  muscles: string[];
+  theme: string;
+}
+
 const DAYS_OF_WEEK = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 
 interface AggregatedPerformanceData {
@@ -123,6 +131,104 @@ interface AggregatedPerformanceData {
   targetWeight?: string;
 }
 
+// 🏋️‍♂️ FONCTION POUR DÉTERMINER LE SPLIT MUSCULAIRE
+function determineMuscleSpirit(workoutDaysCount: number, experience: string): MuscleSplit[] {
+  const MUSCLE_SPLITS = {
+    "2_day": [
+      {
+        name: "Upper Body",
+        muscles: ["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Core"],
+        theme: "Full Upper Body"
+      },
+      {
+        name: "Lower Body",
+        muscles: ["Quadriceps", "Hamstrings", "Glutes", "Calves", "Core"],
+        theme: "Full Lower Body"
+      }
+    ],
+    "3_day": [
+      {
+        name: "Push",
+        muscles: ["Chest", "Shoulders", "Triceps", "Core"],
+        theme: "Push Day - Chest, Shoulders, Triceps"
+      },
+      {
+        name: "Pull",
+        muscles: ["Back", "Lats", "Biceps", "Rear Delts"],
+        theme: "Pull Day - Back, Biceps"
+      },
+      {
+        name: "Legs",
+        muscles: ["Quadriceps", "Hamstrings", "Glutes", "Calves", "Core"],
+        theme: "Leg Day - Legs, Glutes"
+      }
+    ],
+    "4_day": [
+      {
+        name: "Chest & Triceps",
+        muscles: ["Chest", "Triceps", "Front Delts"],
+        theme: "Chest & Triceps"
+      },
+      {
+        name: "Back & Biceps",
+        muscles: ["Back", "Lats", "Biceps", "Rear Delts"],
+        theme: "Back & Biceps"
+      },
+      {
+        name: "Legs",
+        muscles: ["Quadriceps", "Hamstrings", "Glutes", "Calves"],
+        theme: "Full Legs"
+      },
+      {
+        name: "Shoulders & Core",
+        muscles: ["Shoulders", "Core", "Traps"],
+        theme: "Shoulders & Core"
+      }
+    ],
+    "5_day": [
+      {
+        name: "Chest",
+        muscles: ["Chest", "Front Delts"],
+        theme: "Chest Focus"
+      },
+      {
+        name: "Back",
+        muscles: ["Back", "Lats", "Rear Delts"],
+        theme: "Back Focus"
+      },
+      {
+        name: "Legs",
+        muscles: ["Quadriceps", "Hamstrings", "Glutes"],
+        theme: "Legs Focus"
+      },
+      {
+        name: "Arms",
+        muscles: ["Biceps", "Triceps", "Forearms"],
+        theme: "Arms Focus"
+      },
+      {
+        name: "Shoulders & Core",
+        muscles: ["Shoulders", "Core", "Traps", "Calves"],
+        theme: "Shoulders & Core Finisher"
+      }
+    ]
+  };
+
+  if (workoutDaysCount <= 2) {
+    return MUSCLE_SPLITS["2_day"];
+  } else if (workoutDaysCount === 3) {
+    return MUSCLE_SPLITS["3_day"];
+  } else if (workoutDaysCount === 4) {
+    return MUSCLE_SPLITS["4_day"];
+  } else if (workoutDaysCount >= 5) {
+    if (experience === "intermediate" || experience === "advanced" || experience === "expert") {
+      return MUSCLE_SPLITS["5_day"];
+    } else {
+      return MUSCLE_SPLITS["4_day"];
+    }
+  }
+  return MUSCLE_SPLITS["3_day"]; // Default
+}
 
 export const generateAiRoutine = onCall<AiRoutineRequestPayload, Promise<AiGeneratedRoutineParts>>(
   {
@@ -154,7 +260,6 @@ export const generateAiRoutine = onCall<AiRoutineRequestPayload, Promise<AiGener
           .where("userId", "==", userId)
           .where("routineId", "==", previousRoutine.id);
 
-        // Tentative de filtrage par date pour les 2 dernières semaines de la routine précédente
         if (previousRoutine.expiresAt) {
           let expiryDate: Date;
           if (previousRoutine.expiresAt instanceof admin.firestore.Timestamp) {
@@ -164,22 +269,18 @@ export const generateAiRoutine = onCall<AiRoutineRequestPayload, Promise<AiGener
           } else if (typeof previousRoutine.expiresAt === "number") {
             expiryDate = new Date(previousRoutine.expiresAt);
           } else {
-            // Fallback si expiresAt n'est pas un format attendu, on ne filtre pas par date pour cette routine
             logger.warn(`Unparseable previousRoutine.expiresAt format: ${typeof previousRoutine.expiresAt}. Proceeding without strict date filtering for logs.`);
-            expiryDate = new Date(); // Ne sera pas utilisé si le type n'est pas bon
+            expiryDate = new Date();
           }
 
-          // Vérifier si expiryDate est une date valide avant de l'utiliser
           if (!isNaN(expiryDate.getTime())) {
             const twoWeeksBeforeExpiry = new Date(expiryDate.getTime() - (14 * 24 * 60 * 60 * 1000));
-            // Les champs startTime/endTime dans les logs sont des strings ISO.
-            // Firestore peut comparer des strings ISO pour les dates.
             queryBase = queryBase.where("startTime", ">=", twoWeeksBeforeExpiry.toISOString());
             logger.info(`Log query will filter logs starting from or after: ${twoWeeksBeforeExpiry.toISOString()}`);
           }
         }
 
-        const logsSnapshot = await queryBase.orderBy("startTime", "desc").limit(30).get(); // Limite généreuse
+        const logsSnapshot = await queryBase.orderBy("startTime", "desc").limit(30).get();
 
         if (!logsSnapshot.empty) {
           logger.info(`Found ${logsSnapshot.docs.length} workout logs for the relevant period of routine ${previousRoutine.id}.`);
@@ -276,8 +377,12 @@ export const generateAiRoutine = onCall<AiRoutineRequestPayload, Promise<AiGener
     }
     actualWorkoutDaysCount = Math.max(1, actualWorkoutDaysCount);
 
+    // 🎯 DÉTERMINER LE SPLIT MUSCULAIRE
+    const selectedSplit = determineMuscleSpirit(actualWorkoutDaysCount, onboarding.experience || "beginner");
+    logger.info(`Selected muscle split for ${actualWorkoutDaysCount} days:`, selectedSplit);
+
     const promptSections: string[] = [
-      "You are an expert fitness coach AI. Your primary task is to generate a highly personalized weekly workout routine based on the user's profile and preferences. Your entire output MUST be a single, valid JSON object conforming to the specified structure. Do not include any explanatory text, markdown formatting, or anything outside of this JSON object. Adherence to the specified number of workout days and session duration is PARAMOUNT.",
+      "You are an expert fitness coach AI specialized in muscle split training. Your primary task is to generate a highly personalized weekly workout routine based on structured muscle group splits. Your entire output MUST be a single, valid JSON object conforming to the specified structure. Do not include any explanatory text, markdown formatting, or anything outside of this JSON object. Adherence to muscle split principles and specified workout days is PARAMOUNT.",
       "\n--- User Profile & Preferences (CRITICAL CONSTRAINTS) ---",
       `- Primary Fitness Goal: ${onboarding.goal || "Not specified"}`,
       `- Gender: ${onboarding.gender || "Not specified"}`,
@@ -295,104 +400,212 @@ export const generateAiRoutine = onCall<AiRoutineRequestPayload, Promise<AiGener
         case "very_long_90_plus": exerciseCountInstruction = "You MUST select EXACTLY 7-9 exercises. This can include multiple primary lifts and sufficient accessory/isolation work. Ensure the workout remains productive."; break;
       }
       promptSections.push(`  - EXERCISE COUNT PER WORKOUT DAY: ${exerciseCountInstruction}`);
-      promptSections.push("  - This exercise count is a strict requirement for each scheduled workout day. You must also consider exercise execution time and rest_between_sets_seconds to ensure the total workout fits the user's available time. Prioritize effective exercises.");
     } else {
       promptSections.push("- Available time per session: Not specified. Assume a standard duration of about 45-60 minutes per workout. You MUST select 4-6 exercises per workout day.");
     }
 
+    // 🏋️‍♂️ MUSCLE SPLIT SYSTEM INSTRUCTIONS
+    promptSections.push("\n--- MUSCLE SPLIT TRAINING SYSTEM (CRITICAL) ---");
+    promptSections.push("You MUST follow a structured muscle split system. Each workout day focuses on specific muscle groups to ensure balanced development and optimal recovery.");
+
     if (useSpecifiedDays && onboarding.workout_days?.length) {
-      promptSections.push(`- CRITICAL CONSTRAINT - Workout Days: User has SPECIFIED training on THESE EXACT ${actualWorkoutDaysCount} DAYS: ${onboarding.workout_days.map(day => day.toLowerCase()).join(", ")}. You MUST schedule workouts (with the exercise count specified above) for ALL these days. ALL OTHER DAYS OF THE WEEK MUST BE REST DAYS (empty array in JSON). NO EXCEPTIONS.`);
+      promptSections.push(`- CRITICAL CONSTRAINT - Workout Days with Muscle Split Themes: User has SPECIFIED training on THESE EXACT ${actualWorkoutDaysCount} DAYS with assigned muscle groups:`);
+
+      const workoutDays = onboarding.workout_days.map(day => day.toLowerCase());
+      workoutDays.forEach((day, index) => {
+        if (index < selectedSplit.length) {
+          const split = selectedSplit[index];
+          promptSections.push(`  - ${day.toUpperCase()}: ${split.theme}`);
+          promptSections.push(`    Primary muscles: ${split.muscles.join(", ")}`);
+          promptSections.push(`    Exercise focus: Select exercises that primarily target these muscle groups`);
+        }
+      });
+
+      promptSections.push("- CRITICAL RULE: Each specified workout day MUST contain exercises that align with its assigned muscle group theme. ALL OTHER DAYS MUST BE REST DAYS (empty array in JSON).");
+
     } else {
-      promptSections.push(`- Training Days Per Week: ${actualWorkoutDaysCount} days.`);
-      if (preferredDaysSelected && onboarding.workout_days?.length) {
-        promptSections.push(`- Preferred Workout Days (select ${actualWorkoutDaysCount} from this list if possible, otherwise choose suitable days, respecting the total count): ${onboarding.workout_days.map(day => day.toLowerCase()).join(", ")}`);
-      }
-      promptSections.push(`  - For days not selected as workout days, they MUST BE REST DAYS (empty array in JSON).`);
+      promptSections.push(`- MUSCLE SPLIT ASSIGNMENT: Create a ${actualWorkoutDaysCount}-day split with these themes:`);
+      selectedSplit.forEach((split, index) => {
+        if (index < actualWorkoutDaysCount) {
+          promptSections.push(`  - Day ${index + 1}: ${split.theme}`);
+          promptSections.push(`    Focus muscles: ${split.muscles.join(", ")}`);
+        }
+      });
+      promptSections.push(`- For days not selected as workout days, they MUST BE REST DAYS (empty array in JSON).`);
     }
+
+    // MUSCLE SPLIT RULES
+    promptSections.push("\n--- MUSCLE SPLIT TRAINING RULES ---");
+    promptSections.push("1. EXERCISE COHESION: All exercises in a single workout day MUST work synergistic muscle groups as specified in the day's theme.");
+    promptSections.push("2. COMPOUND MOVEMENTS FIRST: Start each session with compound exercises (multi-joint movements), then isolation exercises.");
+    promptSections.push("3. MUSCLE GROUP PAIRING: Follow classic pairing principles:");
+    promptSections.push("   - Push Day: Chest + Shoulders + Triceps (pushing movements)");
+    promptSections.push("   - Pull Day: Back + Biceps + Rear Delts (pulling movements)");
+    promptSections.push("   - Leg Day: Quadriceps + Hamstrings + Glutes + Calves");
+    promptSections.push("   - Upper/Lower: Combine push and pull for upper, all leg muscles for lower");
+    promptSections.push("4. RECOVERY CONSIDERATION: Ensure muscle groups have adequate rest between sessions (48-72 hours).");
 
     if (onboarding.equipment && onboarding.equipment.length > 0) {
       const equipmentList = onboarding.equipment.join(", ");
+      promptSections.push(`\n--- Available Equipment ---`);
       promptSections.push(`- Available Equipment: ${equipmentList}.`);
-      promptSections.push("  - CRITICAL: You MUST select exercises that strictly use ONLY the equipment listed. If 'bodyweight' is listed, it can always be used. Do not assume access to unlisted items.");
-      promptSections.push("  - If 'homemade_weights' is listed, you can suggest exercises where improvised weights (like sandbags, water bottles) can be used, and mention this possibility in the exercise description.");
-      promptSections.push("  - If 'gym_machines_selectorized' is listed, assume access to common selectorized machines (e.g., leg press, chest press, lat pulldown, shoulder press machine, leg curl, leg extension). Specify which type of machine if relevant (e.g., 'Lat Pulldown Machine').");
+      promptSections.push("- CRITICAL: You MUST select exercises that strictly use ONLY the equipment listed. If 'bodyweight' is listed, it can always be used. Do not assume access to unlisted items.");
+      promptSections.push("- If 'homemade_weights' is listed, you can suggest exercises where improvised weights (like sandbags, water bottles) can be used, and mention this possibility in the exercise description.");
+      promptSections.push("- If 'gym_machines_selectorized' is listed, assume access to common selectorized machines (e.g., leg press, chest press, lat pulldown, shoulder press machine, leg curl, leg extension). Specify which type of machine if relevant (e.g., 'Lat Pulldown Machine').");
     } else {
-      promptSections.push("- Available Equipment: Bodyweight Only. ALL exercises MUST be strictly bodyweight.");
+      promptSections.push("\n--- Available Equipment ---");
+      promptSections.push("- Available Equipment: Bodyweight Only. ALL exercises MUST be strictly bodyweight while following the muscle split themes.");
     }
 
-    if (onboarding.focus_areas?.length) promptSections.push(`- Specific Body Part Focus: ${onboarding.focus_areas.join(", ")}`);
+    if (onboarding.focus_areas?.length) {
+      promptSections.push(`\n--- Specific Focus Areas ---`);
+      promptSections.push(`- User wants extra focus on: ${onboarding.focus_areas.join(", ")}`);
+      promptSections.push("- Incorporate additional exercises or volume for these areas within the appropriate split days.");
+    }
 
     if (onboarding.physical_stats) {
-      promptSections.push("- Physical Statistics:");
-      if (onboarding.physical_stats.age != null) promptSections.push(`  - Age: ${onboarding.physical_stats.age} years`);
-      if (onboarding.physical_stats.weight_kg != null) promptSections.push(`  - Current Weight: ${onboarding.physical_stats.weight_kg} kg`);
-      if (onboarding.physical_stats.height_m != null) promptSections.push(`  - Height: ${onboarding.physical_stats.height_m} meters`);
-      if (onboarding.physical_stats.target_weight_kg != null) promptSections.push(`  - Target Weight: ${onboarding.physical_stats.target_weight_kg} kg`);
+      promptSections.push("\n--- Physical Statistics ---");
+      if (onboarding.physical_stats.age != null) promptSections.push(`- Age: ${onboarding.physical_stats.age} years`);
+      if (onboarding.physical_stats.weight_kg != null) promptSections.push(`- Current Weight: ${onboarding.physical_stats.weight_kg} kg`);
+      if (onboarding.physical_stats.height_m != null) promptSections.push(`- Height: ${onboarding.physical_stats.height_m} meters`);
+      if (onboarding.physical_stats.target_weight_kg != null) promptSections.push(`- Target Weight: ${onboarding.physical_stats.target_weight_kg} kg`);
     }
 
     if (aggregatedPerformanceSummary.length > 0) {
-      promptSections.push("\n--- User Performance on Previous Routine (Use this for progression) ---");
-      promptSections.push("Consider the following summary of the user's performance on key exercises from their previous routine (last ~2 weeks) to tailor the new plan. Adapt weights, reps, or exercise variations based on this feedback:");
+      promptSections.push("\n--- User Performance on Previous Routine (Use for Progression) ---");
+      promptSections.push("Consider the following performance data to tailor progression in the new muscle split routine:");
       for (const perf of aggregatedPerformanceSummary) {
         let perfString = `- Exercise: "${perf.exerciseName}" (Target: ${perf.targetReps || "N/A"} @ ${perf.targetWeight || "N/A"})`;
         if (perf.averageReps !== undefined) perfString += `, Actual Avg Reps/Set: ${perf.averageReps}`;
         if (perf.maxWeightLiftedKg !== undefined) perfString += `, Actual Max Weight: ${perf.maxWeightLiftedKg}kg`;
-        if (perf.completedRate !== undefined) perfString += `, Completion Rate for this exercise in past sessions: ${perf.completedRate}%`;
+        if (perf.completedRate !== undefined) perfString += `, Completion Rate: ${perf.completedRate}%`;
         promptSections.push(perfString);
       }
-      promptSections.push("Based on this performance data:");
-      promptSections.push("  - If user consistently met or exceeded rep targets with good form (indicated by high completion rate), consider increasing the suggested weight or target reps for similar exercises.");
-      promptSections.push("  - If user struggled with an exercise (low avg reps, low completion rate), consider reducing weight/reps, suggesting an easier variation, or replacing it if it seems too difficult for their current level with available equipment.");
-      promptSections.push("  - If max weight lifted is significantly higher than target, suggest a higher starting weight for the new routine.");
-      promptSections.push("  - Aim for progressive overload. The new routine should be challenging but achievable.");
+      promptSections.push("Use this data for progressive overload while maintaining muscle split principles.");
     } else if (previousRoutine?.id) {
-      promptSections.push("\n--- Previous Routine Context (General) ---");
+      promptSections.push("\n--- Previous Routine Context ---");
       promptSections.push(`- Previous Plan Name: ${previousRoutine.name || "Unnamed"}`);
       if (previousRoutine.durationInWeeks != null) promptSections.push(`- Previous Plan Duration: ${previousRoutine.durationInWeeks} weeks`);
-      promptSections.push("User had a previous routine, but no detailed performance logs were found or processed for the recent period. Base progression on general principles and the nature of the previous plan if provided. Aim for a slight increase in challenge if user experience is not 'beginner'.");
+      promptSections.push("Base progression on general principles while implementing the new muscle split structure.");
     }
 
+    // EXERCISE SELECTION EXAMPLES
+    promptSections.push("\n--- EXERCISE SELECTION EXAMPLES BY MUSCLE SPLIT ---");
+    promptSections.push("Push Day (Chest/Shoulders/Triceps): Push-ups, Chest Press, Shoulder Press, Tricep Dips, Lateral Raises, Tricep Extensions");
+    promptSections.push("Pull Day (Back/Biceps): Pull-ups, Rows, Lat Pulldowns, Bicep Curls, Face Pulls, Reverse Flyes");
+    promptSections.push("Leg Day (Quads/Hamstrings/Glutes): Squats, Deadlifts, Lunges, Leg Press, Calf Raises, Hip Thrusts");
+    promptSections.push("Upper Body: Mix of push and pull movements for all upper body muscles");
+    promptSections.push("Lower Body: All leg and glute exercises, both knee-dominant and hip-dominant movements");
 
-    promptSections.push("\n--- Output Structure & Instructions (REVIEW CRITICAL CONSTRAINTS ABOVE) ---");
-    promptSections.push("1. Generate 'name' (string) for the routine (e.g., 'Strength Builder Phase 1', 'Fat Loss & Tone').");
+    promptSections.push("\n--- Output Structure & Instructions ---");
+    promptSections.push("1. Generate 'name' (string) that reflects the muscle split approach (e.g., '3-Day Push/Pull/Legs Split', '4-Day Upper/Lower Split').");
     promptSections.push("2. Generate 'durationInWeeks' (number, typically 4, 6, or 8 weeks).");
     promptSections.push("3. Provide a 'dailyWorkouts' object containing keys for ALL 7 days of the week (\"monday\" through \"sunday\"). Keys MUST be lowercase.");
-    promptSections.push("   - Workout days: MUST align with the 'CRITICAL CONSTRAINT - Workout Days' specified above. Each of these days MUST have an array of exercise objects, and the number of exercises MUST match the 'EXERCISE COUNT PER WORKOUT DAY' derived from 'session_duration_minutes'.");
-    promptSections.push("   - Rest days: ALL OTHER DAYS (not specified as workout days) MUST have an empty array [] as their value in the 'dailyWorkouts' object.");
+    promptSections.push("   - Workout days: MUST align with the muscle split themes specified above. Each day MUST have exercises that target the assigned muscle groups.");
+    promptSections.push("   - Rest days: ALL OTHER DAYS MUST have an empty array [] as their value.");
     promptSections.push("4. Each exercise object MUST have:");
-    promptSections.push("   - \"name\": string (clear and concise exercise name)");
+    promptSections.push("   - \"name\": string (clear exercise name that targets the day's muscle groups)");
     promptSections.push("   - \"sets\": number (positive integer, e.g., 3, 4)");
-    promptSections.push("   - \"reps\": string (e.g., \"8-12\", \"AMRAP\", \"To Failure\", \"30s\", \"5km\", \"15\")");
-    promptSections.push("   - \"description\": string (CRITICAL: Provide clear, step-by-step instructions on HOW TO PERFORM the exercise correctly. Use a numbered list format (e.g., '1. Step one.\\n2. Step two.\\n3. Step three.') or bullet points prefixed with '*' or '-' (e.g., '- Point one.\\n- Point two.'). Each step should be concise and start on a new line (use '\\n' for new lines within the JSON string). Focus on key form points, common mistakes to avoid, and muscle engagement. This will be shown to the user as their guide.)");
-    promptSections.push("5. Include these exercise properties where applicable (use sensible defaults if not explicitly derived from user data):");
+    promptSections.push("   - \"reps\": string (e.g., \"8-12\", \"AMRAP\", \"To Failure\", \"30s\", \"15\")");
+    promptSections.push("   - \"description\": string (CRITICAL: Format: '**Target: [Primary muscles] | Split: [Day theme]**\\n\\n[Step-by-step instructions]'. Example: '**Target: Chest, Triceps, Shoulders | Split: Push Day**\\n\\n1. Position yourself in push-up stance...\\n2. Lower your body...\\n3. Push back up powerfully.' Use numbered list format for instructions. Focus on proper form and muscle engagement.)");
+    promptSections.push("5. Include these exercise properties:");
     promptSections.push("   - \"weightSuggestionKg\": string (e.g., \"60\" for 60kg, \"Bodyweight\", \"Light\", \"Moderate\", \"Heavy\", \"N/A\" if not applicable)");
     promptSections.push("   - \"restBetweenSetsSeconds\": number (e.g., 45, 60, 90, 120)");
-    promptSections.push("6. Include these boolean/numeric exercise properties:");
-    promptSections.push("   - \"usesWeight\": boolean (true if external weight is typically used or can be added; false for pure bodyweight, most cardio, or timed holds like planks).");
-    promptSections.push("   - \"isTimed\": boolean (true if the primary goal of the set is a duration, e.g., plank for 60s, sprints for 30s, cardio interval. False if rep-based).");
-    promptSections.push("   - \"targetDurationSeconds\": number (ONLY include if isTimed is true AND there's a specific target duration in seconds, e.g., 60 for a 60-second plank. Omit this field otherwise or if 'reps' field already specifies duration like \"30s\").");
+    promptSections.push("   - \"usesWeight\": boolean (true if external weight is typically used; false for bodyweight exercises)");
+    promptSections.push("   - \"isTimed\": boolean (true if duration-based; false if rep-based)");
+    promptSections.push("   - \"targetDurationSeconds\": number (ONLY include if isTimed is true AND specific duration, omit otherwise)");
 
-    promptSections.push("\n--- JSON Structure Example (Your output MUST follow this format PRECISELY) ---");
+    promptSections.push("\n--- JSON Structure Example (MUSCLE SPLIT APPROACH) ---");
     promptSections.push(`
 {
-  "name": "Functional Fitness Foundation",
-  "durationInWeeks": 4,
+  "name": "3-Day Push/Pull/Legs Split",
+  "durationInWeeks": 6,
   "dailyWorkouts": {
     "monday": [
-      {"name": "Goblet Squats", "sets": 3, "reps": "10-12", "weightSuggestionKg": "Moderate", "restBetweenSetsSeconds": 75, "description": "1. Hold dumbbell vertically against chest, elbows tucked in.\\n2. Stand with feet shoulder-width apart, toes pointing slightly outwards.\\n3. Keeping your chest up and back straight, lower your hips back and down as if sitting in a chair.\\n4. Go as low as you can comfortably, ideally until thighs are parallel to the floor or deeper if form allows.\\n5. Push through your heels to return to the starting position, squeezing glutes at the top.", "usesWeight": true, "isTimed": false},
-      {"name": "Push-ups", "sets": 3, "reps": "AMRAP", "weightSuggestionKg": "Bodyweight", "restBetweenSetsSeconds": 60, "description": "- Start in a high plank position with hands slightly wider than shoulder-width, directly under shoulders.\\n- Body should form a straight line from head to heels; engage core and glutes.\\n- Lower your body by bending elbows, keeping them relatively close to your body (about 45 degrees).\\n- Lower until your chest nearly touches the floor.\\n- Push back up powerfully to the starting position.", "usesWeight": false, "isTimed": false}
+      {
+        "name": "Push-ups", 
+        "sets": 3, 
+        "reps": "8-12", 
+        "weightSuggestionKg": "Bodyweight", 
+        "restBetweenSetsSeconds": 60, 
+        "description": "**Target: Chest, Triceps, Shoulders | Split: Push Day**\\n\\n1. Start in high plank position with hands slightly wider than shoulder-width.\\n2. Body forms straight line from head to heels, engage core.\\n3. Lower body by bending elbows, keeping them close to body.\\n4. Lower until chest nearly touches floor.\\n5. Push back up powerfully to starting position.", 
+        "usesWeight": false, 
+        "isTimed": false
+      },
+      {
+        "name": "Pike Push-ups", 
+        "sets": 3, 
+        "reps": "6-10", 
+        "weightSuggestionKg": "Bodyweight", 
+        "restBetweenSetsSeconds": 75, 
+        "description": "**Target: Shoulders, Triceps | Split: Push Day**\\n\\n1. Start in downward dog position, hands shoulder-width apart.\\n2. Walk feet closer to hands to increase shoulder angle.\\n3. Lower head toward ground by bending elbows.\\n4. Press back to starting position, focusing on shoulder strength.", 
+        "usesWeight": false, 
+        "isTimed": false
+      }
     ],
     "tuesday": [],
     "wednesday": [
-      {"name": "Plank", "sets": 3, "reps": "Hold", "weightSuggestionKg": "N/A", "restBetweenSetsSeconds": 45, "description": "1. Lie face down and prop yourself up on your forearms, with elbows directly under your shoulders.\\n2. Lift your hips off the floor so your body forms a straight line from head to heels.\\n3. Engage your core and glutes tightly. Avoid letting your hips sag or rise too high.\\n4. Hold this position for the target duration, breathing steadily.", "usesWeight": false, "isTimed": true, "targetDurationSeconds": 45}
+      {
+        "name": "Pull-ups", 
+        "sets": 3, 
+        "reps": "AMRAP", 
+        "weightSuggestionKg": "Bodyweight", 
+        "restBetweenSetsSeconds": 90, 
+        "description": "**Target: Back, Lats, Biceps | Split: Pull Day**\\n\\n1. Hang from pull-up bar with overhand grip, hands wider than shoulders.\\n2. Engage lats and pull shoulder blades down and back.\\n3. Pull body up until chin clears bar, leading with chest.\\n4. Lower with control, fully extending arms.", 
+        "usesWeight": false, 
+        "isTimed": false
+      },
+      {
+        "name": "Inverted Rows", 
+        "sets": 3, 
+        "reps": "8-12", 
+        "weightSuggestionKg": "Bodyweight", 
+        "restBetweenSetsSeconds": 60, 
+        "description": "**Target: Back, Biceps, Rear Delts | Split: Pull Day**\\n\\n1. Position under horizontal bar or table edge.\\n2. Grip bar with overhand grip, body straight.\\n3. Pull chest toward bar, squeezing shoulder blades together.\\n4. Lower with control, maintaining body alignment.", 
+        "usesWeight": false, 
+        "isTimed": false
+      }
     ],
-    "thursday": [], "friday": [], "saturday": [], "sunday": []
+    "thursday": [],
+    "friday": [
+      {
+        "name": "Bodyweight Squats", 
+        "sets": 4, 
+        "reps": "15-20", 
+        "weightSuggestionKg": "Bodyweight", 
+        "restBetweenSetsSeconds": 60, 
+        "description": "**Target: Quadriceps, Glutes, Hamstrings | Split: Leg Day**\\n\\n1. Stand with feet shoulder-width apart, toes slightly outward.\\n2. Keep chest up and back straight throughout movement.\\n3. Lower hips back and down as if sitting in chair.\\n4. Go until thighs parallel to floor or as low as comfortable.\\n5. Drive through heels to return to starting position.", 
+        "usesWeight": false, 
+        "isTimed": false
+      },
+      {
+        "name": "Walking Lunges", 
+        "sets": 3, 
+        "reps": "10 each leg", 
+        "weightSuggestionKg": "Bodyweight", 
+        "restBetweenSetsSeconds": 60, 
+        "description": "**Target: Quadriceps, Glutes, Hamstrings | Split: Leg Day**\\n\\n1. Stand tall with feet hip-width apart.\\n2. Step forward with right leg, lowering hips until both knees bent 90 degrees.\\n3. Front thigh parallel to floor, back knee nearly touching ground.\\n4. Push through front heel to step forward with back leg.\\n5. Alternate legs with each step forward.", 
+        "usesWeight": false, 
+        "isTimed": false
+      }
+    ],
+    "saturday": [], 
+    "sunday": []
   }
 }`);
-    promptSections.push("\nIMPORTANT: Your entire response MUST be only the JSON object. No other text, apologies, or explanations. Adhere strictly to the JSON structure, field requirements, and ALL CRITICAL CONSTRAINTS mentioned above (especially workout days and exercise counts per session duration). Double-check that all specified workout days have exercises and all other days are empty arrays.");
+
+    promptSections.push("\nCRITICAL MUSCLE SPLIT COMPLIANCE:");
+    promptSections.push("- Each workout day MUST strictly follow its assigned muscle group theme");
+    promptSections.push("- Exercises should work synergistic muscles that complement each other");
+    promptSections.push("- Include the specific split theme in each exercise description");
+    promptSections.push("- Ensure no major muscle group is trained on consecutive days");
+    promptSections.push("- Core/abs can be trained more frequently and included as secondary muscles");
+    promptSections.push("- The routine name should reflect the split approach being used");
+
+    promptSections.push("\nIMPORTANT: Your entire response MUST be only the JSON object. No other text, explanations, or formatting. Adhere strictly to the muscle split themes, JSON structure, and ALL CRITICAL CONSTRAINTS mentioned above. Double-check that workout days align with their assigned muscle groups and all other days are empty arrays.");
 
     const finalPromptFullRoutine = promptSections.join("\n");
-    logger.info(`Final prompt for Gemini (Full Routine, User: ${userId}, Model: ${GEMINI_MODEL_NAME}, Prompt Length: ${finalPromptFullRoutine.length})`);
+    logger.info(`Final prompt for Gemini with Muscle Split (User: ${userId}, Model: ${GEMINI_MODEL_NAME}, Prompt Length: ${finalPromptFullRoutine.length})`);
 
     const apiRequestFullRoutine: GenerateContentRequest = {
       contents: [{ role: "user", parts: [{ text: finalPromptFullRoutine }] }],
@@ -438,6 +651,7 @@ export const generateAiRoutine = onCall<AiRoutineRequestPayload, Promise<AiGener
         logger.error("Parsed routine has invalid top-level structure:", { userId, parsedRoutine });
         throw new Error("AI generated invalid structure (name, duration, or dailyWorkouts).");
       }
+
       const normalizedDailyWorkouts: { [day: string]: AiExercise[] } = {};
       for (const day of DAYS_OF_WEEK) {
         const lowerCaseDay = day.toLowerCase();
@@ -475,12 +689,19 @@ export const generateAiRoutine = onCall<AiRoutineRequestPayload, Promise<AiGener
             typeof exercise.description !== "string") {
             logger.error(`Invalid exercise structure for '${exercise.name || "Unnamed Exercise"}' on day '${day}' (generateAiRoutine):`, { userId, exerciseDetails: exercise });
             if (typeof exercise.description !== "string" || !exercise.description.trim()) {
-              exercise.description = "Instructions for this exercise are currently unavailable.";
+              exercise.description = "**Target: Multiple muscle groups | Split: Training Day**\n\nInstructions for this exercise are currently unavailable.";
             }
           } else {
             exercise.description = exercise.description.trim();
             if (!exercise.description) {
-              exercise.description = "How to perform: Detailed instructions will be available soon.";
+              exercise.description = "**Target: Multiple muscle groups | Split: Training Day**\n\nHow to perform: Detailed instructions will be available soon.";
+            }
+            // Validation du format de description avec muscle split
+            if (!exercise.description.includes("**Target:") || !exercise.description.includes("Split:")) {
+              logger.warn(`Exercise '${exercise.name}' on day '${day}' missing proper muscle split format in description.`);
+              if (!exercise.description.includes("**Target:")) {
+                exercise.description = "**Target: Multiple muscle groups | Split: Training Day**\n\n" + exercise.description;
+              }
             }
           }
           exercise.weightSuggestionKg = (typeof exercise.weightSuggestionKg === "string" && exercise.weightSuggestionKg.trim()) ? exercise.weightSuggestionKg.trim() : "N/A";
@@ -498,7 +719,8 @@ export const generateAiRoutine = onCall<AiRoutineRequestPayload, Promise<AiGener
       logger.error(`Failed to parse Gemini JSON (generateAiRoutine, User: ${userId}):`, { errorMessage: parseError.message, originalResponseText: responseTextFullRoutine.substring(0, 500) });
       throw new HttpsError("internal", "The AI's response was not in the expected JSON format.");
     }
-    logger.info(`Successfully generated and validated AI routine for User: ${userId}. Routine Name: "${parsedRoutine.name}"`);
+
+    logger.info(`Successfully generated and validated AI muscle split routine for User: ${userId}. Routine Name: "${parsedRoutine.name}"`);
     return parsedRoutine;
   }
 );

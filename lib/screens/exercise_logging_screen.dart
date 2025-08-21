@@ -55,10 +55,23 @@ class ExerciseLoggingView extends StatelessWidget {
       return const Scaffold(body: Center(child: Text("Finalizing...")));
     }
 
-    // --- Completed Exercise UI ---
+    // --- Check if exercise is completed and if rest is needed ---
     if (currentLoggedData.isCompleted) {
+      // Check if this is the last exercise by comparing current exercise index with total
+      final currentExerciseIndex = manager.loggedExercisesData.indexWhere(
+          (data) => data.originalExercise.id == viewModel.exercise.id);
+      final isLastExercise =
+          currentExerciseIndex == manager.plannedExercises.length - 1;
+
+      // If rest is active, show rest timer even for completed exercise
+      if (manager.isResting) {
+        return _buildRestAfterCompletionView(context, viewModel.exercise.name,
+            currentLoggedData, manager, isLastExercise);
+      }
+
+      // Show completion view
       return _buildCompletedView(
-          context, viewModel.exercise.name, currentLoggedData);
+          context, viewModel.exercise.name, currentLoggedData, isLastExercise);
     }
 
     // --- Main Logging UI ---
@@ -93,8 +106,14 @@ class ExerciseLoggingView extends StatelessWidget {
 
 // --- UI Sub-Widgets ---
 
-Widget _buildCompletedView(
-    BuildContext context, String exerciseName, LoggedExerciseData loggedData) {
+Widget _buildRestAfterCompletionView(
+    BuildContext context,
+    String exerciseName,
+    LoggedExerciseData loggedData,
+    WorkoutSessionManager manager,
+    bool isLastExercise) {
+  final viewModel = context.read<ExerciseLoggingViewModel>();
+
   return Scaffold(
     appBar: AppBar(title: Text(exerciseName), automaticallyImplyLeading: false),
     body: Center(
@@ -104,19 +123,121 @@ Widget _buildCompletedView(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(Icons.check_circle_outline_rounded,
-                size: 80, color: Colors.green),
-            const SizedBox(height: 24),
+                size: 60, color: Colors.green),
+            const SizedBox(height: 16),
             Text("$exerciseName Complete!",
                 style: Theme.of(context).textTheme.headlineSmall,
                 textAlign: TextAlign.center),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             Text("${loggedData.loggedSets.length} sets logged.",
+                style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 24),
+
+            // Rest Timer Card
+            Card(
+              margin: const EdgeInsets.symmetric(vertical: 16.0),
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  children: [
+                    Text(
+                        isLastExercise
+                            ? "REST BEFORE FINISHING"
+                            : "REST BEFORE NEXT EXERCISE",
+                        style: const TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 12),
+                    Text(
+                      viewModel
+                          .formatDuration(manager.restTimeRemainingSeconds),
+                      style: Theme.of(context).textTheme.displayMedium,
+                    ),
+                    const SizedBox(height: 16),
+                    LinearProgressIndicator(
+                      value: manager.currentRestTotalSeconds > 0
+                          ? manager.restTimeRemainingSeconds /
+                              manager.currentRestTotalSeconds
+                          : 0,
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        TextButton(
+                          onPressed: manager.skipRest,
+                          child: const Text("Skip Rest",
+                              style: TextStyle(fontSize: 16)),
+                        ),
+                        ElevatedButton.icon(
+                          icon: Icon(
+                              isLastExercise
+                                  ? Icons.celebration_rounded
+                                  : Icons.arrow_forward_ios_rounded,
+                              size: 18),
+                          label: Text(isLastExercise
+                              ? "Finish Workout"
+                              : "Continue Workout"),
+                          onPressed: () {
+                            manager.skipRest();
+                            Navigator.pop(context);
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+Widget _buildCompletedView(BuildContext context, String exerciseName,
+    LoggedExerciseData loggedData, bool isLastExercise) {
+  return Scaffold(
+    appBar: AppBar(title: Text(exerciseName), automaticallyImplyLeading: false),
+    body: Center(
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+                isLastExercise
+                    ? Icons.celebration_rounded
+                    : Icons.check_circle_outline_rounded,
+                size: 80,
+                color: isLastExercise ? Colors.orange : Colors.green),
+            const SizedBox(height: 24),
+            Text(
+                isLastExercise
+                    ? "Workout Complete!"
+                    : "$exerciseName Complete!",
+                style: Theme.of(context).textTheme.headlineSmall,
+                textAlign: TextAlign.center),
+            const SizedBox(height: 10),
+            Text(
+                isLastExercise
+                    ? "All exercises completed! Great job!"
+                    : "${loggedData.loggedSets.length} sets logged.",
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 36),
             ElevatedButton.icon(
-              icon: const Icon(Icons.arrow_forward_ios_rounded, size: 18),
-              label: const Text("Continue Workout"),
-              onPressed: () => Navigator.pop(context),
+              icon: Icon(
+                  isLastExercise
+                      ? Icons.home_rounded
+                      : Icons.arrow_forward_ios_rounded,
+                  size: 18),
+              label:
+                  Text(isLastExercise ? "Finish Workout" : "Continue Workout"),
+              onPressed: () {
+                // Always navigate back to ActiveWorkoutSessionScreen
+                Navigator.pop(context);
+              },
             ),
           ],
         ),
@@ -233,6 +354,8 @@ class _RepBasedExerciseForm extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final viewModel = context.read<ExerciseLoggingViewModel>();
+    final manager = context.watch<WorkoutSessionManager>();
+
     return Column(
       children: [
         if (viewModel.exercise.usesWeight) ...[
@@ -257,6 +380,22 @@ class _RepBasedExerciseForm extends StatelessWidget {
             if (error != null && context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text(error), backgroundColor: Colors.red));
+            } else {
+              // Set logged successfully
+              // Check if this was the last set of the exercise
+              final currentLoggedData = manager.currentLoggedExerciseData;
+              if (currentLoggedData != null &&
+                  currentLoggedData.loggedSets.length >=
+                      viewModel.exercise.sets) {
+                // This was the last set - the exercise should be automatically marked as completed
+                // Start rest timer before next exercise
+                manager
+                    .startRestTimer(viewModel.exercise.restBetweenSetsSeconds);
+              } else {
+                // Not the last set - start rest timer for next set
+                manager
+                    .startRestTimer(viewModel.exercise.restBetweenSetsSeconds);
+              }
             }
           },
         ),

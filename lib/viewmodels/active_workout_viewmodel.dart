@@ -69,11 +69,6 @@ class ActiveWorkoutViewModel {
         builder: (_) => ExerciseLoggingScreen(
             exercise: exerciseToLog, onExerciseCompleted: () {}),
       ),
-    ).then((_) {
-      // After returning, move to the next exercise if the workout is still active.
-      if (_sessionManager.isWorkoutActive) {
-        _sessionManager.moveToNextExercise();
-      }
-    });
+    );
   }
 }
