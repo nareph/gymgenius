@@ -1,9 +1,8 @@
+// lib/screens/onboarding/onboarding_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gymgenius/models/onboarding_question.dart';
 import 'package:gymgenius/repositories/profile_repository.dart';
-import 'package:gymgenius/screens/auth/sign_up_screen.dart';
-import 'package:gymgenius/screens/main_dashboard_screen.dart';
 import 'package:gymgenius/blocs/onboarding/onboarding_bloc.dart';
 import 'package:gymgenius/screens/onboarding/views/question_view.dart';
 import 'package:gymgenius/screens/onboarding/views/stats_input_view.dart';
@@ -18,28 +17,17 @@ import 'package:provider/provider.dart';
 /// 2. Post-login: Allows a logged-in user to complete their profile.
 class OnboardingScreen extends StatelessWidget {
   final bool isPostLoginCompletion;
+  final void Function(Map<String, dynamic>)? onSignUpRequested;
 
   const OnboardingScreen({
     super.key,
     this.isPostLoginCompletion = false,
+    this.onSignUpRequested,
   });
-
-  /// Static method to create a route that provides all necessary dependencies
-  /// for the post-login completion flow. This is called by the AuthWrapper.
-  static Route<void> route() {
-    return MaterialPageRoute<void>(
-      builder: (_) {
-        // We wrap the screen with its required providers.
-        // OnboardingScreen itself handles providing these, so we just instantiate it.
-        return const OnboardingScreen(isPostLoginCompletion: true);
-      },
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
-    // This widget now sets up the necessary providers for the OnboardingView.
-    // This keeps the dependency setup logic encapsulated within the feature itself.
+    // This widget sets up the necessary providers for the OnboardingView.
     return BlocProvider(
       create: (_) => OnboardingBloc(),
       child: ChangeNotifierProvider(
@@ -48,20 +36,15 @@ class OnboardingScreen extends StatelessWidget {
           profileRepository: context.read<ProfileRepository>(),
           onboardingBloc: context.read<OnboardingBloc>(),
           onPreSignupComplete: (answers) {
-            // Callback for pre-signup flow: navigates to the SignUp screen.
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                  builder: (_) => SignUpScreen(onboardingData: answers)),
-            );
+            // Callback for pre-signup flow
+            if (onSignUpRequested != null) {
+              onSignUpRequested!(answers);
+            }
           },
           onPostLoginComplete: () {
-            // Callback for post-login flow: navigates to the main dashboard.
-            // This is the manual but pragmatic solution for this specific flow.
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => const MainDashboardScreen()),
-              (route) => false,
-            );
+            // Callback for post-login flow: close the screen
+            // AuthBloc will handle the navigation through AuthWrapper
+            Navigator.of(context).pop();
           },
         ),
         child: const OnboardingView(),

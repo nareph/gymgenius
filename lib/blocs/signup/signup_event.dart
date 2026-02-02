@@ -1,4 +1,5 @@
-part of 'signup_bloc.dart';
+// lib/blocs/signup/signup_event.dart
+import 'package:equatable/equatable.dart';
 
 abstract class SignUpEvent extends Equatable {
   const SignUpEvent();
@@ -8,22 +9,24 @@ abstract class SignUpEvent extends Equatable {
 }
 
 class SignUpEmailChanged extends SignUpEvent {
-  const SignUpEmailChanged(this.email);
   final String email;
+  const SignUpEmailChanged(this.email);
+
   @override
   List<Object> get props => [email];
 }
 
 class SignUpPasswordChanged extends SignUpEvent {
-  const SignUpPasswordChanged(this.password);
   final String password;
+  const SignUpPasswordChanged(this.password);
+
   @override
   List<Object> get props => [password];
 }
 
 class SignUpSubmitted extends SignUpEvent {
-  const SignUpSubmitted({this.onboardingData});
   final Map<String, dynamic>? onboardingData;
+  const SignUpSubmitted({this.onboardingData});
 
   @override
   List<Object?> get props => [onboardingData];

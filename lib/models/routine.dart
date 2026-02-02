@@ -1,6 +1,6 @@
 // lib/models/routine.dart
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:gymgenius/services/logger_service.dart';
+import 'package:gymgenius/utils/type_converter.dart';
 import 'package:uuid/uuid.dart';
 
 final _uuid = Uuid();
@@ -30,21 +30,37 @@ class RoutineExercise {
     this.targetDurationSeconds,
   }) : id = id ?? _uuid.v4();
 
+  // Factory constructor to create RoutineExercise from a map
   factory RoutineExercise.fromMap(Map<String, dynamic> map) {
+    // Use TypeConverter to ensure type safety
+    final safeMap = TypeConverter.toSafeMap(map);
+
     return RoutineExercise(
-      id: map['id'] as String? ?? _uuid.v4(),
-      name: map['name'] as String? ?? 'Unknown Exercise',
-      sets: map['sets'] as int? ?? 3,
-      reps: map['reps'] as String? ?? '8-12',
-      weightSuggestionKg: map['weightSuggestionKg'] as String? ?? 'N/A',
-      restBetweenSetsSeconds: map['restBetweenSetsSeconds'] as int? ?? 60,
-      description: map['description'] as String? ?? '',
-      usesWeight: map['usesWeight'] as bool? ?? true,
-      isTimed: map['isTimed'] as bool? ?? false,
-      targetDurationSeconds: map['targetDurationSeconds'] as int?,
+      id: safeMap['id'] is String ? safeMap['id'] as String : _uuid.v4(),
+      name: safeMap['name'] is String
+          ? safeMap['name'] as String
+          : 'Unknown Exercise',
+      sets: safeMap['sets'] is int ? safeMap['sets'] as int : 3,
+      reps: safeMap['reps'] is String ? safeMap['reps'] as String : '8-12',
+      weightSuggestionKg: safeMap['weightSuggestionKg'] is String
+          ? safeMap['weightSuggestionKg'] as String
+          : 'N/A',
+      restBetweenSetsSeconds: safeMap['restBetweenSetsSeconds'] is int
+          ? safeMap['restBetweenSetsSeconds'] as int
+          : 60,
+      description: safeMap['description'] is String
+          ? safeMap['description'] as String
+          : '',
+      usesWeight:
+          safeMap['usesWeight'] is bool ? safeMap['usesWeight'] as bool : true,
+      isTimed: safeMap['isTimed'] is bool ? safeMap['isTimed'] as bool : false,
+      targetDurationSeconds: safeMap['targetDurationSeconds'] is int
+          ? safeMap['targetDurationSeconds'] as int
+          : null,
     );
   }
 
+  // Convert RoutineExercise to a map
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -97,8 +113,8 @@ class WeeklyRoutine {
   final String name;
   final Map<String, List<RoutineExercise>> dailyWorkouts;
   final int durationInWeeks;
-  final Timestamp generatedAt;
-  final Timestamp expiresAt;
+  final DateTime generatedAt;
+  final DateTime expiresAt;
 
   WeeklyRoutine({
     required this.id,
@@ -109,51 +125,77 @@ class WeeklyRoutine {
     required this.expiresAt,
   });
 
+  // Factory constructor to create WeeklyRoutine from a map
   factory WeeklyRoutine.fromMap(Map<String, dynamic> map) {
+    // Convert the entire map to be type-safe using TypeConverter
+    final safeMap = TypeConverter.toSafeMap(map);
+
     Map<String, List<RoutineExercise>> parsedWorkouts = {};
-    if (map['dailyWorkouts'] is Map) {
-      (map['dailyWorkouts'] as Map).forEach((day, exercisesDynamic) {
+
+    if (safeMap['dailyWorkouts'] is Map) {
+      // Iterate through each day in the workouts
+      (safeMap['dailyWorkouts'] as Map).forEach((dayKey, exercisesDynamic) {
         if (exercisesDynamic is List) {
-          parsedWorkouts[day as String] = exercisesDynamic
-              .map((exJson) =>
-                  RoutineExercise.fromMap(exJson as Map<String, dynamic>))
-              .toList();
+          // Convert day key to string safely
+          final dayString = dayKey.toString();
+
+          // Parse each exercise using TypeConverter
+          final exercisesList = exercisesDynamic.map((exJson) {
+            // Convert each exercise JSON to a safe map
+            final safeExMap = TypeConverter.toSafeMap(exJson);
+            return RoutineExercise.fromMap(safeExMap);
+          }).toList();
+
+          parsedWorkouts[dayString] = exercisesList.cast<RoutineExercise>();
         }
       });
     }
 
-    int duration = map['durationInWeeks'] as int? ?? 4;
+    // Parse duration safely
+    int duration = 4;
+    if (safeMap['durationInWeeks'] is int) {
+      duration = safeMap['durationInWeeks'] as int;
+    } else if (safeMap['durationInWeeks'] is String) {
+      duration = int.tryParse(safeMap['durationInWeeks'] as String) ?? 4;
+    }
 
-    Timestamp parseTimestamp(dynamic value, {required bool isExpiry}) {
-      if (value is Timestamp) {
+    // Helper function to parse datetime safely
+    DateTime parseDateTime(dynamic value, {required bool isExpiry}) {
+      if (value is DateTime) {
         return value;
+      } else if (value is int) {
+        // Milliseconds since epoch
+        return DateTime.fromMillisecondsSinceEpoch(value);
       } else if (value is String) {
         try {
-          return Timestamp.fromDate(DateTime.parse(value));
+          return DateTime.parse(value);
         } catch (e) {
-          Log.debug("Error parsing timestamp string '$value': $e");
+          Log.debug("Error parsing datetime string '$value': $e");
           return isExpiry
-              ? Timestamp.fromDate(
-                  DateTime.now().add(Duration(days: duration * 7)))
-              : Timestamp.now();
+              ? DateTime.now().add(Duration(days: duration * 7))
+              : DateTime.now();
         }
       }
+      // Default fallback
       return isExpiry
-          ? Timestamp.fromDate(DateTime.now().add(Duration(days: duration * 7)))
-          : Timestamp.now();
+          ? DateTime.now().add(Duration(days: duration * 7))
+          : DateTime.now();
     }
 
     return WeeklyRoutine(
-      id: map['id'] as String? ?? _uuid.v4(),
-      name: map['name'] as String? ?? 'Unnamed Routine',
+      id: safeMap['id'] is String ? safeMap['id'] as String : _uuid.v4(),
+      name: safeMap['name'] is String
+          ? safeMap['name'] as String
+          : 'Unnamed Routine',
       dailyWorkouts: parsedWorkouts,
       durationInWeeks: duration,
-      generatedAt: parseTimestamp(map['generatedAt'], isExpiry: false),
-      expiresAt: parseTimestamp(map['expiresAt'], isExpiry: true),
+      generatedAt: parseDateTime(safeMap['generatedAt'], isExpiry: false),
+      expiresAt: parseDateTime(safeMap['expiresAt'], isExpiry: true),
     );
   }
 
-  Map<String, dynamic> toMapForFirestore() {
+  // Convert WeeklyRoutine to a map for local storage
+  Map<String, dynamic> toMap() {
     return {
       'id': id,
       'name': name,
@@ -161,11 +203,35 @@ class WeeklyRoutine {
         (key, value) => MapEntry(key, value.map((ex) => ex.toMap()).toList()),
       ),
       'durationInWeeks': durationInWeeks,
-      'generatedAt': generatedAt,
-      'expiresAt': expiresAt,
+      'generatedAt': generatedAt.millisecondsSinceEpoch,
+      'expiresAt': expiresAt.millisecondsSinceEpoch,
     };
   }
 
+  WeeklyRoutine copyWith({
+    String? id,
+    String? name,
+    Map<String, List<RoutineExercise>>? dailyWorkouts,
+    int? durationInWeeks,
+    DateTime? generatedAt,
+    DateTime? expiresAt,
+  }) {
+    return WeeklyRoutine(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      dailyWorkouts: dailyWorkouts ?? Map.from(this.dailyWorkouts),
+      durationInWeeks: durationInWeeks ?? this.durationInWeeks,
+      generatedAt: generatedAt ?? this.generatedAt,
+      expiresAt: expiresAt ?? this.expiresAt,
+    );
+  }
+
+  // For Firestore compatibility (keep for future use)
+  Map<String, dynamic> toMapForFirestore() {
+    return toMap();
+  }
+
+  // For AI service compatibility
   Map<String, dynamic> toMapForCloudFunction() {
     return {
       'id': id,
@@ -174,11 +240,12 @@ class WeeklyRoutine {
         (key, value) => MapEntry(key, value.map((ex) => ex.toMap()).toList()),
       ),
       'durationInWeeks': durationInWeeks,
-      'generatedAt': generatedAt.toDate().toIso8601String(),
-      'expiresAt': expiresAt.toDate().toIso8601String(),
+      'generatedAt': generatedAt.toIso8601String(),
+      'expiresAt': expiresAt.toIso8601String(),
     };
   }
 
+  // Days of the week constants
   static const List<String> daysOfWeek = [
     'monday',
     'tuesday',
@@ -189,7 +256,8 @@ class WeeklyRoutine {
     'sunday'
   ];
 
+  // Check if the routine is expired
   bool isExpired() {
-    return expiresAt.toDate().isBefore(DateTime.now());
+    return expiresAt.isBefore(DateTime.now());
   }
 }

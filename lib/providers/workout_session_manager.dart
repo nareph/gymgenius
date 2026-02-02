@@ -1,17 +1,17 @@
 // lib/providers/workout_session_manager.dart
-import 'dart:async';
 
+import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:gymgenius/models/routine.dart';
 import 'package:gymgenius/models/workout_log.dart';
 import 'package:gymgenius/services/logger_service.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 class WorkoutSessionManager with ChangeNotifier {
   final AudioPlayer _audioPlayer = AudioPlayer();
   bool _restEndTimeSoundPlayed = false;
   bool _exerciseTimeUpSoundPlayed = false;
-
   bool _isWorkoutActive = false;
   DateTime? _workoutStartTime;
   Timer? _sessionDurationTimer;
@@ -19,40 +19,33 @@ class WorkoutSessionManager with ChangeNotifier {
   String _currentWorkoutName = "";
   String? _currentRoutineId;
   String? _currentDayKey;
-
   List<RoutineExercise> _plannedExercises = [];
   List<LoggedExerciseData> _loggedExercisesData = [];
   int _currentExerciseIndex = -1;
-
   Timer? _restTimer;
   int _restTimeRemainingSeconds = 0;
   int _currentRestTotalSeconds = 0;
   bool _isResting = false;
-
   bool get isWorkoutActive => _isWorkoutActive;
   Duration get currentWorkoutDuration => _currentWorkoutDuration;
   DateTime? get workoutStartTime => _workoutStartTime;
   String get currentWorkoutName => _currentWorkoutName;
   String? get currentRoutineId => _currentRoutineId;
   String? get currentDayKey => _currentDayKey;
-
   List<RoutineExercise> get plannedExercises =>
       List.unmodifiable(_plannedExercises);
   List<LoggedExerciseData> get loggedExercisesData =>
       List.unmodifiable(_loggedExercisesData);
-
   RoutineExercise? get currentExercise => (_isWorkoutActive &&
           _currentExerciseIndex >= 0 &&
           _currentExerciseIndex < _plannedExercises.length)
       ? _plannedExercises[_currentExerciseIndex]
       : null;
-
   LoggedExerciseData? get currentLoggedExerciseData => (_isWorkoutActive &&
           _currentExerciseIndex >= 0 &&
           _currentExerciseIndex < _loggedExercisesData.length)
       ? _loggedExercisesData[_currentExerciseIndex]
       : null;
-
   int get currentSetIndexForLogging =>
       currentLoggedExerciseData?.loggedSets.length ?? 0;
   int get currentExerciseIndex => _currentExerciseIndex;
@@ -62,7 +55,6 @@ class WorkoutSessionManager with ChangeNotifier {
   bool get isResting => _isResting;
   int get restTimeRemainingSeconds => _restTimeRemainingSeconds;
   int get currentRestTotalSeconds => _currentRestTotalSeconds;
-
   Future<void> _playSound(String assetName) async {
     try {
       await _audioPlayer.play(AssetSource('sounds/$assetName'));
@@ -84,6 +76,24 @@ class WorkoutSessionManager with ChangeNotifier {
     _exerciseTimeUpSoundPlayed = false;
   }
 
+  Future<void> _enableWakelock() async {
+    try {
+      await WakelockPlus.enable();
+      Log.debug("WorkoutSession: Wakelock enabled - screen will stay awake");
+    } catch (e) {
+      Log.error("WorkoutSession: Failed to enable wakelock", error: e);
+    }
+  }
+
+  Future<void> _disableWakelock() async {
+    try {
+      await WakelockPlus.disable();
+      Log.debug("WorkoutSession: Wakelock disabled - screen can sleep");
+    } catch (e) {
+      Log.error("WorkoutSession: Failed to disable wakelock", error: e);
+    }
+  }
+
   void _startWorkoutInternal(
     List<RoutineExercise> exercisesForSession, {
     String workoutName = "Workout Session",
@@ -101,6 +111,8 @@ class WorkoutSessionManager with ChangeNotifier {
         .map((ex) => LoggedExerciseData(originalExercise: ex))
         .toList();
     _currentExerciseIndex = _plannedExercises.isNotEmpty ? 0 : -1;
+// Enable wakelock to keep screen awake during workout
+    _enableWakelock();
 
     _sessionDurationTimer?.cancel();
     _sessionDurationTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -154,7 +166,6 @@ class WorkoutSessionManager with ChangeNotifier {
       Log.error("No current exercise or logged data available");
       return;
     }
-
     if (currentLoggedExerciseData!.isCompleted) {
       Log.debug(
           "Exercise '${currentExercise!.name}' was already marked complete. Logging an additional set");
@@ -198,7 +209,6 @@ class WorkoutSessionManager with ChangeNotifier {
       }
       return;
     }
-
     _restTimer?.cancel();
     _isResting = true;
     _currentRestTotalSeconds = durationSeconds;
@@ -245,7 +255,7 @@ class WorkoutSessionManager with ChangeNotifier {
   bool moveToNextExercise() {
     if (!_isWorkoutActive) return false;
     Log.debug(
-        "Attempting move from index $_currentExerciseIndex (${currentExercise?.name})");
+        "Attempting move from index currentExerciseIndex(_currentExerciseIndex (c​urrentExerciseIndex({currentExercise?.name})");
 
     if (currentExercise != null &&
         currentLoggedExerciseData != null &&
@@ -318,9 +328,11 @@ class WorkoutSessionManager with ChangeNotifier {
     String endedWorkoutName = _currentWorkoutName;
     Log.debug(
         "Ending workout '$endedWorkoutName'. Duration: ${_formatDuration(_currentWorkoutDuration)}");
-
     _sessionDurationTimer?.cancel();
     _restTimer?.cancel();
+
+// Disable wakelock when workout ends
+    _disableWakelock();
 
     final Map<String, dynamic> workoutLogData = {
       'workoutName': _currentWorkoutName,
@@ -344,6 +356,9 @@ class WorkoutSessionManager with ChangeNotifier {
 
   void _resetSessionState({bool notify = true}) {
     Log.debug("Resetting all session state");
+// Disable wakelock when resetting session
+    _disableWakelock();
+
     _isWorkoutActive = false;
     _workoutStartTime = null;
     _currentWorkoutDuration = Duration.zero;
@@ -382,10 +397,13 @@ class WorkoutSessionManager with ChangeNotifier {
 
   @override
   void dispose() {
-    Log.debug("dispose() called. Cancelling timers");
+    Log.debug("dispose() called. Cancelling timers and disabling wakelock");
     _sessionDurationTimer?.cancel();
     _restTimer?.cancel();
     _audioPlayer.dispose();
+// Ensure wakelock is disabled on disposal
+    _disableWakelock();
+
     super.dispose();
   }
 }

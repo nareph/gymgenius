@@ -1,13 +1,16 @@
 // lib/screens/main_dashboard_screen.dart
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gymgenius/blocs/auth/auth_bloc.dart';
+import 'package:gymgenius/models/hive/user_model.dart';
+import 'package:gymgenius/models/onboarding.dart';
 import 'package:gymgenius/screens/tabs/home_tab_screen.dart';
 import 'package:gymgenius/screens/tabs/profile_tab_screen.dart';
 import 'package:gymgenius/screens/tabs/tracking_tab_screen.dart';
 import 'package:gymgenius/services/logger_service.dart';
-import 'package:gymgenius/widgets/sync_status_widget.dart'; // Import the widget
+import 'package:gymgenius/viewmodels/home_viewmodel.dart';
+import 'package:gymgenius/widgets/regeneration/regenerate_button.dart';
+import 'package:gymgenius/widgets/regeneration/regeneration_options_sheet.dart';
+import 'package:provider/provider.dart';
 
 const int kHomeTabIndex = 0;
 const int kTrackingTabIndex = 1;
@@ -15,7 +18,6 @@ const int kProfileTabIndex = 2;
 
 class MainDashboardScreen extends StatefulWidget {
   const MainDashboardScreen({super.key});
-
   static Route<void> route() {
     return MaterialPageRoute<void>(builder: (_) => const MainDashboardScreen());
   }
@@ -27,7 +29,6 @@ class MainDashboardScreen extends StatefulWidget {
 class _MainDashboardScreenState extends State<MainDashboardScreen> {
   int _selectedIndex = kHomeTabIndex;
   late final PageController _pageController;
-
   @override
   void initState() {
     super.initState();
@@ -57,9 +58,9 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     }
   }
 
-  String _getAppBarTitle(int index, User? user) {
+  String _getAppBarTitle(int index, UserModel? user) {
     final displayName =
-        user?.displayName ?? user?.email?.split('@').first ?? 'User';
+        user?.displayName ?? user?.email.split('@').first ?? 'User';
     switch (index) {
       case kHomeTabIndex:
         return 'Welcome, $displayName!';
@@ -89,7 +90,6 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
   Widget build(BuildContext context) {
     final authState = context.watch<AuthBloc>().state;
     final user = authState.user;
-
     if (user == null) {
       return const Scaffold(body: Center(child: Text("Authenticating...")));
     }
@@ -102,7 +102,6 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        // --- REINTEGRATION OF TITLE AND ACTIONS ---
         title: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
@@ -113,9 +112,22 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
           ],
         ),
         centerTitle: true,
-        actions: const [
-          SyncStatusWidget(showInAppBar: true),
-          SizedBox(width: 8), // Add some padding
+        actions: [
+          if (_selectedIndex == kHomeTabIndex)
+            Consumer<HomeViewModel>(
+              builder: (context, viewModel, child) {
+                return RegenerateButton(
+                  onboardingData: viewModel.onboardingData ??
+                      OnboardingData(completed: false),
+                  currentRoutine: viewModel.currentRoutine,
+                  onRegenerate: (options) {
+                    _handleRegeneration(context, viewModel, options);
+                  },
+                  isGenerating: viewModel.isGeneratingRoutine,
+                  tooltip: 'Edit Routine',
+                );
+              },
+            ),
         ],
       ),
       body: PageView(
@@ -144,5 +156,17 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
         onTap: _onItemTapped,
       ),
     );
+  }
+
+  Future<void> _handleRegeneration(
+    BuildContext context,
+    HomeViewModel viewModel,
+    RegenerationOptions options,
+  ) async {
+    try {
+      await viewModel.regenerateRoutine(options);
+    } catch (e) {
+// Error is already handled in the ViewModel
+    }
   }
 }

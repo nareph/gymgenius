@@ -1,49 +1,40 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+
+// lib/repositories/tracking_repository.dart
+import 'package:gymgenius/models/hive/workout_log_model.dart';
+import 'package:gymgenius/services/database_service.dart';
 
 class TrackingRepository {
-  final FirebaseFirestore _firestore;
-  final FirebaseAuth _auth;
+  final DatabaseService _db;
 
-  TrackingRepository({FirebaseFirestore? firestore, FirebaseAuth? auth})
-      : _firestore = firestore ?? FirebaseFirestore.instance,
-        _auth = auth ?? FirebaseAuth.instance;
+  TrackingRepository({DatabaseService? database})
+      : _db = database ?? DatabaseService.instance;
 
-  User? get _currentUser => _auth.currentUser;
+  String? get _currentUserId => _db.getCurrentUserId();
 
-  /// Provides a stream of the user's document, containing the current routine.
-  Stream<DocumentSnapshot<Map<String, dynamic>>>? getUserDocumentStream() {
-    if (_currentUser == null) return null;
-    return _firestore.collection('users').doc(_currentUser!.uid).snapshots();
+  /// Provides a stream of the user's data changes
+  Stream<void> getUserDocumentStream() {
+    if (_currentUserId == null) return const Stream.empty();
+    return _db.watchUser(_currentUserId!);
   }
 
-  /// Provides a stream of all workout logs for the current user.
-  Stream<QuerySnapshot<Map<String, dynamic>>>? getWorkoutLogsStream() {
-    if (_currentUser == null) return null;
-    return _firestore
-        .collection('workout_logs')
-        .where('userId', isEqualTo: _currentUser!.uid)
-        .orderBy('savedAt', descending: true)
-        .snapshots();
+  /// Provides a stream of all workout logs changes
+  Stream<void> getWorkoutLogsStream() {
+    if (_currentUserId == null) return const Stream.empty();
+    return _db.watchWorkoutLogs();
   }
 
-  /// Fetches the detailed workout logs for a specific day.
+  /// Fetches the detailed workout logs for a specific day
   Future<List<Map<String, dynamic>>> getLogsForDay(DateTime day) async {
-    if (_currentUser == null) return [];
+    if (_currentUserId == null) return [];
 
-    final startOfDay =
-        Timestamp.fromDate(DateTime(day.year, day.month, day.day));
-    final endOfDay = Timestamp.fromDate(
-        DateTime(day.year, day.month, day.day).add(const Duration(days: 1)));
+    final logs = _db.getLogsForDay(_currentUserId!, day);
+    return logs.map((log) => {...log.toMap()}).toList();
+  }
 
-    final snapshot = await _firestore
-        .collection('workout_logs')
-        .where('userId', isEqualTo: _currentUser!.uid)
-        .where('savedAt', isGreaterThanOrEqualTo: startOfDay)
-        .where('savedAt', isLessThan: endOfDay)
-        .orderBy('savedAt', descending: true)
-        .get();
-
-    return snapshot.docs.map((doc) => {...doc.data(), 'id': doc.id}).toList();
+  /// Get all workout logs for the current user
+  List<WorkoutLogModel> getAllWorkoutLogs() {
+    if (_currentUserId == null) return [];
+    return _db.getUserWorkoutLogs(_currentUserId!);
   }
 }
+

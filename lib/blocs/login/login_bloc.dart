@@ -1,8 +1,10 @@
+// lib/blocs/login/login_bloc.dart
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:formz/formz.dart';
 import 'package:gymgenius/repositories/auth_repository.dart';
 import 'package:gymgenius/services/logger_service.dart';
+import 'package:gymgenius/models/form_validators.dart';
 
 part 'login_event.dart';
 part 'login_state.dart';
@@ -37,6 +39,7 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
       LoginSubmitted event, Emitter<LoginState> emit) async {
     if (!state.isValid) return;
     emit(state.copyWith(status: FormzSubmissionStatus.inProgress));
+    
     try {
       await _authRepository.signInWithEmailAndPassword(
         email: state.email.value,
@@ -45,16 +48,21 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
 
       Log.info("LoginBloc: signInWithEmailAndPassword successful.");
 
-      //await Future.delayed(const Duration(milliseconds: 500));
-
       // Emit a success state WITHOUT a successMessage.
       // This will trigger the navigation in the UI.
       emit(state.copyWith(status: FormzSubmissionStatus.success));
-      // emit(state.copyWith(status: FormzSubmissionStatus.initial));
-    } catch (e) {
+      
+    } on AuthException catch (e) {
+      // Handle local authentication exceptions with specific error messages
       emit(state.copyWith(
         status: FormzSubmissionStatus.failure,
-        errorMessage: "Login failed. Please check your credentials.",
+        errorMessage: _mapAuthErrorToMessage(e.message),
+      ));
+    } catch (e) {
+      Log.error("LoginBloc: Unexpected error during login", error: e);
+      emit(state.copyWith(
+        status: FormzSubmissionStatus.failure,
+        errorMessage: "Login failed. Please try again.",
       ));
     }
   }
@@ -68,7 +76,9 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
           errorMessage: "Please enter a valid email to reset your password."));
       return;
     }
+    
     emit(state.copyWith(status: FormzSubmissionStatus.inProgress));
+    
     try {
       await _authRepository.sendPasswordResetEmail(email: state.email.value);
 
@@ -79,11 +89,36 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
         successMessage:
             "If the email is in our system, a reset link has been sent.",
       ));
+    } on AuthException catch (e) {
+      emit(state.copyWith(
+        status: FormzSubmissionStatus.failure,
+        errorMessage: e.message,
+      ));
     } catch (e) {
+      Log.error("LoginBloc: Error sending password reset", error: e);
       emit(state.copyWith(
         status: FormzSubmissionStatus.failure,
         errorMessage: "Failed to send reset email. Please try again.",
       ));
+    }
+  }
+
+  /// Map authentication error messages to user-friendly text
+  String _mapAuthErrorToMessage(String errorMessage) {
+    final lowerMessage = errorMessage.toLowerCase();
+    
+    if (lowerMessage.contains('no user found') || lowerMessage.contains('not found')) {
+      return 'No account found with this email. Please sign up.';
+    } else if (lowerMessage.contains('incorrect password') || lowerMessage.contains('wrong password')) {
+      return 'Incorrect password. Please try again.';
+    } else if (lowerMessage.contains('invalid email')) {
+      return 'Invalid email address format.';
+    } else if (lowerMessage.contains('too many')) {
+      return 'Too many login attempts. Please try again later.';
+    } else if (lowerMessage.contains('disabled') || lowerMessage.contains('suspended')) {
+      return 'This account has been disabled. Please contact support.';
+    } else {
+      return errorMessage;
     }
   }
 }

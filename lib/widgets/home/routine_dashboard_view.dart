@@ -1,5 +1,6 @@
-import 'package:firebase_auth/firebase_auth.dart';
+// lib/widgets/home/routine_dashboard_view.dart
 import 'package:flutter/material.dart';
+import 'package:gymgenius/blocs/auth/auth_bloc.dart';
 import 'package:gymgenius/models/onboarding.dart';
 import 'package:gymgenius/models/routine.dart';
 import 'package:gymgenius/providers/workout_session_manager.dart';
@@ -11,13 +12,11 @@ import 'package:provider/provider.dart';
 class RoutineDashboardView extends StatelessWidget {
   final WeeklyRoutine routine;
   final OnboardingData onboardingData;
-  final bool isOffline;
 
   const RoutineDashboardView({
     super.key,
     required this.routine,
     required this.onboardingData,
-    this.isOffline = false,
   });
 
   String capitalize(String s) {
@@ -235,37 +234,15 @@ class RoutineDashboardView extends StatelessWidget {
     final today = DateTime.now();
     final todayDayKey = WeeklyRoutine.daysOfWeek[today.weekday - 1];
     final todaysExercises = routine.dailyWorkouts[todayDayKey.toLowerCase()];
-    final user = FirebaseAuth.instance.currentUser;
+    final user = context.read<AuthBloc>().state.user;
 
     return ListView(
       padding: const EdgeInsets.all(16.0),
       children: [
-        if (isOffline)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(8.0),
-            margin: const EdgeInsets.only(bottom: 16),
-            decoration: BoxDecoration(
-              color: Colors.orange.shade100,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.cloud_off, color: Colors.orange.shade800, size: 18),
-                const SizedBox(width: 8),
-                Text(
-                  "Offline Mode - Showing cached data",
-                  style: TextStyle(
-                      color: Colors.orange.shade800,
-                      fontWeight: FontWeight.w500),
-                ),
-              ],
-            ),
-          ),
         Text("Your Current Plan: ${routine.name}",
             style: textTheme.headlineSmall),
         Text(
-          "Duration: ${routine.durationInWeeks} weeks. Expires: ${DateFormat.yMMMd().add_jm().format(routine.expiresAt.toDate().toLocal())}",
+          "Duration: ${routine.durationInWeeks} weeks. Expires: ${DateFormat.yMMMd().add_jm().format(routine.expiresAt.toLocal())}",
           style: textTheme.bodySmall
               ?.copyWith(color: colorScheme.onSurfaceVariant),
         ),
@@ -275,7 +252,7 @@ class RoutineDashboardView extends StatelessWidget {
             !routine.isExpired())
           Card(
             color: _getSplitThemeColor(todaysExercises, colorScheme)
-                .withAlpha((178).round()),
+                .withAlpha(178),
             elevation: 2,
             child: ListTile(
               contentPadding:
@@ -292,13 +269,13 @@ class RoutineDashboardView extends StatelessWidget {
                 children: [
                   Text("${todaysExercises.length} exercises planned",
                       style: textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.onPrimaryContainer
-                              .withAlpha((204).round()))),
+                          color:
+                              colorScheme.onPrimaryContainer.withAlpha(204))),
                   if (_extractSplitTheme(todaysExercises) != 'Rest')
                     Text("Split: ${_extractSplitTheme(todaysExercises)}",
                         style: textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onPrimaryContainer
-                                .withAlpha((180).round()),
+                            color:
+                                colorScheme.onPrimaryContainer.withAlpha(180),
                             fontStyle: FontStyle.italic)),
                 ],
               ),
@@ -334,8 +311,7 @@ class RoutineDashboardView extends StatelessWidget {
               subtitle: Text(
                   "Enjoy your recovery, ${user?.displayName?.split(' ')[0] ?? 'User'}.",
                   style: textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurfaceVariant
-                          .withAlpha((204).round()))),
+                      color: colorScheme.onSurfaceVariant.withAlpha(204))),
             ),
           ),
         const SizedBox(height: 24),

@@ -1,0 +1,149 @@
+<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Dégradé principal basé sur votre thème -->
+    <radialGradient id="mainGradient" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" style="stop-color:#1E88E5;stop-opacity:1" /> <!-- blue.shade600 -->
+      <stop offset="70%" style="stop-color:#1565C0;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0D47A1;stop-opacity:1" />
+    </radialGradient>
+    
+    <!-- Dégradé orange pour les accents -->
+    <linearGradient id="orangeAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF8F00;stop-opacity:1" /> <!-- orangeAccent.shade700 -->
+      <stop offset="100%" style="stop-color:#E65100;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Dégradé gris pour les surfaces -->
+    <linearGradient id="surfaceGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#424242;stop-opacity:1" /> <!-- grey.shade800 -->
+      <stop offset="100%" style="stop-color:#212121;stop-opacity:1" /> <!-- grey.shade900 -->
+    </linearGradient>
+    
+    <!-- Ombre portée -->
+    <filter id="dropShadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.3"/>
+    </filter>
+    
+    <!-- Effet de brillance -->
+    <linearGradient id="shine" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:0.2" />
+      <stop offset="50%" style="stop-color:#FFFFFF;stop-opacity:0.1" />
+      <stop offset="100%" style="stop-color:#FFFFFF;stop-opacity:0" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Fond principal avec le dégradé bleu du thème -->
+  <circle cx="512" cy="512" r="480" fill="url(#mainGradient)" filter="url(#dropShadow)"/>
+  
+  <!-- Effet de brillance sur le fond -->
+  <circle cx="512" cy="512" r="480" fill="url(#shine)"/>
+  
+  <!-- Conteneur principal centré -->
+  <g transform="translate(512,512)">
+    
+    <!-- Haltère stylisé avec les couleurs du thème -->
+    <g transform="translate(0,40)">
+      <!-- Barre centrale - couleur surface du thème -->
+      <rect x="-100" y="-18" width="200" height="36" rx="18" 
+            fill="url(#surfaceGradient)" stroke="#FFFFFF" stroke-width="2" opacity="0.95"/>
+      
+      <!-- Poids gauche -->
+      <g transform="translate(-120,0)">
+        <rect x="-35" y="-55" width="70" height="110" rx="8" 
+              fill="url(#surfaceGradient)" stroke="#1E88E5" stroke-width="3"/>
+        <rect x="-25" y="-45" width="50" height="90" rx="6" 
+              fill="#616161" opacity="0.8"/>
+        <!-- Détails du poids -->
+        <rect x="-20" y="-35" width="40" height="4" rx="2" fill="#1E88E5" opacity="0.7"/>
+        <rect x="-20" y="-15" width="40" height="4" rx="2" fill="#1E88E5" opacity="0.7"/>
+        <rect x="-20" y="5" width="40" height="4" rx="2" fill="#1E88E5" opacity="0.7"/>
+        <rect x="-20" y="25" width="40" height="4" rx="2" fill="#1E88E5" opacity="0.7"/>
+      </g>
+      
+      <!-- Poids droit -->
+      <g transform="translate(120,0)">
+        <rect x="-35" y="-55" width="70" height="110" rx="8" 
+              fill="url(#surfaceGradient)" stroke="#1E88E5" stroke-width="3"/>
+        <rect x="-25" y="-45" width="50" height="90" rx="6" 
+              fill="#616161" opacity="0.8"/>
+        <!-- Détails du poids -->
+        <rect x="-20" y="-35" width="40" height="4" rx="2" fill="#1E88E5" opacity="0.7"/>
+        <rect x="-20" y="-15" width="40" height="4" rx="2" fill="#1E88E5" opacity="0.7"/>
+        <rect x="-20" y="5" width="40" height="4" rx="2" fill="#1E88E5" opacity="0.7"/>
+        <rect x="-20" y="25" width="40" height="4" rx="2" fill="#1E88E5" opacity="0.7"/>
+      </g>
+      
+      <!-- Poignée centrale avec texture -->
+      <g transform="translate(0,0)">
+        <rect x="-15" y="-12" width="30" height="24" rx="6" fill="#9E9E9E" opacity="0.9"/>
+        <!-- Texture de grip -->
+        <line x1="-10" y1="-8" x2="-10" y2="8" stroke="#424242" stroke-width="1"/>
+        <line x1="-5" y1="-8" x2="-5" y2="8" stroke="#424242" stroke-width="1"/>
+        <line x1="0" y1="-8" x2="0" y2="8" stroke="#424242" stroke-width="1"/>
+        <line x1="5" y1="-8" x2="5" y2="8" stroke="#424242" stroke-width="1"/>
+        <line x1="10" y1="-8" x2="10" y2="8" stroke="#424242" stroke-width="1"/>
+      </g>
+    </g>
+    
+    <!-- Cerveau IA moderne - couleur orange accent du thème -->
+    <g transform="translate(0,-80)">
+      <!-- Forme du cerveau -->
+      <path d="M-35,-25 Q-45,-40 -25,-45 Q-5,-50 15,-45 Q35,-40 40,-25 Q45,-10 35,5 Q30,20 15,22 Q0,24 -15,22 Q-30,20 -35,5 Q-45,-10 -35,-25 Z" 
+            fill="url(#orangeAccent)" stroke="#FFFFFF" stroke-width="2" opacity="0.95"/>
+      
+      <!-- Circonvolutions du cerveau -->
+      <path d="M-20,-20 Q-15,-25 -10,-20 Q-5,-15 0,-20 Q5,-25 10,-20 Q15,-15 20,-20" 
+            stroke="#FFFFFF" stroke-width="2" fill="none" opacity="0.6"/>
+      <path d="M-25,-5 Q-20,-10 -15,-5 Q-10,0 -5,-5 Q0,-10 5,-5 Q10,0 15,-5 Q20,-10 25,-5" 
+            stroke="#FFFFFF" stroke-width="2" fill="none" opacity="0.6"/>
+      
+      <!-- Circuits neuronaux - style high-tech -->
+      <g stroke="#FFFFFF" stroke-width="2.5" fill="none" opacity="0.8">
+        <!-- Circuit principal -->
+        <path d="M-20,-10 L-10,-10 L-10,0 L0,0 L0,10 L10,10"/>
+        <path d="M15,-15 L15,-5 L25,-5"/>
+        <path d="M-25,5 L-15,5 L-15,15"/>
+        
+        <!-- Connexions secondaires -->
+        <line x1="-10" y1="-10" x2="-5" y2="-15"/>
+        <line x1="0" y1="0" x2="5" y2="-5"/>
+        <line x1="10" y1="10" x2="15" y2="15"/>
+      </g>
+      
+      <!-- Nœuds de connexion - style tech -->
+      <circle cx="-10" cy="-10" r="3" fill="#FFFFFF" opacity="0.9"/>
+      <circle cx="0" cy="0" r="3" fill="#FFFFFF" opacity="0.9"/>
+      <circle cx="10" cy="10" r="3" fill="#FFFFFF" opacity="0.9"/>
+      <circle cx="25" cy="-5" r="2.5" fill="#1E88E5" opacity="0.8"/>
+      <circle cx="-15" cy="15" r="2.5" fill="#1E88E5" opacity="0.8"/>
+      
+      <!-- Point central lumineux -->
+      <circle cx="0" cy="-5" r="4" fill="#FFFFFF" opacity="0.9"/>
+      <circle cx="0" cy="-5" r="2" fill="#FF8F00"/>
+    </g>
+    
+    <!-- Logo GG stylisé en bas -->
+    <g transform="translate(0,120)">
+      <rect x="-45" y="-20" width="90" height="40" rx="20" 
+            fill="url(#surfaceGradient)" stroke="#1E88E5" stroke-width="2" opacity="0.9"/>
+      <text x="0" y="5" font-family="Arial, sans-serif" font-size="28" font-weight="bold" 
+            fill="#FFFFFF" text-anchor="middle" dominant-baseline="middle">GG</text>
+    </g>
+    
+    <!-- Particules d'énergie autour -->
+    <g opacity="0.6">
+      <circle cx="-150" cy="-50" r="3" fill="#FF8F00">
+        <animate attributeName="opacity" values="0.3;1;0.3" dur="2s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="160" cy="30" r="2" fill="#1E88E5">
+        <animate attributeName="opacity" values="0.5;1;0.5" dur="1.5s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="-120" cy="100" r="2.5" fill="#FF8F00">
+        <animate attributeName="opacity" values="0.4;1;0.4" dur="1.8s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="140" cy="-80" r="2" fill="#1E88E5">
+        <animate attributeName="opacity" values="0.6;1;0.6" dur="2.2s" repeatCount="indefinite"/>
+      </circle>
+    </g>
+  </g>
+</svg>

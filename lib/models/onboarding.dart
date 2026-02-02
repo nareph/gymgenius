@@ -3,6 +3,8 @@
 // --- Helper Function ---
 // This private helper function safely parses a dynamic value into a number (int or double).
 // It can handle values that are already numbers, strings, or null.
+import 'package:gymgenius/utils/type_converter.dart';
+
 T? _parseNum<T extends num>(dynamic value) {
   if (value == null) return null;
   if (value is T) return value; // Already the correct type.
@@ -124,28 +126,31 @@ class OnboardingData {
 
   /// Factory constructor to create OnboardingData from a map.
   factory OnboardingData.fromMap(Map<String, dynamic> map) {
+    // Convert the entire map to be type-safe
+    final safeMap = TypeConverter.toSafeMap(map);
+
     return OnboardingData(
-      goal: map['goal'] as String?,
-      gender: map['gender'] as String?,
-      experience: map['experience'] as String?,
-      frequency: map['frequency'] as String?,
-      sessionDurationPreference: map['session_duration_minutes'] as String?,
-      workoutDays: map['workout_days'] != null
-          ? List<String>.from(map['workout_days'] as List<dynamic>)
+      goal: safeMap['goal'] as String?,
+      gender: safeMap['gender'] as String?,
+      experience: safeMap['experience'] as String?,
+      frequency: safeMap['frequency'] as String?,
+      sessionDurationPreference: safeMap['session_duration_minutes'] as String?,
+      workoutDays: safeMap['workout_days'] != null
+          ? TypeConverter.toSafeList<String>(safeMap['workout_days'])
           : null,
-      equipment: map['equipment'] != null
-          ? List<String>.from(map['equipment'] as List<dynamic>)
+      equipment: safeMap['equipment'] != null
+          ? TypeConverter.toSafeList<String>(safeMap['equipment'])
           : null,
-      focusAreas: map['focus_areas'] != null
-          ? List<String>.from(map['focus_areas'] as List<dynamic>)
+      focusAreas: safeMap['focus_areas'] != null
+          ? TypeConverter.toSafeList<String>(safeMap['focus_areas'])
           : null,
-      // This part is now safer because PhysicalStats.fromMap handles type issues.
-      physicalStats: map['physical_stats'] != null &&
-              (map['physical_stats'] is Map) &&
-              (map['physical_stats'] as Map).isNotEmpty
-          ? PhysicalStats.fromMap(map['physical_stats'] as Map<String, dynamic>)
+      physicalStats: safeMap['physical_stats'] != null &&
+              (safeMap['physical_stats'] is Map) &&
+              (safeMap['physical_stats'] as Map).isNotEmpty
+          ? PhysicalStats.fromMap(
+              TypeConverter.toSafeMap(safeMap['physical_stats']))
           : null,
-      completed: map['completed'] as bool? ?? false,
+      completed: safeMap['completed'] as bool? ?? false,
     );
   }
 

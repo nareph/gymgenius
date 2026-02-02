@@ -1,7 +1,8 @@
-import 'package:firebase_auth/firebase_auth.dart';
+// lib/screens/tabs/profile_tab_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gymgenius/blocs/auth/auth_bloc.dart';
+import 'package:gymgenius/models/hive/user_model.dart';
 import 'package:gymgenius/viewmodels/profile_viewmodel.dart';
 import 'package:gymgenius/widgets/common/error_state_view.dart';
 import 'package:gymgenius/widgets/profile/profile_view.dart';
@@ -29,7 +30,7 @@ class ProfileTabScreen extends StatelessWidget {
   }
 
   Widget _buildBody(
-      BuildContext context, ProfileViewModel viewModel, User user) {
+      BuildContext context, ProfileViewModel viewModel, UserModel user) {
     Widget content;
     switch (viewModel.state) {
       case ProfileState.initial:
@@ -48,13 +49,12 @@ class ProfileTabScreen extends StatelessWidget {
         content = Column(
           children: [
             ProfileView(
-              displayName:
-                  user.displayName ?? user.email?.split('@')[0] ?? 'User',
-              email: user.email ?? 'N/A',
+              displayName: user.displayName ?? user.email.split('@')[0],
+              email: user.email,
               isEditing: viewModel.isEditing,
               isSaving: viewModel.state == ProfileState.saving,
               sourceDataForUI: viewModel.displayData,
-              controllers: viewModel.controllers, // Pass the controllers here
+              controllers: viewModel.controllers,
               onToggleEdit: () => viewModel.toggleEditMode(),
               onSaveChanges: viewModel.saveChanges,
               onCancelChanges: () => viewModel.toggleEditMode(cancel: true),
@@ -117,7 +117,7 @@ class ProfileTabScreen extends StatelessWidget {
 
             // If confirmed, dispatch the logout event to the AuthBloc.
             if (confirmSignOut == true && context.mounted) {
-              context.read<AuthBloc>().add(AuthLogoutRequested());
+              context.read<AuthBloc>().add(const AuthLogoutRequested());
             }
           },
         ),

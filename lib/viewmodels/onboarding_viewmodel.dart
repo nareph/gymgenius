@@ -1,3 +1,4 @@
+// lib/viewmodels/onboarding_viewmodel.dart
 import 'package:flutter/material.dart';
 import 'package:gymgenius/repositories/profile_repository.dart';
 import 'package:gymgenius/blocs/onboarding/onboarding_bloc.dart';
@@ -36,19 +37,24 @@ class OnboardingViewModel extends ChangeNotifier {
   /// Called when the user presses 'NEXT' on the last page or 'SKIP'.
   Future<void> completeOnboarding() async {
     final answers = _onboardingBloc.state.answers;
-    
+
+    Log.debug("OnboardingViewModel: Completing onboarding");
+    Log.debug("  - Mode: ${isPostLogin ? 'POST-LOGIN' : 'PRE-SIGNUP'}");
+    Log.debug("  - Answers: $answers");
+
     if (isPostLogin) {
-      Log.debug("OnboardingViewModel: Completing post-login onboarding...");
+      Log.debug("OnboardingViewModel: Saving post-login data...");
       try {
         await _profileRepository.updateOnboardingData(answers);
-        Log.debug("OnboardingViewModel: Data saved. Triggering completion callback.");
+        Log.debug("OnboardingViewModel: Data saved successfully");
         onPostLoginComplete();
-      } catch (e) {
-        Log.error("OnboardingViewModel: Failed to save post-login data", error: e);
-        // Optionally show an error to the user.
+      } catch (e, s) {
+        Log.error("OnboardingViewModel: Failed to save post-login data",
+            error: e, stackTrace: s);
+        // Optionally show an error to the user
       }
     } else {
-      Log.debug("OnboardingViewModel: Completing pre-signup onboarding...");
+      Log.debug("OnboardingViewModel: Passing data to signup...");
       onPreSignupComplete(answers);
     }
   }
@@ -61,7 +67,6 @@ class OnboardingViewModel extends ChangeNotifier {
         curve: Curves.easeOutCubic,
       );
     } else {
-      // If on the last page, trigger completion.
       completeOnboarding();
     }
   }

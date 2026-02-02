@@ -6,67 +6,52 @@ import 'package:gymgenius/screens/home_screen.dart';
 import 'package:gymgenius/screens/main_dashboard_screen.dart';
 import 'package:gymgenius/screens/onboarding/onboarding_screen.dart';
 import 'package:gymgenius/services/logger_service.dart';
-import 'package:gymgenius/widgets/offline_no_data_screen.dart';
 
 /// AuthWrapper is the gatekeeper of the application's navigation.
-/// It listens to the global [AuthBloc] state and pushes the correct
-/// screen flow onto its own [Navigator].
-class AuthWrapper extends StatefulWidget {
+/// It listens to the global [AuthBloc] state and displays the correct screen.
+class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
   @override
-  State<AuthWrapper> createState() => _AuthWrapperState();
-}
-
-class _AuthWrapperState extends State<AuthWrapper> {
-  // A GlobalKey for our root navigator.
-  final _navigatorKey = GlobalKey<NavigatorState>();
-
-  NavigatorState get _navigator => _navigatorKey.currentState!;
-
-  @override
   Widget build(BuildContext context) {
-    return BlocListener<AuthBloc, AuthState>(
-      // The listener is the single source of truth for global navigation changes.
+    return BlocConsumer<AuthBloc, AuthState>(
       listener: (context, state) {
+        // Log state changes for debugging
         Log.info(
-            "AuthWrapper Listener: Received new auth status: ${state.status}");
+            "AuthWrapper: State changed to ${state.status}, user: ${state.user?.email}, profileComplete: ${state.isProfileComplete}");
+      },
+      builder: (context, state) {
+        Log.info("AuthWrapper: Building with auth status: ${state.status}");
+
         switch (state.status) {
           case AuthStatus.authenticated:
-            final route = state.isProfileComplete
-                ? MainDashboardScreen.route()
-                : OnboardingScreen.route();
-            // Push the new screen and remove all previous routes.
-            _navigator.pushAndRemoveUntil<void>(route, (route) => false);
-            break;
+            // User is authenticated, check if profile is complete
+            if (state.isProfileComplete) {
+              Log.debug(
+                  "AuthWrapper: User authenticated with complete profile -> MainDashboard");
+              return const MainDashboardScreen();
+            } else {
+              Log.debug(
+                  "AuthWrapper: User authenticated but profile incomplete -> Onboarding");
+              return const OnboardingScreen(isPostLoginCompletion: true);
+            }
+
           case AuthStatus.unauthenticated:
-            // Push the home screen and remove all previous routes.
-            _navigator.pushAndRemoveUntil<void>(
-              HomeScreen.route(),
-              (route) => false,
-            );
-            break;
-          case AuthStatus.authenticatedOfflineNoCache:
-            _navigator.pushAndRemoveUntil<void>(
-              MaterialPageRoute(builder: (_) => const OfflineNoDataScreen()),
-              (route) => false,
-            );
-            break;
+            // User is not authenticated
+            Log.debug("AuthWrapper: User unauthenticated -> HomeScreen");
+            return const HomeScreen();
+
+          case AuthStatus.unknown:
           default:
-            // For 'unknown' or other states, the initial route (loading screen) will be shown.
-            break;
+            // Still determining auth state - show loading
+            Log.debug("AuthWrapper: Auth state unknown -> Loading");
+            return const Scaffold(
+              body: Center(
+                child: CircularProgressIndicator(),
+              ),
+            );
         }
       },
-      child: Navigator(
-        key: _navigatorKey,
-        // The Navigator starts with a single, simple loading page.
-        // The BlocListener above will immediately replace it with the correct page.
-        onGenerateRoute: (_) => MaterialPageRoute(
-          builder: (context) => const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          ),
-        ),
-      ),
     );
   }
 }

@@ -7,31 +7,46 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  firebase_core: ^3.13.0
-  firebase_auth: ^5.5.3
-  google_sign_in: ^6.1.5
+  
+  # Local Database & Storage
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  path_provider: ^2.1.2
+  
+  # State Management
   flutter_bloc: ^9.1.1
-  equatable: ^2.0.5
-  page_indicator: ^0.4.1 # Pour les indicateurs de progression
-  cloud_firestore: ^5.6.7
-  intl: ^0.20.2
-  table_calendar: ^3.2.0
-  uuid: ^4.5.1
-  cloud_functions: ^5.5.0
-  audioplayers: ^6.4.0
-  logger: ^2.5.0
   provider: ^6.1.5
+  bloc: ^9.0.0
+  
+  # Utilities
+  equatable: ^2.0.5
+  uuid: ^4.5.1
+  intl: ^0.20.2
+  logger: ^2.5.0
   shared_preferences: ^2.5.3
+  
+  # Authentication (Local)
+  local_auth: ^2.2.0
+  flutter_secure_storage: ^9.2.2
+  crypto: ^3.0.3
+  
+  # UI Components
+  page_indicator: ^0.4.1
+  table_calendar: ^3.2.0
+  audioplayers: ^6.4.0
+  cupertino_icons: ^1.0.8
   connectivity_plus: ^6.1.4
   formz: ^0.8.0
-  bloc: ^9.0.0
-  cupertino_icons: ^1.0.8
+  dio: ^5.9.1
+  wakelock_plus: ^1.4.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_launcher_icons: ^0.14.3
   flutter_lints: ^5.0.0
+  hive_generator: ^2.0.1
+  build_runner: ^2.4.8
 
 flutter:
   uses-material-design: true
@@ -41,24 +56,10 @@ flutter:
     - assets/launcher_icon/
 
 flutter_launcher_icons:
-  android: true # Génère pour Android. Peut aussi être "launcher_icon" pour un nom spécifique.
-  ios: true # Génère pour iOS.
-  image_path: "assets/launcher_icon/launcher_icon.png" # Chemin vers votre image source.
-  min_sdk_android: 21 # Requis pour les icônes adaptatives, sinon facultatif.
-  remove_alpha_ios: true # Recommandé si votre PNG a de la transparence.
-
-
-  # Ajoutez cette section pour les images et les polices
-  #   - assets/images/ # Exemple : déclare tout un dossier d'images
-  #   - assets/icons/ # Exemple : déclare un dossier d'icônes
-  #   - assets/logo.png # Exemple : déclare un fichier spécifique
-
-  # fonts:
-  #   - family: MyCustomFont # Nom de la famille de police
-  #     fonts:
-  #       - asset: assets/fonts/MyCustomFont-Regular.ttf
-  #       - asset: assets/fonts/MyCustomFont-Bold.ttf
-  #         weight: 700
-  #   - family: MyIconFont # Nom de la police d'icônes personnalisées
-  #     fonts:
-  #       - asset: assets/fonts/MyIconFont.ttf
+  android: true
+  ios: true
+  image_path: "assets/launcher_icon/launcher_icon.png"
+  min_sdk_android: 21
+  remove_alpha_ios: true
+  adaptive_icon_background: "#1565C0"
+  adaptive_icon_foreground: "assets/launcher_icon/launcher_icon.png"

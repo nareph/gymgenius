@@ -4,11 +4,15 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:formz/formz.dart';
 import 'package:gymgenius/blocs/login/login_bloc.dart';
 import 'package:gymgenius/repositories/auth_repository.dart';
-import 'package:gymgenius/screens/auth/sign_up_screen.dart';
 import 'package:gymgenius/services/logger_service.dart';
 
 class LoginScreen extends StatelessWidget {
-  const LoginScreen({super.key});
+  final VoidCallback? onSignUpRequested;
+
+  const LoginScreen({
+    super.key,
+    this.onSignUpRequested,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -17,19 +21,23 @@ class LoginScreen extends StatelessWidget {
         elevation: 0,
         backgroundColor: Colors.transparent,
       ),
-      // Provide the LoginBloc to the widget tree below.
       body: BlocProvider(
         create: (context) => LoginBloc(
           authRepository: context.read<AuthRepository>(),
         ),
-        child: const LoginForm(),
+        child: LoginForm(onSignUpRequested: onSignUpRequested),
       ),
     );
   }
 }
 
 class LoginForm extends StatefulWidget {
-  const LoginForm({super.key});
+  final VoidCallback? onSignUpRequested;
+
+  const LoginForm({
+    super.key,
+    this.onSignUpRequested,
+  });
 
   @override
   State<LoginForm> createState() => _LoginFormState();
@@ -42,7 +50,6 @@ class _LoginFormState extends State<LoginForm> {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
 
-    // BlocListener handles "side effects" like navigation or showing SnackBars.
     return BlocListener<LoginBloc, LoginState>(
       listener: (context, state) {
         Log.info(
@@ -57,7 +64,6 @@ class _LoginFormState extends State<LoginForm> {
             );
         }
         if (state.status.isSuccess && state.successMessage != null) {
-          // Show success message
           ScaffoldMessenger.of(context)
             ..hideCurrentSnackBar()
             ..showSnackBar(
@@ -67,7 +73,8 @@ class _LoginFormState extends State<LoginForm> {
               ),
             );
         }
-        // AuthBloc will handle navigation automatically upon successful login.
+        // IMPORTANT: NO NAVIGATION HERE
+        // AuthBloc will handle navigation automatically through AuthWrapper
       },
       child: Center(
         child: SingleChildScrollView(
@@ -102,7 +109,7 @@ class _LoginFormState extends State<LoginForm> {
               const SizedBox(height: 25),
               _LoginButton(),
               const SizedBox(height: 30),
-              _SignUpButton(),
+              _SignUpButton(onPressed: widget.onSignUpRequested),
             ],
           ),
         ),
@@ -110,8 +117,6 @@ class _LoginFormState extends State<LoginForm> {
     );
   }
 }
-
-// Private sub-widgets to keep the build method clean.
 
 class _EmailInput extends StatelessWidget {
   @override
@@ -190,6 +195,10 @@ class _LoginButton extends StatelessWidget {
 }
 
 class _SignUpButton extends StatelessWidget {
+  final VoidCallback? onPressed;
+
+  const _SignUpButton({this.onPressed});
+
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -197,10 +206,7 @@ class _SignUpButton extends StatelessWidget {
       children: [
         const Text("Don't have an account?"),
         TextButton(
-          onPressed: () => Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => const SignUpScreen()),
-            (route) => false,
-          ),
+          onPressed: onPressed,
           child: const Text("Sign Up"),
         ),
       ],

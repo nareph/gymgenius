@@ -129,12 +129,17 @@ class ProfileViewModel extends ChangeNotifier {
       }
     });
 
+    Log.debug("ProfileViewModel: Saving changes");
+    Log.debug("  - Edit values: $_editValues");
+
     _setState(ProfileState.saving);
     try {
       await _repository.saveProfileData(_editValues);
       _originalData = Map.from(_editValues);
       _isEditing = false;
       _disposeControllers();
+
+      Log.debug("ProfileViewModel: Changes saved successfully");
       _setState(ProfileState.loaded);
     } catch (e, s) {
       Log.error("ProfileViewModel: Failed to save profile",

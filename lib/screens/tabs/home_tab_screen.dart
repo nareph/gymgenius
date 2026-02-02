@@ -5,7 +5,6 @@ import 'package:gymgenius/widgets/home/error_view.dart';
 import 'package:gymgenius/widgets/home/expired_routine_view.dart';
 import 'package:gymgenius/widgets/home/loading_view.dart';
 import 'package:gymgenius/widgets/home/no_routine_view.dart';
-import 'package:gymgenius/widgets/home/offline_view.dart';
 import 'package:gymgenius/widgets/home/routine_dashboard_view.dart';
 import 'package:provider/provider.dart';
 
@@ -58,18 +57,6 @@ class HomeTabScreen extends StatelessWidget {
       case HomeState.loading:
         return const LoadingView(
             key: ValueKey('loading'), message: "Loading your dashboard...");
-
-      case HomeState.offline:
-        if (viewModel.currentRoutine != null) {
-          return RoutineDashboardView(
-            key: const ValueKey('offline_dashboard'),
-            routine: viewModel.currentRoutine!,
-            onboardingData: viewModel.onboardingData!,
-            isOffline: true,
-          );
-        }
-        return wrapInScrollable(OfflineView(
-            key: const ValueKey('offline_view'), onRetry: viewModel.refresh));
 
       case HomeState.error:
         return wrapInScrollable(ErrorView(

@@ -14,28 +14,48 @@ class Log {
     filter: ProductionFilter(),
   );
 
-  static void trace(String message, {dynamic error, StackTrace? stackTrace}) {
-    _logger.t(message, error: error, stackTrace: stackTrace);
+  // Helper method to format messages with tags
+  static String _formatMessage(String message, {String? tag}) {
+    if (tag != null && tag.isNotEmpty) {
+      return '[$tag] $message';
+    }
+    return message;
   }
 
-  static void debug(String message, {dynamic error, StackTrace? stackTrace}) {
-    _logger.d(message, error: error, stackTrace: stackTrace);
+  static void trace(String message,
+      {dynamic error, StackTrace? stackTrace, String? tag}) {
+    _logger.t(_formatMessage(message, tag: tag),
+        error: error, stackTrace: stackTrace);
   }
 
-  static void info(String message, {dynamic error, StackTrace? stackTrace}) {
-    _logger.i(message, error: error, stackTrace: stackTrace);
+  static void debug(String message,
+      {dynamic error, StackTrace? stackTrace, String? tag}) {
+    _logger.d(_formatMessage(message, tag: tag),
+        error: error, stackTrace: stackTrace);
   }
 
-  static void warning(String message, {dynamic error, StackTrace? stackTrace}) {
-    _logger.w(message, error: error, stackTrace: stackTrace);
+  static void info(String message,
+      {dynamic error, StackTrace? stackTrace, String? tag}) {
+    _logger.i(_formatMessage(message, tag: tag),
+        error: error, stackTrace: stackTrace);
   }
 
-  static void error(String message, {dynamic error, StackTrace? stackTrace}) {
-    _logger.e(message, error: error, stackTrace: stackTrace);
+  static void warning(String message,
+      {dynamic error, StackTrace? stackTrace, String? tag}) {
+    _logger.w(_formatMessage(message, tag: tag),
+        error: error, stackTrace: stackTrace);
   }
 
-  static void fatal(String message, {dynamic error, StackTrace? stackTrace}) {
-    _logger.f(message, error: error, stackTrace: stackTrace);
+  static void error(String message,
+      {dynamic error, StackTrace? stackTrace, String? tag}) {
+    _logger.e(_formatMessage(message, tag: tag),
+        error: error, stackTrace: stackTrace);
+  }
+
+  static void fatal(String message,
+      {dynamic error, StackTrace? stackTrace, String? tag}) {
+    _logger.f(_formatMessage(message, tag: tag),
+        error: error, stackTrace: stackTrace);
   }
 
   static String enumToString(dynamic enumValue) {
@@ -47,8 +67,9 @@ class Log {
     required String url,
     dynamic body,
     Map<String, dynamic>? headers,
+    String? tag,
   }) {
-    _logger.d('API Request', error: {
+    _logger.d(_formatMessage('API Request', tag: tag), error: {
       'method': method,
       'url': url,
       'body': body,
@@ -62,8 +83,9 @@ class Log {
     required int statusCode,
     dynamic response,
     int? durationMs,
+    String? tag,
   }) {
-    _logger.i('API Response', error: {
+    _logger.i(_formatMessage('API Response', tag: tag), error: {
       'method': method,
       'url': url,
       'statusCode': statusCode,
