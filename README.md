@@ -1,6 +1,12 @@
 # GymGenius - Your AI-Powered Fitness Coach
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Version](https://img.shields.io/badge/version-1.0.0--firebase-orange.svg)](https://github.com/nareph/gymgenius/releases)
+[![Flutter](https://img.shields.io/badge/Flutter-3.19+-02569B.svg?logo=flutter)](https://flutter.dev)
+[![Firebase](https://img.shields.io/badge/Firebase-Enabled-orange.svg?logo=firebase)](https://firebase.google.com)
+
+> 📍 **You are on:** Firebase Version (Cloud Sync)  
+> 🔄 **Switch to:** [Local Version](https://github.com/nareph/gymgenius/tree/local) (Privacy-Focused)
 
 **GymGenius is a mobile application designed to be your personal AI fitness coach, crafting personalized workout routines tailored to your goals, experience, and available equipment.**
 
