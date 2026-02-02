@@ -1,6 +1,6 @@
 #!/bin/bash
-GymGenius - Production Build Script with Gemini AI
-This script builds a production APK with Gemini AI enabled
+GymGenius - Local AI Build Script
+This script builds a production APK with LOCAL AI (no Gemini, 100% offline)
 Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -9,31 +9,11 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 echo -e "BLUE════════════════════════════════════════════{BLUE}════════════════════════════════════════════
 BLUE════════════════════════════════════════════{NC}"
-echo -e "BLUEGymGeniusProductionBuild{BLUE}  GymGenius Production Build
-BLUEGymGeniusProductionBuild{NC}"
+echo -e "BLUEGymGeniusLocalAIBuild{BLUE}  GymGenius Local AI Build
+BLUEGymGeniusLocalAIBuild{NC}"
 echo -e "BLUE════════════════════════════════════════════{BLUE}════════════════════════════════════════════
 BLUE════════════════════════════════════════════{NC}"
 echo ""
-
-Check if API key is defined
-if [ -z "$GEMINI_API_KEY_PRODUCTION" ]; then
-    echo -e "RED❌ERROR:GEMINIAPIKEYPRODUCTIONisnotdefined{RED}❌ ERROR: GEMINI_API_KEY_PRODUCTION is not defined
-RED❌ERROR:GEMINIA​PIK​EYP​RODUCTIONisnotdefined{NC}"
-    echo ""
-    echo -e "YELLOW📝Tofixthis:{YELLOW}📝 To fix this:
-YELLOW📝Tofixthis:{NC}"
-    echo -e "${YELLOW}   1. Get API key from:
-https://aistudio.google.com/app/apikey${NC}"
-    echo -e "YELLOW2.Exportit:{YELLOW}   2. Export it:
-YELLOW2.Exportit:{NC}"
-    echo -e "      export GEMINI_API_KEY_PRODUCTION=your_api_key${NC}"
-    echo ""
-    echo -e "YELLOWOraddtoyourshellprofile( /.bashrc, /.zshrc):{YELLOW}   Or add to your shell profile (~/.bashrc, ~/.zshrc):
-YELLOWOraddtoyourshellprofile( /.bashrc, /.zshrc):{NC}"
-    echo -e "      echo 'export GEMINI_API_KEY_PRODUCTION=your_key' >> ~/.bashrc${NC}"
-    echo ""
-    exit 1
-fi
 
 Check Flutter installation
 if ! command -v flutter &> /dev/null; then
@@ -50,11 +30,11 @@ flutter --version | head -n 1
 echo ""
 
 Confirm build
-echo -e "YELLOW⚠®ThiswillbuildaPRODUCTIONAPKwith:{YELLOW}⚠️  This will build a PRODUCTION APK with:
-YELLOW⚠R◯ThiswillbuildaPRODUCTIONAPKwith:{NC}"
+echo -e "YELLOWℹ®ThiswillbuildaLOCALAIAPKwith:{YELLOW}ℹ️  This will build a LOCAL AI APK with:
+YELLOWℹR◯ThiswillbuildaLOCALAIAPKwith:{NC}"
 echo -e "   • Environment: production"
-echo -e "   • AI Mode: Gemini AI (enabled)"
-echo -e "   • Model: gemini-2.0-flash-exp"
+echo -e "   • AI Mode: Local (100% offline)"
+echo -e "   • Privacy: Complete (no cloud calls)"
 echo -e "   • Split APKs: Yes (arm64-v8a, armeabi-v7a, x86_64)"
 echo ""
 read -p "Continue? (y/N) " -n 1 -r
@@ -74,23 +54,22 @@ echo -e "BLUE🔄Gettingdependencies...{BLUE}🔄 Getting dependencies...
 BLUE🔄Gettingdependencies...{NC}"
 flutter pub get
 
-echo -e "BLUE⚡BuildingproductionAPK...{BLUE}⚡ Building production APK...
-BLUE⚡BuildingproductionAPK...{NC}"
+echo -e "BLUE⚡BuildingproductionAPK(LocalAI)...{BLUE}⚡ Building production APK (Local AI)...
+BLUE⚡BuildingproductionAPK(LocalAI)...{NC}"
 echo -e "BLUEThismaytake3−5minutes...{BLUE}   This may take 3-5 minutes...
 BLUEThismaytake3−5minutes...{NC}"
 echo ""
 
-Build with error handling
+Build with LOCAL AI (no Gemini)
 if flutter build apk --split-per-abi 
 --release 
 --dart-define=ENVIRONMENT=production 
---dart-define=USE_REAL_AI=true 
---dart-define=GEMINI_API_KEY=$GEMINI_API_KEY_PRODUCTION 
+--dart-define=USE_REAL_AI=false 
 --obfuscate 
 --split-debug-info=build/app/outputs/symbols; then
 echo ""
 echo -e "${GREEN}════════════════════════════════════════════${NC}"
-echo -e "${GREEN}✅ Production build completed successfully!${NC}"
+echo -e "${GREEN}✅ Local AI build completed successfully!${NC}"
 echo -e "${GREEN}════════════════════════════════════════════${NC}"
 echo ""
 
@@ -110,13 +89,11 @@ done
 
 echo ""
 
-# Calculate total size (compatible with both Linux and macOS)
+# Calculate total size
 if command -v stat &> /dev/null; then
     if [[ "$OSTYPE" == "darwin"* ]]; then
-        # macOS
         TOTAL_SIZE=$(find $APK_DIR -name "*.apk" -exec stat -f%z {} \; | awk '{s+=$1} END {print s}')
     else
-        # Linux
         TOTAL_SIZE=$(find $APK_DIR -name "*.apk" -exec stat -c%s {} \; | awk '{s+=$1} END {print s}')
     fi
     TOTAL_MB=$(echo "scale=2; $TOTAL_SIZE/1024/1024" | bc)
@@ -127,17 +104,27 @@ echo ""
 echo -e "${BLUE}📍 Location: $APK_DIR${NC}"
 echo ""
 
+# Features
+echo -e "${GREEN}✨ This build includes:${NC}"
+echo -e "   ✓ 100% offline functionality"
+echo -e "   ✓ Complete privacy (no cloud calls)"
+echo -e "   ✓ Instant routine generation (<200ms)"
+echo -e "   ✓ No API keys needed"
+echo -e "   ✓ Local Hive database"
+echo ""
+
 # Recommendations
 echo -e "${YELLOW}📝 Next steps:${NC}"
 echo -e "   1. Test APK on physical device"
-echo -e "   2. Upload to Google Play Console"
-echo -e "   3. Keep debug symbols: build/app/outputs/symbols"
+echo -e "   2. Verify offline functionality"
+echo -e "   3. Test routine generation"
 echo ""
-echo -e "${GREEN}Recommended APK for upload:${NC}"
-echo -e "   ${GREEN}app-arm64-v8a-release.apk${NC} (most modern devices)"
+echo -e "${GREEN}Recommended APK:${NC}"
+echo -e "   ${GREEN}app-arm64-v8a-release.apk${NC} (64-bit devices)"
 echo ""
 
 exit 0
+
 else
     echo ""
     echo -e "RED════════════════════════════════════════════{RED}════════════════════════════════════════════
@@ -146,13 +133,6 @@ RED═════════════════════════�
 RED❌Buildfailed!{NC}"
     echo -e "RED════════════════════════════════════════════{RED}════════════════════════════════════════════
 RED════════════════════════════════════════════{NC}"
-    echo ""
-    echo -e "YELLOWCommonissues:{YELLOW}Common issues:
-YELLOWCommonissues:{NC}"
-    echo -e "   • Check Flutter version (3.19+)"
-    echo -e "   • Run 'flutter doctor' to check setup"
-    echo -e "   • Verify GEMINI_API_KEY_PRODUCTION is valid"
-    echo -e "   • Check internet connection"
     echo ""
     exit 1
 fi
