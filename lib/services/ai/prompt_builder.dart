@@ -12,14 +12,13 @@ class PromptBuilder {
     List<String>? regenerationInstructions,
   }) {
     final sections = <String>[];
-
-// Core instruction - ultra concise
+// Core instruction
     sections.add(
       "Expert fitness AI. Generate ONLY valid JSON. Follow muscle split EXACTLY. "
       "No markdown, no explanations.",
     );
 
-// User profile - condensed
+// User profile
     sections.add(
       "\n=== USER ===\n"
       "Goal: ${onboarding.goal ?? 'fitness'} | "
@@ -27,10 +26,10 @@ class PromptBuilder {
       "Gender: ${onboarding.gender ?? 'n/a'}",
     );
 
-// Session duration - compact
+// Session duration
     _addCompactSessionDuration(sections, onboarding);
 
-// Muscle split - condensed
+// Muscle split
     _addCompactMuscleSplit(
       sections,
       selectedSplit,
@@ -39,15 +38,15 @@ class PromptBuilder {
       onboarding,
     );
 
-// Equipment - minimal
+// Equipment
     _addCompactEquipment(sections, onboarding);
 
-// Focus areas - if present
+// Focus areas
     if (onboarding.focusAreas != null && onboarding.focusAreas!.isNotEmpty) {
       sections.add("Focus: ${onboarding.focusAreas!.join(', ')}");
     }
 
-// Physical stats - minimal
+// Physical stats
     if (onboarding.physicalStats != null) {
       final stats = onboarding.physicalStats!;
       sections.add(
@@ -56,7 +55,7 @@ class PromptBuilder {
       );
     }
 
-// Previous routine context
+// Previous routine
     if (previousRoutine != null && previousRoutine['name'] != null) {
       sections.add(
         "Previous: ${previousRoutine['name']} "
@@ -64,7 +63,7 @@ class PromptBuilder {
       );
     }
 
-// Regeneration instructions - if present
+// Regeneration instructions
     if (regenerationInstructions != null &&
         regenerationInstructions.isNotEmpty) {
       sections.add("\n=== REGENERATION ===");
@@ -73,10 +72,10 @@ class PromptBuilder {
       }
     }
 
-// JSON structure - ultra compact
+// JSON structure with CRITICAL weight/timer instructions
     _addCompactJsonStructure(sections);
 
-// Minimal example - single day only
+// Minimal example
     _addMinimalJsonExample(sections);
 
     return sections.join('\n');
@@ -151,12 +150,21 @@ class PromptBuilder {
     OnboardingDataAI onboarding,
   ) {
     if (onboarding.equipment != null && onboarding.equipment!.isNotEmpty) {
-      sections.add("Equipment: ${onboarding.equipment!.join(', ')} ONLY");
+      final equipment = onboarding.equipment!;
+      sections.add("Equipment: ${equipment.join(', ')} ONLY");
+// Special note for resistance bands
+      if (equipment.any((e) => e.toLowerCase().contains('resistance band'))) {
+        sections.add(
+          "IMPORTANT: Resistance band exercises use 'Bodyweight' for weightSuggestionKg. "
+          "Bands provide resistance, not weight in kg.",
+        );
+      }
     } else {
       sections.add("Equipment: Bodyweight ONLY");
     }
   }
 
+// Update JSON structure section
   static void _addCompactJsonStructure(List<String> sections) {
     sections.add(
       "\n=== JSON OUTPUT ===\n"
@@ -171,45 +179,67 @@ class PromptBuilder {
       "{\n"
       '  "name": "Exercise Name",\n'
       '  "sets": 3,\n'
-      '  "reps": "8-12",\n'
-      '  "description": "Target: Muscles | Split: Theme\n\n1. Step 1\n2. Step 2",\n'
-      '  "weightSuggestionKg": "Bodyweight",\n'
+      '  "reps": "8-12",  // OR "30s" for timed\n'
+      '  "description": "Target: Muscles | Split: Theme\n\n1. Step\n2. Step",\n'
+      '  "weightSuggestionKg": "Bodyweight",  // OR "20" for dumbbells/barbells\n'
       '  "restBetweenSetsSeconds": 60,\n'
-      '  "usesWeight": false,\n'
-      '  "isTimed": false\n'
-      "}",
+      '  "usesWeight": false,  // true ONLY for dumbbells/barbells with numeric kg\n'
+      '  "isTimed": false,  // true if reps contains "s" or duration\n'
+      '  "targetDurationSeconds": 30  // ONLY if isTimed = true\n'
+      "}\n\n"
+      "WEIGHT RULES:\n"
+      "- Dumbbells/Barbells: usesWeight=true, weightSuggestionKg='20'\n"
+      "- Resistance Bands: usesWeight=false, weightSuggestionKg='Bodyweight'\n"
+      "- Bodyweight: usesWeight=false, weightSuggestionKg='Bodyweight'\n"
+      "- Homemade weights: usesWeight=true, weightSuggestionKg='15'\n\n"
+      "TIMER RULES:\n"
+      '- isTimed=true → MUST include "targetDurationSeconds"\n'
+      '- isTimed=true → reps should be "30s" format\n'
+      '- isTimed=false → NO "targetDurationSeconds"\n'
+      "- Planks, holds, wall sits → isTimed=true",
     );
   }
 
   static void _addMinimalJsonExample(List<String> sections) {
     sections.add(
-      "\n=== EXAMPLE (1 DAY) ===\n"
+      "\n=== EXAMPLES ===\n"
+      "Weighted exercise:\n"
       '{\n'
-      '  "name": "5-Day Push/Pull/Legs Split",\n'
-      '  "durationInWeeks": 6,\n'
-      '  "dailyWorkouts": {\n'
-      '    "monday": [\n'
-      '      {\n'
-      '        "name": "Push-ups",\n'
-      '        "sets": 3,\n'
-      '        "reps": "12-15",\n'
-      '        "description": "Target: Chest, Triceps | Split: Push\n\n1. Plank position\n2. Lower down\n3. Push up",\n'
-      '        "weightSuggestionKg": "Bodyweight",\n'
-      '        "restBetweenSetsSeconds": 60,\n'
-      '        "usesWeight": false,\n'
-      '        "isTimed": false\n'
-      '      }\n'
-      '    ],\n'
-      '    "tuesday": [],\n'
-      '    "wednesday": [...],\n'
-      '    "thursday": [],\n'
-      '    "friday": [...],\n'
-      '    "saturday": [],\n'
-      '    "sunday": []\n'
-      '  }\n'
+      '  "name": "Dumbbell Rows",\n'
+      '  "sets": 3,\n'
+      '  "reps": "10-12",\n'
+      '  "description": "Target: Back | Split: Pull\n\n1. Bend at hips\n2. Pull weight to chest",\n'
+      '  "weightSuggestionKg": "12.5",\n'
+      '  "restBetweenSetsSeconds": 90,\n'
+      '  "usesWeight": true,\n'
+      '  "isTimed": false\n'
+      '}\n\n'
+      "Timed exercise:\n"
+      '{\n'
+      '  "name": "Plank Hold",\n'
+      '  "sets": 3,\n'
+      '  "reps": "45s",\n'
+      '  "description": "Target: Core | Split: Core Work\n\n1. Forearm position\n2. Hold body straight",\n'
+      '  "weightSuggestionKg": "Bodyweight",\n'
+      '  "restBetweenSetsSeconds": 60,\n'
+      '  "usesWeight": false,\n'
+      '  "isTimed": true,\n'
+      '  "targetDurationSeconds": 45\n'
+      '}\n\n'
+      "Bodyweight exercise:\n"
+      '{\n'
+      '  "name": "Push-ups",\n'
+      '  "sets": 3,\n'
+      '  "reps": "12-15",\n'
+      '  "description": "Target: Chest, Triceps | Split: Push\n\n1. Plank\n2. Lower\n3. Push up",\n'
+      '  "weightSuggestionKg": "Bodyweight",\n'
+      '  "restBetweenSetsSeconds": 60,\n'
+      '  "usesWeight": false,\n'
+      '  "isTimed": false\n'
       '}\n\n'
       "CRITICAL: Output ONLY valid JSON. All 7 days MUST be present. "
-      "Workout days = exercises array. Rest days = empty array [].",
+      "Workout days = exercises array. Rest days = empty array [].\n"
+      "ALWAYS set usesWeight and isTimed correctly!",
     );
   }
 }
