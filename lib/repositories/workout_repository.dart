@@ -24,6 +24,17 @@ class WorkoutRepository {
     }
 
     try {
+      Log.debug("========== SAVING WORKOUT LOG ==========");
+      Log.debug("Raw workout log data:");
+      Log.debug("  - workoutName: ${workoutLog['workoutName']}");
+      Log.debug("  - durationSeconds: ${workoutLog['durationSeconds']}");
+      Log.debug(
+          "  - exercises count: ${(workoutLog['exercises'] as List?)?.length ?? 0}");
+      Log.debug(
+          "  - totalPlannedExercises: ${workoutLog['totalPlannedExercises']}");
+      Log.debug(
+          "  - totalCompletedExercises: ${workoutLog['totalCompletedExercises']}");
+
       final log = WorkoutLogModel(
         id: _uuid.v4(),
         userId: _currentUserId!,
@@ -32,11 +43,30 @@ class WorkoutRepository {
         synced: true, // Always synced in local-only mode
       );
 
-      await _db.saveWorkoutLog(log);
-      Log.debug("WorkoutRepository: Log successfully saved to database.");
+      Log.debug("WorkoutLogModel created with ID: ${log.id}");
+      Log.debug("  - userId: ${log.userId}");
+      Log.debug("  - savedAt: ${log.savedAt}");
+      Log.debug("  - workoutData keys: ${log.workoutData.keys.toList()}");
 
-      return SaveResult
-          .successOnline; // Consider local save as "online" success
+      await _db.saveWorkoutLog(log);
+
+      // Verify the save by reading it back
+      final savedLog = _db.getWorkoutLog(log.id);
+      if (savedLog != null) {
+        Log.debug("Verification: Log saved successfully");
+        Log.debug(
+            "  - Saved workoutName: ${savedLog.workoutData['workoutName']}");
+        Log.debug(
+            "  - Saved durationSeconds: ${savedLog.workoutData['durationSeconds']}");
+        Log.debug(
+            "  - Saved exercises count: ${(savedLog.workoutData['exercises'] as List?)?.length ?? 0}");
+      } else {
+        Log.error("Verification FAILED: Could not read back saved log!");
+      }
+
+      Log.debug("========================================");
+      Log.debug("WorkoutRepository: Log successfully saved to database.");
+      return SaveResult.successOnline;
     } catch (e, s) {
       Log.error("WorkoutRepository: Failed to save workout log",
           error: e, stackTrace: s);

@@ -12,13 +12,14 @@ class PromptBuilder {
     List<String>? regenerationInstructions,
   }) {
     final sections = <String>[];
-// Core instruction
+
+    // Core instruction
     sections.add(
       "Expert fitness AI. Generate ONLY valid JSON. Follow muscle split EXACTLY. "
       "No markdown, no explanations.",
     );
 
-// User profile
+    // User profile
     sections.add(
       "\n=== USER ===\n"
       "Goal: ${onboarding.goal ?? 'fitness'} | "
@@ -26,10 +27,10 @@ class PromptBuilder {
       "Gender: ${onboarding.gender ?? 'n/a'}",
     );
 
-// Session duration
+    // Session duration
     _addCompactSessionDuration(sections, onboarding);
 
-// Muscle split
+    // Muscle split
     _addCompactMuscleSplit(
       sections,
       selectedSplit,
@@ -38,15 +39,15 @@ class PromptBuilder {
       onboarding,
     );
 
-// Equipment
+    // Equipment - WITH STRICT CONSTRAINTS
     _addCompactEquipment(sections, onboarding);
 
-// Focus areas
+    // Focus areas
     if (onboarding.focusAreas != null && onboarding.focusAreas!.isNotEmpty) {
       sections.add("Focus: ${onboarding.focusAreas!.join(', ')}");
     }
 
-// Physical stats
+    // Physical stats
     if (onboarding.physicalStats != null) {
       final stats = onboarding.physicalStats!;
       sections.add(
@@ -55,7 +56,7 @@ class PromptBuilder {
       );
     }
 
-// Previous routine
+    // Previous routine
     if (previousRoutine != null && previousRoutine['name'] != null) {
       sections.add(
         "Previous: ${previousRoutine['name']} "
@@ -63,7 +64,7 @@ class PromptBuilder {
       );
     }
 
-// Regeneration instructions
+    // Regeneration instructions
     if (regenerationInstructions != null &&
         regenerationInstructions.isNotEmpty) {
       sections.add("\n=== REGENERATION ===");
@@ -72,10 +73,10 @@ class PromptBuilder {
       }
     }
 
-// JSON structure with CRITICAL weight/timer instructions
+    // JSON structure with CRITICAL weight/timer instructions
     _addCompactJsonStructure(sections);
 
-// Minimal example
+    // Minimal example
     _addMinimalJsonExample(sections);
 
     return sections.join('\n');
@@ -152,19 +153,127 @@ class PromptBuilder {
     if (onboarding.equipment != null && onboarding.equipment!.isNotEmpty) {
       final equipment = onboarding.equipment!;
       sections.add("Equipment: ${equipment.join(', ')} ONLY");
-// Special note for resistance bands
-      if (equipment.any((e) => e.toLowerCase().contains('resistance band'))) {
-        sections.add(
-          "IMPORTANT: Resistance band exercises use 'Bodyweight' for weightSuggestionKg. "
-          "Bands provide resistance, not weight in kg.",
-        );
+
+      // Add strict equipment constraints
+      sections.add("\n=== EQUIPMENT RULES (CRITICAL) ===");
+
+      // Check if bodyweight only (no other equipment)
+      final isBodyweightOnly = equipment.length == 1 &&
+          equipment.first.toLowerCase().contains('bodyweight');
+
+      if (isBodyweightOnly) {
+        sections.add("⚠️ BODYWEIGHT ONLY - User has NO equipment at all:\n"
+            "✓ ALLOWED EXERCISES:\n"
+            "  • Push-ups (standard, wide, diamond, decline)\n"
+            "  • Squats (bodyweight, jump squats, pistol squats)\n"
+            "  • Lunges (forward, reverse, walking, jumping)\n"
+            "  • Planks (standard, side, reverse)\n"
+            "  • Mountain climbers\n"
+            "  • Burpees\n"
+            "  • Glute bridges\n"
+            "  • Crunches, leg raises, bicycle crunches\n"
+            "  • Wall sits\n"
+            "  • Jumping jacks, high knees\n"
+            "  • Step-ups (using stairs)\n"
+            "  • Bear crawls, crab walks\n\n"
+            "✗ ABSOLUTELY FORBIDDEN:\n"
+            "  • Pull-ups, chin-ups (requires pull-up bar)\n"
+            "  • Inverted rows (requires bar or table)\n"
+            "  • Dips (requires parallel bars or bench)\n"
+            "  • Hanging exercises (no bar available)\n"
+            "  • Any exercise requiring elevated equipment\n"
+            "  • Any exercise requiring grip on bars/rings\n\n"
+            "FOR BACK EXERCISES: Use only superman holds, reverse snow angels, "
+            "prone Y-raises - NO pulling exercises since there's nothing to pull on!");
+      } else {
+        // User has some equipment - list what they DON'T have
+        final constraints = <String>[];
+
+        // Check for pull-up bar
+        final hasPullUpBar = equipment.any((e) =>
+            e.toLowerCase().contains('pull') &&
+            e.toLowerCase().contains('bar'));
+
+        if (!hasPullUpBar) {
+          constraints.add("NO PULL-UP BAR:\n"
+              "✗ FORBIDDEN: Pull-ups, chin-ups, hanging leg raises, "
+              "muscle-ups, inverted rows, any hanging exercises");
+        }
+
+        // Check for weights
+        final hasWeights = equipment.any((e) =>
+            e.toLowerCase().contains('dumbbell') ||
+            e.toLowerCase().contains('barbell') ||
+            e.toLowerCase().contains('kettlebell') ||
+            e.toLowerCase().contains('homemade'));
+
+        if (!hasWeights) {
+          constraints.add("NO WEIGHTS:\n"
+              "✗ FORBIDDEN: Any dumbbell, barbell, or weighted exercises\n"
+              "✓ Use bodyweight progressions instead");
+        }
+
+        // Check for gym machines
+        final hasMachines = equipment.any((e) =>
+            e.toLowerCase().contains('machine') ||
+            e.toLowerCase().contains('gym'));
+
+        if (!hasMachines) {
+          constraints.add("NO GYM MACHINES:\n"
+              "✗ FORBIDDEN: Cable exercises, lat pulldown, leg press, "
+              "smith machine, any machine exercises");
+        }
+
+        // Check for bench
+        final hasBench =
+            equipment.any((e) => e.toLowerCase().contains('bench'));
+
+        if (!hasBench) {
+          constraints.add("NO BENCH:\n"
+              "✗ FORBIDDEN: Bench press, incline press, bench dips, "
+              "step-ups on bench");
+        }
+
+        // Add constraints to sections
+        if (constraints.isNotEmpty) {
+          sections.addAll(constraints);
+        }
+
+        // Add positive guidance for what they DO have
+        if (equipment.any((e) => e.toLowerCase().contains('resistance band'))) {
+          sections.add("\n✓ RESISTANCE BANDS AVAILABLE:\n"
+              "Use for: Band rows (if no pull-up bar), chest press, "
+              "lateral raises, bicep curls, tricep extensions, face pulls\n"
+              "IMPORTANT: Use 'Bodyweight' for weightSuggestionKg with bands");
+        }
+
+        if (equipment.any((e) => e.toLowerCase().contains('homemade'))) {
+          sections.add("\n✓ HOMEMADE WEIGHTS AVAILABLE:\n"
+              "Use for: Curls, rows, overhead press, weighted squats, goblet squats\n"
+              "Suggest moderate weights: 8-15kg");
+        }
       }
+
+      // Final critical reminder
+      sections.add("\n⚠️⚠️⚠️ CRITICAL RULE ⚠️⚠️⚠️\n"
+          "ONLY suggest exercises that can be performed with the EXACT equipment "
+          "listed above. If an exercise requires equipment NOT in the user's list, "
+          "DO NOT include it under ANY circumstances. When in doubt, use bodyweight "
+          "alternatives.");
     } else {
+      // No equipment specified - assume bodyweight only
       sections.add("Equipment: Bodyweight ONLY");
+      sections.add("\n=== BODYWEIGHT ONLY CONSTRAINTS ===\n"
+          "User has NO equipment. ONLY pure bodyweight exercises allowed.\n"
+          "✓ ALLOWED: Push-ups, squats, lunges, planks, mountain climbers, burpees, "
+          "glute bridges, crunches, leg raises, wall sits, jumping jacks, high knees\n"
+          "✗ FORBIDDEN: Pull-ups, chin-ups, inverted rows, dips, hanging exercises, "
+          "anything requiring bars, rings, benches, or elevated equipment\n"
+          "FOR BACK: Use superman holds, reverse snow angels, prone raises ONLY");
     }
   }
 
-// Update JSON structure section
+  // Update JSON structure section
   static void _addCompactJsonStructure(List<String> sections) {
     sections.add(
       "\n=== JSON OUTPUT ===\n"

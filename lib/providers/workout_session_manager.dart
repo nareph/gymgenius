@@ -325,27 +325,46 @@ class WorkoutSessionManager with ChangeNotifier {
       Log.debug("Workout NOT active. Cannot end");
       return null;
     }
+
     String endedWorkoutName = _currentWorkoutName;
+    DateTime workoutEndTime = DateTime.now();
+
     Log.debug(
         "Ending workout '$endedWorkoutName'. Duration: ${_formatDuration(_currentWorkoutDuration)}");
+
     _sessionDurationTimer?.cancel();
     _restTimer?.cancel();
 
-// Disable wakelock when workout ends
+    // Disable wakelock when workout ends
     _disableWakelock();
 
+    // Create comprehensive workout log data
     final Map<String, dynamic> workoutLogData = {
-      'workoutName': _currentWorkoutName,
+      'workoutName': _currentWorkoutName.isNotEmpty
+          ? _currentWorkoutName
+          : 'Unnamed Workout',
       'routineId': _currentRoutineId,
       'dayKey': _currentDayKey,
-      'startTime': _workoutStartTime?.toIso8601String(),
-      'endTime': DateTime.now().toIso8601String(),
+      'startTime': _workoutStartTime?.toIso8601String() ??
+          workoutEndTime.toIso8601String(),
+      'endTime': workoutEndTime.toIso8601String(),
       'durationSeconds': _currentWorkoutDuration.inSeconds,
       'exercises':
           _loggedExercisesData.map((exData) => exData.toMap()).toList(),
       'totalPlannedExercises': _plannedExercises.length,
       'totalCompletedExercises': completedExercisesCount,
     };
+
+    Log.debug("========== WORKOUT LOG DATA PREPARED ==========");
+    Log.debug("  - Name: ${workoutLogData['workoutName']}");
+    Log.debug("  - Duration: ${workoutLogData['durationSeconds']}s");
+    Log.debug(
+        "  - Exercises logged: ${(workoutLogData['exercises'] as List).length}");
+    Log.debug(
+        "  - Completed: ${workoutLogData['totalCompletedExercises']}/${workoutLogData['totalPlannedExercises']}");
+    Log.debug("  - Start: ${workoutLogData['startTime']}");
+    Log.debug("  - End: ${workoutLogData['endTime']}");
+    Log.debug("================================================");
 
     _resetSessionState(notify: false);
     Log.debug(
