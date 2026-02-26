@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:gymgenius/models/logged_exercise.dart';
 import 'package:gymgenius/models/routine.dart';
-import 'package:gymgenius/models/workout_log.dart';
 import 'package:gymgenius/providers/workout_session_manager.dart';
 import 'package:gymgenius/services/logger_service.dart';
 import 'package:gymgenius/viewmodels/exercise_logging_viewmodel.dart';

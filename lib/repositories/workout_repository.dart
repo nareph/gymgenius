@@ -1,5 +1,6 @@
 // lib/repositories/workout_repository.dart
 import 'package:gymgenius/models/hive/workout_log_model.dart';
+import 'package:gymgenius/models/workout_log.dart';
 import 'package:gymgenius/services/database_service.dart';
 import 'package:gymgenius/services/logger_service.dart';
 import 'package:uuid/uuid.dart';
@@ -16,7 +17,7 @@ class WorkoutRepository {
   String? get _currentUserId => _db.getCurrentUserId();
 
   /// Saves a completed workout log to local database
-  Future<SaveResult> saveWorkoutLog(Map<String, dynamic> workoutLog) async {
+  Future<SaveResult> saveWorkoutLog(WorkoutLog workoutLog) async {
     if (_currentUserId == null) {
       Log.error(
           "WorkoutRepository: Cannot save log, user is not authenticated.");
@@ -26,40 +27,31 @@ class WorkoutRepository {
     try {
       Log.debug("========== SAVING WORKOUT LOG ==========");
       Log.debug("Raw workout log data:");
-      Log.debug("  - workoutName: ${workoutLog['workoutName']}");
-      Log.debug("  - durationSeconds: ${workoutLog['durationSeconds']}");
-      Log.debug(
-          "  - exercises count: ${(workoutLog['exercises'] as List?)?.length ?? 0}");
-      Log.debug(
-          "  - totalPlannedExercises: ${workoutLog['totalPlannedExercises']}");
-      Log.debug(
-          "  - totalCompletedExercises: ${workoutLog['totalCompletedExercises']}");
+      Log.debug("  - workoutName: ${workoutLog.workoutName}");
+      Log.debug("  - durationSeconds: ${workoutLog.durationSeconds}");
+      Log.debug("  - exercises count: ${workoutLog.exercises.length}");
 
-      final log = WorkoutLogModel(
+      final hiveModel = WorkoutLogModel(
         id: _uuid.v4(),
         userId: _currentUserId!,
         savedAt: DateTime.now(),
-        workoutData: workoutLog,
-        synced: true, // Always synced in local-only mode
+        workoutData: workoutLog.toMap(),
+        synced: true,
       );
 
-      Log.debug("WorkoutLogModel created with ID: ${log.id}");
-      Log.debug("  - userId: ${log.userId}");
-      Log.debug("  - savedAt: ${log.savedAt}");
-      Log.debug("  - workoutData keys: ${log.workoutData.keys.toList()}");
+      Log.debug("WorkoutLogModel created with ID: ${hiveModel.id}");
+      Log.debug("  - userId: ${hiveModel.userId}");
+      Log.debug("  - savedAt: ${hiveModel.savedAt}");
+      Log.debug("  - workoutData keys: ${hiveModel.workoutData.keys.toList()}");
 
-      await _db.saveWorkoutLog(log);
+      await _db.saveWorkoutLog(hiveModel);
 
       // Verify the save by reading it back
-      final savedLog = _db.getWorkoutLog(log.id);
+      final savedLog = _db.getWorkoutLog(hiveModel.id);
       if (savedLog != null) {
         Log.debug("Verification: Log saved successfully");
         Log.debug(
             "  - Saved workoutName: ${savedLog.workoutData['workoutName']}");
-        Log.debug(
-            "  - Saved durationSeconds: ${savedLog.workoutData['durationSeconds']}");
-        Log.debug(
-            "  - Saved exercises count: ${(savedLog.workoutData['exercises'] as List?)?.length ?? 0}");
       } else {
         Log.error("Verification FAILED: Could not read back saved log!");
       }
@@ -75,9 +67,12 @@ class WorkoutRepository {
   }
 
   /// Get unsynced logs (useful if you later add cloud sync)
-  List<WorkoutLogModel> getUnsyncedLogs() {
+  List<WorkoutLog> getUnsyncedLogs() {
     if (_currentUserId == null) return [];
-    return _db.getUnsyncedLogs(_currentUserId!);
+    return _db
+        .getUnsyncedLogs(_currentUserId!)
+        .map((log) => WorkoutLog.fromHiveModel(log))
+        .toList();
   }
 
   /// Mark a log as synced

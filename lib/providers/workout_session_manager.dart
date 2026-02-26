@@ -3,13 +3,17 @@
 import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
+import 'package:gymgenius/models/logged_exercise.dart';
 import 'package:gymgenius/models/routine.dart';
 import 'package:gymgenius/models/workout_log.dart';
 import 'package:gymgenius/services/logger_service.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+import 'package:uuid/uuid.dart';
 
 class WorkoutSessionManager with ChangeNotifier {
   final AudioPlayer _audioPlayer = AudioPlayer();
+  final _uuid = const Uuid();
+
   bool _restEndTimeSoundPlayed = false;
   bool _exerciseTimeUpSoundPlayed = false;
   bool _isWorkoutActive = false;
@@ -26,6 +30,8 @@ class WorkoutSessionManager with ChangeNotifier {
   int _restTimeRemainingSeconds = 0;
   int _currentRestTotalSeconds = 0;
   bool _isResting = false;
+
+  // Getters
   bool get isWorkoutActive => _isWorkoutActive;
   Duration get currentWorkoutDuration => _currentWorkoutDuration;
   DateTime? get workoutStartTime => _workoutStartTime;
@@ -36,16 +42,19 @@ class WorkoutSessionManager with ChangeNotifier {
       List.unmodifiable(_plannedExercises);
   List<LoggedExerciseData> get loggedExercisesData =>
       List.unmodifiable(_loggedExercisesData);
+
   RoutineExercise? get currentExercise => (_isWorkoutActive &&
           _currentExerciseIndex >= 0 &&
           _currentExerciseIndex < _plannedExercises.length)
       ? _plannedExercises[_currentExerciseIndex]
       : null;
+
   LoggedExerciseData? get currentLoggedExerciseData => (_isWorkoutActive &&
           _currentExerciseIndex >= 0 &&
           _currentExerciseIndex < _loggedExercisesData.length)
       ? _loggedExercisesData[_currentExerciseIndex]
       : null;
+
   int get currentSetIndexForLogging =>
       currentLoggedExerciseData?.loggedSets.length ?? 0;
   int get currentExerciseIndex => _currentExerciseIndex;
@@ -55,6 +64,8 @@ class WorkoutSessionManager with ChangeNotifier {
   bool get isResting => _isResting;
   int get restTimeRemainingSeconds => _restTimeRemainingSeconds;
   int get currentRestTotalSeconds => _currentRestTotalSeconds;
+
+  // Sound methods
   Future<void> _playSound(String assetName) async {
     try {
       await _audioPlayer.play(AssetSource('sounds/$assetName'));
@@ -76,6 +87,7 @@ class WorkoutSessionManager with ChangeNotifier {
     _exerciseTimeUpSoundPlayed = false;
   }
 
+  // Wakelock methods
   Future<void> _enableWakelock() async {
     try {
       await WakelockPlus.enable();
@@ -94,6 +106,7 @@ class WorkoutSessionManager with ChangeNotifier {
     }
   }
 
+  // Internal workout start
   void _startWorkoutInternal(
     List<RoutineExercise> exercisesForSession, {
     String workoutName = "Workout Session",
@@ -111,7 +124,8 @@ class WorkoutSessionManager with ChangeNotifier {
         .map((ex) => LoggedExerciseData(originalExercise: ex))
         .toList();
     _currentExerciseIndex = _plannedExercises.isNotEmpty ? 0 : -1;
-// Enable wakelock to keep screen awake during workout
+
+    // Enable wakelock to keep screen awake during workout
     _enableWakelock();
 
     _sessionDurationTimer?.cancel();
@@ -123,10 +137,12 @@ class WorkoutSessionManager with ChangeNotifier {
       _currentWorkoutDuration += const Duration(seconds: 1);
       notifyListeners();
     });
+
     Log.debug(
         "Workout '$workoutName' started. CurrentExIndex: $_currentExerciseIndex. RoutineID: $routineId, DayKey: $dayKey");
   }
 
+  // Public workout start methods
   bool startWorkoutIfNoSession(
     List<RoutineExercise> exercisesForSession, {
     String workoutName = "Workout Session",
@@ -161,6 +177,7 @@ class WorkoutSessionManager with ChangeNotifier {
     notifyListeners();
   }
 
+  // Logging methods
   void logSetForCurrentExercise(String reps, String weight) {
     if (currentExercise == null || currentLoggedExerciseData == null) {
       Log.error("No current exercise or logged data available");
@@ -200,6 +217,7 @@ class WorkoutSessionManager with ChangeNotifier {
     notifyListeners();
   }
 
+  // Rest timer methods
   void startRestTimer(int durationSeconds) {
     if (durationSeconds <= 0) {
       Log.debug("Rest timer not started, duration was $durationSeconds");
@@ -252,10 +270,11 @@ class WorkoutSessionManager with ChangeNotifier {
     notifyListeners();
   }
 
+  // Navigation methods
   bool moveToNextExercise() {
     if (!_isWorkoutActive) return false;
     Log.debug(
-        "Attempting move from index currentExerciseIndex(_currentExerciseIndex (c​urrentExerciseIndex({currentExercise?.name})");
+        "Attempting move from index currentExerciseIndex($_currentExerciseIndex) for ${currentExercise?.name}");
 
     if (currentExercise != null &&
         currentLoggedExerciseData != null &&
@@ -320,7 +339,8 @@ class WorkoutSessionManager with ChangeNotifier {
     return true;
   }
 
-  Map<String, dynamic>? endWorkout() {
+  /// End workout and return WorkoutLog object (without user ID - repository handles that)
+  WorkoutLog? endWorkout() {
     if (!_isWorkoutActive) {
       Log.debug("Workout NOT active. Cannot end");
       return null;
@@ -338,44 +358,49 @@ class WorkoutSessionManager with ChangeNotifier {
     // Disable wakelock when workout ends
     _disableWakelock();
 
-    // Create comprehensive workout log data
-    final Map<String, dynamic> workoutLogData = {
-      'workoutName': _currentWorkoutName.isNotEmpty
+    // Create WorkoutLog object WITHOUT userId (repository will add it)
+    final workoutLog = WorkoutLog(
+      id: _uuid.v4(),
+      userId: '', // Will be set by repository when saving
+      savedAt: DateTime.now(),
+      workoutName: _currentWorkoutName.isNotEmpty
           ? _currentWorkoutName
           : 'Unnamed Workout',
-      'routineId': _currentRoutineId,
-      'dayKey': _currentDayKey,
-      'startTime': _workoutStartTime?.toIso8601String() ??
-          workoutEndTime.toIso8601String(),
-      'endTime': workoutEndTime.toIso8601String(),
-      'durationSeconds': _currentWorkoutDuration.inSeconds,
-      'exercises':
-          _loggedExercisesData.map((exData) => exData.toMap()).toList(),
-      'totalPlannedExercises': _plannedExercises.length,
-      'totalCompletedExercises': completedExercisesCount,
-    };
+      routineId: _currentRoutineId,
+      dayKey: _currentDayKey,
+      startTime: _workoutStartTime ?? workoutEndTime,
+      endTime: workoutEndTime,
+      durationSeconds: _currentWorkoutDuration.inSeconds,
+      exercises: List.from(_loggedExercisesData),
+      totalPlannedExercises: _plannedExercises.length,
+      totalCompletedExercises: completedExercisesCount,
+      synced: true,
+    );
 
-    Log.debug("========== WORKOUT LOG DATA PREPARED ==========");
-    Log.debug("  - Name: ${workoutLogData['workoutName']}");
-    Log.debug("  - Duration: ${workoutLogData['durationSeconds']}s");
+    Log.debug("========== WORKOUT LOG OBJECT CREATED ==========");
+    Log.debug("  - ID: ${workoutLog.id}");
+    Log.debug("  - Name: ${workoutLog.workoutName}");
+    Log.debug("  - Duration: ${workoutLog.durationSeconds}s");
+    Log.debug("  - Exercises logged: ${workoutLog.exercises.length}");
     Log.debug(
-        "  - Exercises logged: ${(workoutLogData['exercises'] as List).length}");
-    Log.debug(
-        "  - Completed: ${workoutLogData['totalCompletedExercises']}/${workoutLogData['totalPlannedExercises']}");
-    Log.debug("  - Start: ${workoutLogData['startTime']}");
-    Log.debug("  - End: ${workoutLogData['endTime']}");
+        "  - Completed: ${workoutLog.totalCompletedExercises}/${workoutLog.totalPlannedExercises}");
+    Log.debug("  - Start: ${workoutLog.startTime}");
+    Log.debug("  - End: ${workoutLog.endTime}");
     Log.debug("================================================");
 
     _resetSessionState(notify: false);
     Log.debug(
         "Session '$endedWorkoutName' ended. Log prepared. isWorkoutActive is now $_isWorkoutActive");
     notifyListeners();
-    return workoutLogData;
+
+    return workoutLog;
   }
 
+  // Reset session
   void _resetSessionState({bool notify = true}) {
     Log.debug("Resetting all session state");
-// Disable wakelock when resetting session
+
+    // Disable wakelock when resetting session
     _disableWakelock();
 
     _isWorkoutActive = false;
@@ -403,6 +428,7 @@ class WorkoutSessionManager with ChangeNotifier {
     }
   }
 
+  // Utility methods
   String _formatDuration(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, '0');
     final hours = duration.inHours;
@@ -420,7 +446,8 @@ class WorkoutSessionManager with ChangeNotifier {
     _sessionDurationTimer?.cancel();
     _restTimer?.cancel();
     _audioPlayer.dispose();
-// Ensure wakelock is disabled on disposal
+
+    // Ensure wakelock is disabled on disposal
     _disableWakelock();
 
     super.dispose();

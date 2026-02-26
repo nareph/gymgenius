@@ -1,136 +1,110 @@
-// lib/models/logged_exercise.dart
-import 'package:gymgenius/models/routine.dart';
+// lib/models/workout_log.dart
+import 'package:gymgenius/models/hive/workout_log_model.dart';
+import 'package:gymgenius/models/logged_exercise.dart';
 import 'package:gymgenius/utils/type_converter.dart';
 
-/// Represents a single set of an exercise that has been performed and logged by the user.
-class LoggedSetData {
-  final int setNumber;
-  final String performedReps;
-  final String performedWeightKg;
-  final DateTime loggedAt;
+class WorkoutLog {
+  final String id;
+  final String userId;
+  final DateTime savedAt;
+  final String workoutName;
+  final String? routineId;
+  final String? dayKey;
+  final DateTime startTime;
+  final DateTime endTime;
+  final int durationSeconds;
+  final List<LoggedExerciseData> exercises;
+  final int totalPlannedExercises;
+  final int totalCompletedExercises;
+  final bool synced;
 
-  LoggedSetData({
-    required this.setNumber,
-    required this.performedReps,
-    required this.performedWeightKg,
-    required this.loggedAt,
+  WorkoutLog({
+    required this.id,
+    required this.userId,
+    required this.savedAt,
+    required this.workoutName,
+    this.routineId,
+    this.dayKey,
+    required this.startTime,
+    required this.endTime,
+    required this.durationSeconds,
+    required this.exercises,
+    required this.totalPlannedExercises,
+    required this.totalCompletedExercises,
+    this.synced = true,
   });
 
-  /// Converts this object into a map suitable for storage.
-  Map<String, dynamic> toMap() {
-    return {
-      'setNumber': setNumber,
-      'performedReps': performedReps,
-      'performedWeightKg': performedWeightKg,
-      'loggedAt': loggedAt.millisecondsSinceEpoch,
-    };
-  }
+  // Convert from Hive WorkoutLogModel + workoutData
+  factory WorkoutLog.fromHiveModel(WorkoutLogModel hiveModel) {
+    // Use TypeConverter to safely convert to Map<String, dynamic>
+    final data = TypeConverter.toSafeMap(hiveModel.workoutData);
 
-  /// Factory constructor to create LoggedSetData from a map
-  factory LoggedSetData.fromMap(Map<String, dynamic> map) {
-    // Use TypeConverter to ensure type safety
-    final safeMap = TypeConverter.toSafeMap(map);
-
-    return LoggedSetData(
-      setNumber: safeMap['setNumber'] is int ? safeMap['setNumber'] as int : 0,
-      performedReps: safeMap['performedReps'] is String
-          ? safeMap['performedReps'] as String
-          : '',
-      performedWeightKg: safeMap['performedWeightKg'] is String
-          ? safeMap['performedWeightKg'] as String
-          : '',
-      loggedAt: safeMap['loggedAt'] is int
-          ? DateTime.fromMillisecondsSinceEpoch(safeMap['loggedAt'] as int)
-          : DateTime.now(),
-    );
-  }
-}
-
-/// Represents a full exercise, including its planned details and all the sets logged against it.
-class LoggedExerciseData {
-  final RoutineExercise originalExercise;
-  final List<LoggedSetData> loggedSets;
-  final bool isCompleted;
-
-  LoggedExerciseData({
-    required this.originalExercise,
-    this.loggedSets = const [],
-    this.isCompleted = false,
-  });
-
-  /// Returns a new instance with an added set.
-  LoggedExerciseData addSet(LoggedSetData set) {
-    return LoggedExerciseData(
-      originalExercise: originalExercise,
-      loggedSets: List.from(loggedSets)..add(set),
-      isCompleted: isCompleted,
+    return WorkoutLog(
+      id: hiveModel.id,
+      userId: hiveModel.userId,
+      savedAt: hiveModel.savedAt,
+      workoutName: data['workoutName']?.toString() ?? 'Unnamed Workout',
+      routineId: data['routineId']?.toString(),
+      dayKey: data['dayKey']?.toString(),
+      startTime: _parseDateTime(data['startTime']),
+      endTime: _parseDateTime(data['endTime']),
+      durationSeconds: data['durationSeconds'] is num
+          ? (data['durationSeconds'] as num).toInt()
+          : 0,
+      exercises: _parseExercises(data['exercises']),
+      totalPlannedExercises: data['totalPlannedExercises'] is num
+          ? (data['totalPlannedExercises'] as num).toInt()
+          : 0,
+      totalCompletedExercises: data['totalCompletedExercises'] is num
+          ? (data['totalCompletedExercises'] as num).toInt()
+          : 0,
+      synced: hiveModel.synced,
     );
   }
 
-  /// Returns a new instance with an updated completion status.
-  LoggedExerciseData markAsCompleted(bool completedStatus) {
-    return LoggedExerciseData(
-      originalExercise: originalExercise,
-      loggedSets: loggedSets,
-      isCompleted: completedStatus,
-    );
-  }
+  static List<LoggedExerciseData> _parseExercises(dynamic exercisesData) {
+    if (exercisesData == null) return [];
 
-  /// Converts this object into a map suitable for local storage,
-  /// containing both the planned and performed data for the exercise.
-  Map<String, dynamic> toMap() {
-    return {
-      // Original plan data
-      'exerciseId': originalExercise.id,
-      'exerciseName': originalExercise.name,
-      'targetSets': originalExercise.sets,
-      'targetReps': originalExercise.reps,
-      'targetWeight': originalExercise.weightSuggestionKg,
-      'targetRest': originalExercise.restBetweenSetsSeconds,
-      'description': originalExercise.description,
-      'usesWeight': originalExercise.usesWeight,
-      'isTimed': originalExercise.isTimed,
-      if (originalExercise.targetDurationSeconds != null)
-        'targetDurationSeconds': originalExercise.targetDurationSeconds,
-
-      // Logged data
-      'loggedSets': loggedSets.map((s) => s.toMap()).toList(),
-      'isCompleted': isCompleted,
-    };
-  }
-
-  /// Factory constructor to create LoggedExerciseData from a map
-  factory LoggedExerciseData.fromMap(Map<String, dynamic> map) {
-    // Use TypeConverter to ensure type safety
-    final safeMap = TypeConverter.toSafeMap(map);
-
-    // Parse logged sets safely
-    List<LoggedSetData> loggedSets = [];
-    if (safeMap['loggedSets'] is List) {
-      loggedSets = (safeMap['loggedSets'] as List).map((setMap) {
-        final safeSetMap = TypeConverter.toSafeMap(setMap);
-        return LoggedSetData.fromMap(safeSetMap);
-      }).toList();
+    final List<dynamic> exercisesList;
+    if (exercisesData is List) {
+      exercisesList = exercisesData;
+    } else {
+      exercisesList = [];
     }
 
-    return LoggedExerciseData(
-      originalExercise: RoutineExercise.fromMap({
-        'id': safeMap['exerciseId'],
-        'name': safeMap['exerciseName'],
-        'sets': safeMap['targetSets'],
-        'reps': safeMap['targetReps'],
-        'weightSuggestionKg': safeMap['targetWeight'],
-        'restBetweenSetsSeconds': safeMap['targetRest'],
-        'description': safeMap['description'],
-        'usesWeight': safeMap['usesWeight'],
-        'isTimed': safeMap['isTimed'],
-        if (safeMap['targetDurationSeconds'] != null)
-          'targetDurationSeconds': safeMap['targetDurationSeconds'],
-      }),
-      loggedSets: loggedSets,
-      isCompleted: safeMap['isCompleted'] is bool
-          ? safeMap['isCompleted'] as bool
-          : false,
-    );
+    return exercisesList.map((ex) {
+      final safeEx = TypeConverter.toSafeMap(ex);
+      return LoggedExerciseData.fromMap(safeEx);
+    }).toList();
+  }
+
+  static DateTime _parseDateTime(dynamic value) {
+    if (value is String) {
+      try {
+        return DateTime.parse(value);
+      } catch (e) {
+        return DateTime.now();
+      }
+    } else if (value is DateTime) {
+      return value;
+    } else if (value is int) {
+      return DateTime.fromMillisecondsSinceEpoch(value);
+    }
+    return DateTime.now();
+  }
+
+  // Convert to map for Hive storage
+  Map<String, dynamic> toMap() {
+    return {
+      'workoutName': workoutName,
+      'routineId': routineId,
+      'dayKey': dayKey,
+      'startTime': startTime.toIso8601String(),
+      'endTime': endTime.toIso8601String(),
+      'durationSeconds': durationSeconds,
+      'exercises': exercises.map((e) => e.toMap()).toList(),
+      'totalPlannedExercises': totalPlannedExercises,
+      'totalCompletedExercises': totalCompletedExercises,
+    };
   }
 }

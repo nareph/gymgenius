@@ -3,6 +3,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:gymgenius/models/routine.dart';
+import 'package:gymgenius/models/workout_log.dart';
 import 'package:gymgenius/repositories/tracking_repository.dart';
 import 'package:gymgenius/services/database_service.dart';
 import 'package:gymgenius/services/logger_service.dart';
@@ -50,8 +51,8 @@ class TrackingViewModel extends ChangeNotifier {
   Set<DateTime> _completedWorkoutDates = {};
   Set<DateTime> get completedWorkoutDates => _completedWorkoutDates;
 
-  List<Map<String, dynamic>> _selectedDayLogs = [];
-  List<Map<String, dynamic>> get selectedDayLogs => _selectedDayLogs;
+  List<WorkoutLog> _selectedDayLogs = [];
+  List<WorkoutLog> get selectedDayLogs => _selectedDayLogs;
 
   Future<void> _loadInitialData() async {
     Log.info("TrackingViewModel: Loading initial data...");

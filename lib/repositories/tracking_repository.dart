@@ -1,5 +1,6 @@
 // lib/repositories/tracking_repository.dart
 import 'package:gymgenius/models/hive/workout_log_model.dart';
+import 'package:gymgenius/models/workout_log.dart';
 import 'package:gymgenius/services/database_service.dart';
 import 'package:gymgenius/services/logger_service.dart';
 
@@ -24,7 +25,7 @@ class TrackingRepository {
   }
 
   /// Fetches the detailed workout logs for a specific day
-  Future<List<Map<String, dynamic>>> getLogsForDay(DateTime day) async {
+  Future<List<WorkoutLog>> getLogsForDay(DateTime day) async {
     if (_currentUserId == null) {
       Log.debug("TrackingRepository.getLogsForDay: No current user");
       return [];
@@ -40,12 +41,14 @@ class TrackingRepository {
 
     final result = logs.map((log) {
       Log.debug("  - Log ID: ${log.id}");
-      Log.debug("    - workoutName: ${log.workoutData['workoutName']}");
-      Log.debug("    - durationSeconds: ${log.workoutData['durationSeconds']}");
-      Log.debug(
-          "    - exercises count: ${(log.workoutData['exercises'] as List?)?.length ?? 0}");
 
-      return {...log.workoutData};
+      final workoutLog = WorkoutLog.fromHiveModel(log);
+
+      Log.debug("    - workoutName: ${workoutLog.workoutName}");
+      Log.debug("    - durationSeconds: ${workoutLog.durationSeconds}");
+      Log.debug("    - exercises count: ${workoutLog.exercises.length}");
+
+      return workoutLog;
     }).toList();
 
     Log.debug("==========================================");
@@ -54,8 +57,11 @@ class TrackingRepository {
   }
 
   /// Get all workout logs for the current user
-  List<WorkoutLogModel> getAllWorkoutLogs() {
+  List<WorkoutLog> getAllWorkoutLogs() {
     if (_currentUserId == null) return [];
-    return _db.getUserWorkoutLogs(_currentUserId!);
+    return _db
+        .getUserWorkoutLogs(_currentUserId!)
+        .map((log) => WorkoutLog.fromHiveModel(log))
+        .toList();
   }
 }
