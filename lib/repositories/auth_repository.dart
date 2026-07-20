@@ -1,4 +1,3 @@
-// lib/repositories/auth_repository.dart
 import 'dart:async';
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
@@ -19,13 +18,11 @@ class AuthRepository {
   final FlutterSecureStorage _secureStorage;
   final _uuid = const Uuid();
 
-  // Stream controller for auth state changes
   final _authStateController = StreamController<UserModel?>.broadcast();
 
   UserModel? _currentUser;
   bool _initialized = false;
 
-  /// Provides direct access to the current user object.
   UserModel? get currentUser => _currentUser;
 
   AuthRepository({
@@ -36,7 +33,6 @@ class AuthRepository {
     _initializeCurrentUser();
   }
 
-  /// Initialize current user from database
   Future<void> _initializeCurrentUser() async {
     try {
       final userId = _db.getCurrentUserId();
@@ -51,7 +47,6 @@ class AuthRepository {
 
       _initialized = true;
 
-      // Emit initial state after a short delay to ensure listeners are ready
       Future.delayed(const Duration(milliseconds: 100), () {
         if (!_authStateController.isClosed) {
           _authStateController.add(_currentUser);
@@ -67,29 +62,22 @@ class AuthRepository {
     }
   }
 
-  /// Stream of [UserModel] which will emit the current user when the auth state changes.
   Stream<UserModel?> get authStateChanges async* {
-    // If already initialized, emit current state immediately
     if (_initialized) {
       yield _currentUser;
     }
-    // Then continue with the stream
     yield* _authStateController.stream;
   }
 
   // --- Authentication Methods ---
 
-  /// Signs in a user with the given [email] and [password].
-  /// Throws an [AuthException] if signing in fails.
   Future<void> signInWithEmailAndPassword({
     required String email,
     required String password,
   }) async {
     try {
-      // Hash the password for comparison
       final hashedPassword = _hashPassword(password);
 
-      // Get stored credentials
       final storedHash = await _secureStorage.read(key: 'password_$email');
       final storedUid = await _secureStorage.read(key: 'uid_$email');
 
@@ -101,20 +89,15 @@ class AuthRepository {
         throw AuthException('Incorrect password');
       }
 
-      // Load user from database
       final user = _db.getUser(storedUid);
       if (user == null) {
         throw AuthException('User data not found');
       }
 
-      // Set as current user
       _currentUser = user;
       await _db.setCurrentUser(user.uid);
-
-      // Emit state change AFTER updating _currentUser
       _authStateController.add(_currentUser);
-      Log.debug(
-          "AuthRepository: User ${user.email} signed in successfully, state emitted");
+      Log.debug("AuthRepository: User ${user.email} signed in successfully");
     } catch (e) {
       if (e is AuthException) rethrow;
       Log.error("AuthRepository: Error during sign-in", error: e);
@@ -122,8 +105,6 @@ class AuthRepository {
     }
   }
 
-  /// Sends a password reset link to the given [email].
-  /// In local mode, this generates a reset token.
   Future<void> sendPasswordResetEmail({required String email}) async {
     try {
       final storedUid = await _secureStorage.read(key: 'uid_$email');
@@ -131,7 +112,6 @@ class AuthRepository {
         throw AuthException('No user found with this email');
       }
 
-      // Generate reset token (in a real app, you'd send this via email)
       final resetToken = _uuid.v4();
       await _secureStorage.write(
         key: 'reset_token_$email',
@@ -139,7 +119,6 @@ class AuthRepository {
       );
 
       Log.debug("AuthRepository: Password reset token generated for $email");
-      // In a real implementation, send this token via email
     } catch (e) {
       if (e is AuthException) rethrow;
       Log.error("AuthRepository: Error during password reset", error: e);
@@ -147,8 +126,6 @@ class AuthRepository {
     }
   }
 
-  /// Signs up a new user with the given [email] and [password].
-  /// Note: Existing user data should be cleared BEFORE calling this (in home_screen.dart)
   Future<void> signUp({
     required String email,
     required String password,
@@ -157,21 +134,17 @@ class AuthRepository {
     try {
       Log.debug("AuthRepository: Starting signup for $email");
 
-      // Check if user already exists with this email
       final existingUid = await _secureStorage.read(key: 'uid_$email');
       if (existingUid != null) {
         throw AuthException('An account with this email already exists');
       }
 
-      // Create new user
       final uid = _uuid.v4();
       final hashedPassword = _hashPassword(password);
 
-      // Store credentials securely
       await _secureStorage.write(key: 'uid_$email', value: uid);
       await _secureStorage.write(key: 'password_$email', value: hashedPassword);
 
-      // Validate onboarding data
       bool isOnboardingComplete = false;
       if (onboardingData != null && onboardingData.isNotEmpty) {
         final onboarding = OnboardingData.fromMap(onboardingData);
@@ -184,7 +157,6 @@ class AuthRepository {
         Log.debug("  - Is sufficient: $isOnboardingComplete");
       }
 
-      // Create user model
       final user = UserModel(
         uid: uid,
         email: email,
@@ -200,14 +172,9 @@ class AuthRepository {
       Log.debug("  - Display Name: ${user.displayName}");
       Log.debug("  - Onboarding Complete: ${user.onboardingCompleted}");
 
-      // Save to database (DatabaseService handles clearing old data if different UID)
       await _db.saveUser(user);
-
-      // Set as current user
       _currentUser = user;
       await _db.setCurrentUser(uid);
-
-      // Emit state change AFTER updating _currentUser
       _authStateController.add(_currentUser);
       Log.debug("AuthRepository: User $email signed up successfully");
     } catch (e, s) {
@@ -218,7 +185,6 @@ class AuthRepository {
     }
   }
 
-  /// Signs out the current user.
   Future<void> signOut() async {
     _currentUser = null;
     await _db.setCurrentUser(null);
@@ -228,7 +194,6 @@ class AuthRepository {
 
   // --- User Profile Logic ---
 
-  /// Checks if the user's profile setup is marked as complete.
   Future<bool> isProfileSetupComplete(String userId) async {
     if (userId.isEmpty) {
       Log.warning("isProfileSetupComplete called with an empty userId.");
@@ -245,7 +210,6 @@ class AuthRepository {
     return false;
   }
 
-  /// Checks if user has usable cached data (onboarding profile or active routine).
   Future<bool> hasUsableCachedData(String userId) async {
     if (userId.isEmpty) return false;
 
@@ -253,7 +217,6 @@ class AuthRepository {
       final user = _db.getUser(userId);
       if (user == null) return false;
 
-      // Check for valid onboarding data
       if (user.onboardingData != null) {
         final onboarding = OnboardingData.fromMap(user.onboardingData!);
         if (onboarding.isSufficientForAiGeneration) {
@@ -262,10 +225,10 @@ class AuthRepository {
         }
       }
 
-      // Check for non-expired routine
-      final routine = _db.getCurrentRoutine(userId);
-      if (routine != null && !routine.isExpired()) {
-        Log.debug("User $userId has a valid routine.");
+      // Check for non-expired program
+      final program = _db.getCurrentProgram(userId);
+      if (program != null && !program.isExpired()) {
+        Log.debug("User $userId has a valid program.");
         return true;
       }
 
@@ -278,7 +241,6 @@ class AuthRepository {
     }
   }
 
-  /// Hash password using SHA-256
   String _hashPassword(String password) {
     final bytes = utf8.encode(password);
     final digest = sha256.convert(bytes);
@@ -290,7 +252,6 @@ class AuthRepository {
   }
 }
 
-/// Custom exception for authentication errors
 class AuthException implements Exception {
   final String message;
   AuthException(this.message);

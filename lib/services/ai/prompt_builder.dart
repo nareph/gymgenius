@@ -2,13 +2,13 @@
 import 'package:gymgenius/services/ai/types.dart';
 
 class PromptBuilder {
-  static String buildRoutinePrompt({
+  static String buildProgramPrompt({
     required OnboardingDataAI onboarding,
     required List<MuscleSplit> selectedSplit,
     required int workoutDaysCount,
     required bool useSpecifiedDays,
     List<AggregatedPerformanceData>? aggregatedPerformanceSummary,
-    Map<String, dynamic>? previousRoutine,
+    Map<String, dynamic>? previousProgram,
     List<String>? regenerationInstructions,
   }) {
     final sections = <String>[];
@@ -56,11 +56,11 @@ class PromptBuilder {
       );
     }
 
-    // Previous routine
-    if (previousRoutine != null && previousRoutine['name'] != null) {
+    // Previous Program
+    if (previousProgram != null && previousProgram['name'] != null) {
       sections.add(
-        "Previous: ${previousRoutine['name']} "
-        "(${previousRoutine['durationInWeeks'] ?? 'N/A'} weeks)",
+        "Previous: ${previousProgram['name']} "
+        "(${previousProgram['durationInWeeks'] ?? 'N/A'} weeks)",
       );
     }
 

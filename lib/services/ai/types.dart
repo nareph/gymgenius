@@ -1,5 +1,7 @@
 // lib/services/ai/types.dart
 
+export 'package:gymgenius/engines/workout_engine/models/muscle_split.dart';
+
 class OnboardingDataAI {
   final String? goal;
   final String? gender;
@@ -119,18 +121,6 @@ class PhysicalStats {
       'targetWeightKg': targetWeightKg,
     };
   }
-}
-
-class MuscleSplit {
-  final String name;
-  final List<String> muscles;
-  final String theme;
-
-  MuscleSplit({
-    required this.name,
-    required this.muscles,
-    required this.theme,
-  });
 }
 
 class AiExercise {

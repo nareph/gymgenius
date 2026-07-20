@@ -1,42 +1,41 @@
-// lib/services/ai/generators/gemini_generator.dart
+// lib/services/ai/generators/gemini_program_generator.dart
 import 'package:gymgenius/config/ai_config.dart';
-import 'package:gymgenius/models/routine.dart';
 import 'package:gymgenius/services/ai/api/gemini_api_client.dart';
 import 'package:gymgenius/services/ai/prompt_builder.dart';
 import 'package:gymgenius/services/ai/types.dart';
 import 'package:gymgenius/services/logger_service.dart';
 
-/// Generate routines using Gemini AI API
-class GeminiRoutineGenerator {
+/// Generate training programs using Gemini AI
+class GeminiProgramGenerator {
   final GeminiAPIClient _geminiClient;
-  static const _tag = 'GeminiGenerator';
-  GeminiRoutineGenerator({GeminiAPIClient? geminiClient})
+  static const _tag = 'GeminiProgramGenerator';
+
+  GeminiProgramGenerator({GeminiAPIClient? geminiClient})
       : _geminiClient = geminiClient ?? GeminiAPIClient();
 
-  /// Generate routine using Gemini AI
+  /// Generate a training program using Gemini AI
   Future<Map<String, dynamic>> generate({
     required OnboardingDataAI onboardingData,
     required List<MuscleSplit> selectedSplit,
     required int workoutDaysCount,
     required bool useSpecifiedDays,
-    WeeklyRoutine? previousRoutine,
+    Map<String, dynamic>? previousProgram,
   }) async {
     try {
       Log.debug('Building optimized prompt', tag: _tag);
-// Build prompt with regeneration instructions if present
-      final prompt = PromptBuilder.buildRoutinePrompt(
+
+      final prompt = PromptBuilder.buildProgramPrompt(
         onboarding: onboardingData,
         selectedSplit: selectedSplit,
         workoutDaysCount: workoutDaysCount,
         useSpecifiedDays: useSpecifiedDays,
         aggregatedPerformanceSummary: [],
-        previousRoutine: previousRoutine?.toMapForCloudFunction(),
+        previousProgram: previousProgram,
         regenerationInstructions: onboardingData.regenerationInstructions,
       );
 
       Log.debug('Prompt length: ${prompt.length} chars', tag: _tag);
 
-      // Warn if prompt exceeds recommended length
       if (prompt.length > AIConfig.maxPromptLength) {
         Log.warning(
           'Prompt exceeds max length (${prompt.length} > ${AIConfig.maxPromptLength})',
@@ -46,7 +45,6 @@ class GeminiRoutineGenerator {
 
       Log.debug('Calling Gemini API', tag: _tag);
 
-      // Call Gemini with increased output token limit
       final responseText = await _geminiClient.generateContent(
         prompt: prompt,
         temperature: 0.7,
@@ -55,18 +53,14 @@ class GeminiRoutineGenerator {
 
       Log.debug('Received response (${responseText.length} chars)', tag: _tag);
 
-      // Save response for debugging
       _saveResponseForDebug(responseText);
 
-      // Check for truncation
       if (_isResponseTruncated(responseText)) {
         Log.warning('Response appears truncated', tag: _tag);
-
-        // If truncated and 5-day split, suggest reduction
         if (workoutDaysCount == 5) {
           throw Exception(
-            'Response truncated for 5-day routine.\n\n'
-            'Gemini cannot generate complete 5-day routines.\n'
+            'Response truncated for 5-day program.\n\n'
+            'Gemini cannot generate complete 5-day programs.\n'
             'Please try:\n'
             '• 3-4 workout days instead\n'
             '• Simpler split (Full Body, Upper/Lower)\n'
@@ -77,21 +71,17 @@ class GeminiRoutineGenerator {
 
       Log.debug('Parsing JSON', tag: _tag);
 
-      // Parse JSON response with repair strategies
-      final routineJson = _geminiClient.parseJsonResponse(responseText);
+      final programJson = _geminiClient.parseJsonResponse(responseText);
 
-      // Validate completeness
-      _validateRoutineCompleteness(routineJson, workoutDaysCount);
+      _validateProgramCompleteness(programJson, workoutDaysCount);
 
-      // Validate structure
-      return _validateRoutineStructure(routineJson);
+      return _validateProgramStructure(programJson);
     } catch (e, s) {
-      Log.error('Error generating routine', tag: _tag, error: e, stackTrace: s);
+      Log.error('Error generating program', tag: _tag, error: e, stackTrace: s);
 
-      // Provide user-friendly error messages
       if (e.toString().contains('truncated')) {
         throw Exception(
-          'Routine generation incomplete.\n\n'
+          'Program generation incomplete.\n\n'
           'The AI response was truncated. Try:\n'
           '• Fewer workout days (3-4 instead of 5)\n'
           '• Simpler equipment (bodyweight only)\n'
@@ -111,16 +101,15 @@ class GeminiRoutineGenerator {
     }
   }
 
-  /// Validate that the routine is complete for expected workout days
-  void _validateRoutineCompleteness(
-    Map<String, dynamic> routine,
+  void _validateProgramCompleteness(
+    Map<String, dynamic> program,
     int expectedWorkoutDays,
   ) {
-    final dailyWorkouts = routine['dailyWorkouts'] as Map<String, dynamic>?;
+    final dailyWorkouts = program['dailyWorkouts'] as Map<String, dynamic>?;
     if (dailyWorkouts == null) {
       throw Exception('Missing dailyWorkouts');
     }
-// Count non-empty days
+
     int nonEmptyDays = 0;
     for (final exercises in dailyWorkouts.values) {
       if (exercises is List && exercises.isNotEmpty) {
@@ -129,33 +118,30 @@ class GeminiRoutineGenerator {
     }
 
     Log.debug(
-      'Routine has $nonEmptyDays/$expectedWorkoutDays workout days',
+      'Program has $nonEmptyDays/$expectedWorkoutDays workout days',
       tag: _tag,
     );
 
-// If fewer days than expected, likely truncated
     if (nonEmptyDays < expectedWorkoutDays) {
       throw Exception(
-        'Incomplete routine: Only $nonEmptyDays/$expectedWorkoutDays days generated.\n'
+        'Incomplete program: Only $nonEmptyDays/$expectedWorkoutDays days generated.\n'
         'Response was likely truncated.',
       );
     }
   }
 
-  /// Validate routine structure
-  Map<String, dynamic> _validateRoutineStructure(Map<String, dynamic> routine) {
-// Check required fields
-    if (!routine.containsKey('name') ||
-        !routine.containsKey('durationInWeeks') ||
-        !routine.containsKey('dailyWorkouts')) {
-      throw Exception('Invalid routine structure from AI');
+  Map<String, dynamic> _validateProgramStructure(Map<String, dynamic> program) {
+    if (!program.containsKey('name') ||
+        !program.containsKey('durationInWeeks') ||
+        !program.containsKey('dailyWorkouts')) {
+      throw Exception('Invalid program structure from AI');
     }
-    final dailyWorkouts = routine['dailyWorkouts'];
+
+    final dailyWorkouts = program['dailyWorkouts'];
     if (dailyWorkouts is! Map<String, dynamic>) {
       throw Exception('Invalid dailyWorkouts structure');
     }
 
-// Ensure all days are present
     final days = [
       'monday',
       'tuesday',
@@ -171,30 +157,25 @@ class GeminiRoutineGenerator {
       }
     }
 
-    return routine;
+    return program;
   }
 
-  /// Check if response appears truncated
   bool _isResponseTruncated(String response) {
     final trimmed = response.trim();
-// Check for truncation markers
     if (trimmed.endsWith('...') ||
         trimmed.endsWith('... (truncated)') ||
         trimmed.endsWith('[TRUNCATED]')) {
       return true;
     }
 
-// Check for unbalanced braces
     final openBraces = '{'.allMatches(trimmed).length;
     final closeBraces = '}'.allMatches(trimmed).length;
     if (openBraces != closeBraces) return true;
 
-// Check for unbalanced brackets
     final openBrackets = '['.allMatches(trimmed).length;
     final closeBrackets = ']'.allMatches(trimmed).length;
     if (openBrackets != closeBrackets) return true;
 
-// Check if ends abnormally
     if (!trimmed.endsWith('}') && !trimmed.endsWith(']')) {
       return true;
     }
@@ -202,7 +183,6 @@ class GeminiRoutineGenerator {
     return false;
   }
 
-  /// Save response for debugging
   void _saveResponseForDebug(String response) {
     try {
       final timestamp = DateTime.now().millisecondsSinceEpoch;

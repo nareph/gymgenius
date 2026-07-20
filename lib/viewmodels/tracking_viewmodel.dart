@@ -1,24 +1,19 @@
-// lib/viewmodels/tracking_viewmodel.dart - UPDATED
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:gymgenius/models/routine.dart';
+import 'package:gymgenius/models/hive/training_program_model.dart';
 import 'package:gymgenius/models/workout_log.dart';
 import 'package:gymgenius/repositories/tracking_repository.dart';
 import 'package:gymgenius/services/database_service.dart';
 import 'package:gymgenius/services/logger_service.dart';
-import 'package:gymgenius/utils/type_converter.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 enum TrackingState { initial, loading, loaded, error }
 
 class TrackingViewModel extends ChangeNotifier {
   final TrackingRepository _repository;
-  StreamSubscription? _routineSubscription;
+  StreamSubscription? _programSubscription;
   StreamSubscription? _logsSubscription;
-
-  // Add a flag to track if data has been loaded at least once
-  bool _hasLoadedInitialData = false;
 
   TrackingViewModel(this._repository) {
     Log.info("TrackingViewModel: Created");
@@ -67,15 +62,12 @@ class TrackingViewModel extends ChangeNotifier {
     }
 
     try {
-      // Load data immediately (not just listen for changes)
-      await _loadRoutineData(userId);
+      await _loadProgramData(userId);
       await _loadCompletedWorkouts(userId);
       await _loadLogsForDay(_selectedDay);
 
-      // Then set up listeners for future changes
       _setupDataListeners(userId);
 
-      _hasLoadedInitialData = true;
       _setState(TrackingState.loaded);
       Log.info("TrackingViewModel: Initial data loaded successfully");
     } catch (error, stackTrace) {
@@ -83,33 +75,29 @@ class TrackingViewModel extends ChangeNotifier {
     }
   }
 
-  Future<void> _loadRoutineData(String userId) async {
-    Log.info("TrackingViewModel: Loading routine data...");
+  Future<void> _loadProgramData(String userId) async {
+    Log.info("TrackingViewModel: Loading program data...");
     try {
-      final routine = DatabaseService.instance.getCurrentRoutine(userId);
-      Log.info("TrackingViewModel: Routine found: ${routine != null}");
+      final program = DatabaseService.instance.getCurrentProgram(userId);
+      Log.info("TrackingViewModel: Program found: ${program != null}");
 
-      if (routine != null && !routine.isExpired()) {
+      if (program != null && !program.isExpired()) {
         try {
-          // Use TypeConverter for type safety
-          final routineMap = routine.toMap();
-          final safeRoutineMap = TypeConverter.toSafeMap(routineMap);
-          final weeklyRoutine = WeeklyRoutine.fromMap(safeRoutineMap);
-          _generatePlannedEventsForRoutine(weeklyRoutine);
+          _generatePlannedEventsForProgram(program);
           Log.info(
               "TrackingViewModel: Planned events generated: ${_plannedEvents.length}");
         } catch (e, s) {
-          Log.error("TrackingViewModel: Failed to parse routine",
+          Log.error("TrackingViewModel: Failed to parse program",
               error: e, stackTrace: s);
           _plannedEvents = {};
         }
       } else {
         _plannedEvents = {};
-        Log.info("TrackingViewModel: No valid routine found");
+        Log.info("TrackingViewModel: No valid program found");
       }
       notifyListeners();
     } catch (error, stackTrace) {
-      Log.error("TrackingViewModel: Error loading routine data",
+      Log.error("TrackingViewModel: Error loading program data",
           error: error, stackTrace: stackTrace);
       _plannedEvents = {};
       notifyListeners();
@@ -142,24 +130,19 @@ class TrackingViewModel extends ChangeNotifier {
   void _setupDataListeners(String userId) {
     Log.info("TrackingViewModel: Setting up data listeners...");
 
-    // Cancel existing subscriptions
-    _routineSubscription?.cancel();
+    _programSubscription?.cancel();
     _logsSubscription?.cancel();
 
-    // Listen to routine changes
-    _routineSubscription = DatabaseService.instance.watchRoutines().listen((_) {
-      Log.info("TrackingViewModel: Routine changed, reloading...");
-      _loadRoutineData(userId);
+    _programSubscription = DatabaseService.instance.watchPrograms().listen((_) {
+      Log.info("TrackingViewModel: Program changed, reloading...");
+      _loadProgramData(userId);
     }, onError: (error) {
-      Log.error("TrackingViewModel: Error in routine stream", error: error);
+      Log.error("TrackingViewModel: Error in program stream", error: error);
     });
 
-    // Listen to workout logs changes
     _logsSubscription = DatabaseService.instance.watchWorkoutLogs().listen((_) {
       Log.info("TrackingViewModel: Workout logs changed, reloading...");
       _loadCompletedWorkouts(userId);
-
-      // If the selected day's completion status changed, refresh its logs
       if (_completedWorkoutDates.contains(_selectedDay) &&
           _selectedDayLogs.isEmpty) {
         _loadLogsForDay(_selectedDay);
@@ -169,22 +152,33 @@ class TrackingViewModel extends ChangeNotifier {
     });
   }
 
-  void _generatePlannedEventsForRoutine(WeeklyRoutine routine) {
+  /// Generate planned events from the Training Program's weekly schedule.
+  void _generatePlannedEventsForProgram(TrainingProgramModel program) {
     final newEvents = <DateTime, List<String>>{};
 
-    if (routine.durationInWeeks <= 0 || routine.dailyWorkouts.isEmpty) {
+    if (program.durationInWeeks <= 0 || program.weeklySchedule.isEmpty) {
       _plannedEvents = newEvents;
       return;
     }
 
-    final startDate = routine.generatedAt;
-    final endDate = routine.expiresAt;
+    final startDate = program.generatedAt;
+    final endDate = program.expiresAt;
     var currentDate = DateTime(startDate.year, startDate.month, startDate.day);
 
+    final daysOfWeek = [
+      'monday',
+      'tuesday',
+      'wednesday',
+      'thursday',
+      'friday',
+      'saturday',
+      'sunday'
+    ];
+
     while (!currentDate.isAfter(endDate)) {
-      final dayKey =
-          WeeklyRoutine.daysOfWeek[currentDate.weekday - 1].toLowerCase();
-      if (routine.dailyWorkouts[dayKey]?.isNotEmpty ?? false) {
+      final dayKey = daysOfWeek[currentDate.weekday - 1];
+      final exercises = program.weeklySchedule[dayKey];
+      if (exercises is List && exercises.isNotEmpty) {
         newEvents[
             DateTime(currentDate.year, currentDate.month, currentDate.day)] = [
           'Planned'
@@ -222,7 +216,7 @@ class TrackingViewModel extends ChangeNotifier {
     if (!isSameDay(_selectedDay, normalizedDay)) {
       _selectedDay = normalizedDay;
       _focusedDay = focusedDay ?? normalizedDay;
-      _selectedDayLogs = []; // Clear immediately for better UX
+      _selectedDayLogs = [];
       _loadLogsForDay(normalizedDay);
       notifyListeners();
     }
@@ -252,7 +246,6 @@ class TrackingViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Add a method to manually refresh data
   Future<void> refresh() async {
     Log.info("TrackingViewModel: Manual refresh requested");
     final userId = DatabaseService.instance.getCurrentUserId();
@@ -264,7 +257,7 @@ class TrackingViewModel extends ChangeNotifier {
   @override
   void dispose() {
     Log.info("TrackingViewModel: Disposing");
-    _routineSubscription?.cancel();
+    _programSubscription?.cancel();
     _logsSubscription?.cancel();
     super.dispose();
   }

@@ -44,13 +44,16 @@ class _HomeScreenState extends State<HomeScreen> {
     Log.debug('HomeScreen: _showOnboarding called');
 
     final db = DatabaseService.instance;
+    // Vérifier les nouvelles boxes : users, programs, weekly_workouts, workout_logs
     final hasExistingData = db.users.isNotEmpty ||
-        db.routines.isNotEmpty ||
+        db.programs.isNotEmpty ||
+        db.weeklyWorkouts.isNotEmpty ||
         db.workoutLogs.isNotEmpty;
 
     Log.debug('HomeScreen: Has existing data? $hasExistingData');
     Log.debug('  - Users: ${db.users.length}');
-    Log.debug('  - Routines: ${db.routines.length}');
+    Log.debug('  - Programs: ${db.programs.length}');
+    Log.debug('  - Weekly Workouts: ${db.weeklyWorkouts.length}');
     Log.debug('  - Logs: ${db.workoutLogs.length}');
 
     if (hasExistingData) {
@@ -69,63 +72,14 @@ class _HomeScreenState extends State<HomeScreen> {
       await _clearAllUserData();
       Log.info('HomeScreen: Data cleared, verification:');
       Log.info('  - Users: ${db.users.length}');
-      Log.info('  - Routines: ${db.routines.length}'); // ← Doit être 0 !
+      Log.info('  - Programs: ${db.programs.length}');
+      Log.info('  - Weekly Workouts: ${db.weeklyWorkouts.length}');
       Log.info('  - Logs: ${db.workoutLogs.length}');
     }
 
     setState(() {
       _currentView = _HomeView.onboarding;
     });
-  }
-
-  void _showLanding() {
-    setState(() {
-      _currentView = _HomeView.landing;
-      _onboardingData = null;
-      Log.debug('HomeScreen: Switched to landing view');
-    });
-  }
-
-  /// Check if there's any existing user data
-  Future<bool> _hasExistingUserData() async {
-    try {
-      final db = DatabaseService.instance;
-
-      // Check Hive boxes
-      if (db.users.isNotEmpty) {
-        Log.debug('HomeScreen: Found ${db.users.length} users in database');
-        return true;
-      }
-
-      if (db.routines.isNotEmpty) {
-        Log.debug(
-            'HomeScreen: Found ${db.routines.length} routines in database');
-        return true;
-      }
-
-      if (db.workoutLogs.isNotEmpty) {
-        Log.debug(
-            'HomeScreen: Found ${db.workoutLogs.length} workout logs in database');
-        return true;
-      }
-
-      // Check FlutterSecureStorage
-      final allKeys = await _secureStorage.readAll();
-      final hasCredentials = allKeys.keys.any((key) =>
-          key.startsWith('uid_') ||
-          key.startsWith('password_') ||
-          key.startsWith('reset_token_'));
-
-      if (hasCredentials) {
-        Log.debug('HomeScreen: Found credentials in secure storage');
-        return true;
-      }
-
-      return false;
-    } catch (e) {
-      Log.error('HomeScreen: Error checking for existing data', error: e);
-      return false;
-    }
   }
 
   /// Clear ALL user data (Hive + FlutterSecureStorage)

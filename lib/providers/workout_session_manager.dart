@@ -4,7 +4,7 @@ import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:gymgenius/models/logged_exercise.dart';
-import 'package:gymgenius/models/routine.dart';
+import 'package:gymgenius/models/exercise.dart';
 import 'package:gymgenius/models/workout_log.dart';
 import 'package:gymgenius/services/logger_service.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -23,7 +23,7 @@ class WorkoutSessionManager with ChangeNotifier {
   String _currentWorkoutName = "";
   String? _currentRoutineId;
   String? _currentDayKey;
-  List<RoutineExercise> _plannedExercises = [];
+  List<Exercise> _plannedExercises = [];
   List<LoggedExerciseData> _loggedExercisesData = [];
   int _currentExerciseIndex = -1;
   Timer? _restTimer;
@@ -38,12 +38,11 @@ class WorkoutSessionManager with ChangeNotifier {
   String get currentWorkoutName => _currentWorkoutName;
   String? get currentRoutineId => _currentRoutineId;
   String? get currentDayKey => _currentDayKey;
-  List<RoutineExercise> get plannedExercises =>
-      List.unmodifiable(_plannedExercises);
+  List<Exercise> get plannedExercises => List.unmodifiable(_plannedExercises);
   List<LoggedExerciseData> get loggedExercisesData =>
       List.unmodifiable(_loggedExercisesData);
 
-  RoutineExercise? get currentExercise => (_isWorkoutActive &&
+  Exercise? get currentExercise => (_isWorkoutActive &&
           _currentExerciseIndex >= 0 &&
           _currentExerciseIndex < _plannedExercises.length)
       ? _plannedExercises[_currentExerciseIndex]
@@ -108,7 +107,7 @@ class WorkoutSessionManager with ChangeNotifier {
 
   // Internal workout start
   void _startWorkoutInternal(
-    List<RoutineExercise> exercisesForSession, {
+    List<Exercise> exercisesForSession, {
     String workoutName = "Workout Session",
     String? routineId,
     String? dayKey,
@@ -144,7 +143,7 @@ class WorkoutSessionManager with ChangeNotifier {
 
   // Public workout start methods
   bool startWorkoutIfNoSession(
-    List<RoutineExercise> exercisesForSession, {
+    List<Exercise> exercisesForSession, {
     String workoutName = "Workout Session",
     String? routineId,
     String? dayKey,
@@ -162,7 +161,7 @@ class WorkoutSessionManager with ChangeNotifier {
   }
 
   void forceStartNewWorkout(
-    List<RoutineExercise> exercisesForSession, {
+    List<Exercise> exercisesForSession, {
     String workoutName = "Workout Session",
     String? routineId,
     String? dayKey,

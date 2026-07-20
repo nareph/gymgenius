@@ -8,8 +8,10 @@ import 'package:gymgenius/repositories/home_repository.dart';
 import 'package:gymgenius/repositories/profile_repository.dart';
 import 'package:gymgenius/repositories/tracking_repository.dart';
 import 'package:gymgenius/repositories/workout_repository.dart';
+import 'package:gymgenius/services/ai_service.dart';
 import 'package:gymgenius/services/database_service.dart';
 import 'package:gymgenius/services/logger_service.dart';
+import 'package:gymgenius/services/workout_service.dart';
 import 'package:gymgenius/theme/app_theme.dart';
 import 'package:gymgenius/viewmodels/home_viewmodel.dart';
 import 'package:gymgenius/viewmodels/profile_viewmodel.dart';
@@ -20,16 +22,13 @@ import 'package:provider/provider.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Hive database
   await DatabaseService.initialize();
 
-  Log.info("--- GymGenius Started (Local Database Mode) ---");
+  Log.info('--- GymGenius Started (Local Database Mode) ---');
 
   runApp(const MyApp());
 }
 
-/// The root widget of the application. Its primary role is to provide
-/// all necessary dependencies (Repositories, BLoCs, ViewModels) to the entire app.
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -40,17 +39,29 @@ class MyApp extends StatelessWidget {
         RepositoryProvider<AuthRepository>(
           create: (_) => AuthRepository(),
         ),
+        RepositoryProvider<WorkoutRepository>(
+          create: (_) => WorkoutRepository(),
+        ),
+        RepositoryProvider<AIService>(
+          create: (_) => AIService(),
+        ),
+        RepositoryProvider<WorkoutService>(
+          create: (context) => WorkoutService(
+            repository: context.read<WorkoutRepository>(),
+            aiService: context.read<AIService>(),
+          ),
+        ),
         RepositoryProvider<HomeRepository>(
-          create: (_) => HomeRepository(),
+          create: (context) => HomeRepository(
+            workoutRepository: context.read<WorkoutRepository>(),
+            workoutService: context.read<WorkoutService>(),
+          ),
         ),
         RepositoryProvider<TrackingRepository>(
           create: (_) => TrackingRepository(),
         ),
         RepositoryProvider<ProfileRepository>(
           create: (_) => ProfileRepository(),
-        ),
-        RepositoryProvider<WorkoutRepository>(
-          create: (_) => WorkoutRepository(),
         ),
       ],
       child: MultiBlocProvider(
@@ -64,7 +75,7 @@ class MyApp extends StatelessWidget {
             create: (context) => WorkoutSessionManager(),
           ),
           ChangeNotifierProvider(
-            create: (context) => HomeViewModel(context.read()),
+            create: (context) => HomeViewModel(context.read<HomeRepository>()),
           ),
           ChangeNotifierProvider(
             create: (context) => TrackingViewModel(context.read()),
@@ -79,8 +90,6 @@ class MyApp extends StatelessWidget {
   }
 }
 
-/// AppView builds the MaterialApp and contains the root Navigator
-/// that will be controlled by the AuthBloc's state.
 class AppView extends StatelessWidget {
   const AppView({super.key});
 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gymgenius/models/logged_exercise.dart';
-import 'package:gymgenius/models/routine.dart';
+import 'package:gymgenius/models/exercise.dart';
 import 'package:gymgenius/providers/workout_session_manager.dart';
 import 'package:gymgenius/services/logger_service.dart';
 import 'package:gymgenius/viewmodels/exercise_logging_viewmodel.dart';
@@ -9,7 +9,7 @@ import 'package:provider/provider.dart';
 
 /// Screen for logging exercise sets with ViewModel support
 class ExerciseLoggingScreen extends StatelessWidget {
-  final RoutineExercise exercise;
+  final Exercise exercise;
   final VoidCallback onExerciseCompleted;
 
   const ExerciseLoggingScreen({
@@ -275,7 +275,7 @@ Widget _buildCompletedView(
 
 /// Header widget showing current set information
 class _SetHeader extends StatelessWidget {
-  final RoutineExercise exercise;
+  final Exercise exercise;
 
   const _SetHeader({required this.exercise});
 

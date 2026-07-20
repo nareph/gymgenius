@@ -1,5 +1,5 @@
 // lib/models/logged_exercise.dart
-import 'package:gymgenius/models/routine.dart';
+import 'package:gymgenius/models/exercise.dart';
 import 'package:gymgenius/utils/type_converter.dart';
 
 /// Represents a single set of an exercise that has been performed and logged by the user.
@@ -28,9 +28,7 @@ class LoggedSetData {
 
   /// Factory constructor to create LoggedSetData from a map
   factory LoggedSetData.fromMap(Map<String, dynamic> map) {
-    // Use TypeConverter to ensure type safety
     final safeMap = TypeConverter.toSafeMap(map);
-
     return LoggedSetData(
       setNumber: safeMap['setNumber'] is num
           ? (safeMap['setNumber'] as num).toInt()
@@ -47,7 +45,7 @@ class LoggedSetData {
 
 /// Represents a full exercise, including its planned details and all the sets logged against it.
 class LoggedExerciseData {
-  final RoutineExercise originalExercise;
+  final Exercise originalExercise;
   final List<LoggedSetData> loggedSets;
   final bool isCompleted;
 
@@ -100,10 +98,8 @@ class LoggedExerciseData {
 
   /// Factory constructor to create LoggedExerciseData from a map
   factory LoggedExerciseData.fromMap(Map<String, dynamic> map) {
-    // Use TypeConverter to ensure type safety
     final safeMap = TypeConverter.toSafeMap(map);
 
-    // Parse logged sets safely
     List<LoggedSetData> loggedSets = [];
     if (safeMap['loggedSets'] is List) {
       loggedSets = (safeMap['loggedSets'] as List).map((setMap) {
@@ -112,29 +108,22 @@ class LoggedExerciseData {
       }).toList();
     }
 
-    // Create RoutineExercise with ALL required parameters
+    // Reconstruct Exercise from map
+    final exerciseMap = {
+      'id': safeMap['exerciseId'] as String?,
+      'name': safeMap['exerciseName'] as String?,
+      'sets': safeMap['targetSets'] as int?,
+      'reps': safeMap['targetReps'] as String?,
+      'description': safeMap['description'] as String?,
+      'weightSuggestionKg': safeMap['targetWeight'] as String?,
+      'restBetweenSetsSeconds': safeMap['targetRest'] as int?,
+      'usesWeight': safeMap['usesWeight'] as bool?,
+      'isTimed': safeMap['isTimed'] as bool?,
+      'targetDurationSeconds': safeMap['targetDurationSeconds'] as int?,
+    };
+
     return LoggedExerciseData(
-      originalExercise: RoutineExercise(
-        id: safeMap['exerciseId']?.toString() ?? '',
-        name: safeMap['exerciseName']?.toString() ?? 'Unknown Exercise',
-        sets: safeMap['targetSets'] is num
-            ? (safeMap['targetSets'] as num).toInt()
-            : 0,
-        reps: safeMap['targetReps']?.toString() ?? '',
-        description: safeMap['description']?.toString() ?? '',
-        weightSuggestionKg: safeMap['targetWeight']?.toString() ?? 'Bodyweight',
-        restBetweenSetsSeconds: safeMap['targetRest'] is num
-            ? (safeMap['targetRest'] as num).toInt()
-            : 60,
-        usesWeight: safeMap['usesWeight'] is bool
-            ? (safeMap['usesWeight'] as bool)
-            : false,
-        isTimed:
-            safeMap['isTimed'] is bool ? (safeMap['isTimed'] as bool) : false,
-        targetDurationSeconds: safeMap['targetDurationSeconds'] is num
-            ? (safeMap['targetDurationSeconds'] as num).toInt()
-            : null,
-      ),
+      originalExercise: Exercise.fromMap(exerciseMap),
       loggedSets: loggedSets,
       isCompleted: safeMap['isCompleted'] is bool
           ? (safeMap['isCompleted'] as bool)

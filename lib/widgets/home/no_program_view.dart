@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-class NoRoutineView extends StatelessWidget {
+class NoProgramView extends StatelessWidget {
   final VoidCallback onGenerate;
 
-  const NoRoutineView({super.key, required this.onGenerate});
+  const NoProgramView({super.key, required this.onGenerate});
 
   @override
   Widget build(BuildContext context) {
@@ -17,17 +17,17 @@ class NoRoutineView extends StatelessWidget {
             Icon(Icons.fitness_center,
                 size: 50, color: theme.colorScheme.primary),
             const SizedBox(height: 16),
-            Text("No Workout Plan Found",
+            Text("No Training Program Found",
                 style: theme.textTheme.headlineSmall,
                 textAlign: TextAlign.center),
             const SizedBox(height: 10),
             const Text(
-                "Let's generate a personalized workout plan to help you reach your fitness goals!",
+                "Let's generate a personalized training program to help you reach your fitness goals!",
                 textAlign: TextAlign.center),
             const SizedBox(height: 20),
             ElevatedButton.icon(
               icon: const Icon(Icons.auto_awesome_outlined),
-              label: const Text("Generate My First Routine"),
+              label: const Text("Generate My First Program"),
               onPressed: onGenerate,
             ),
           ]),

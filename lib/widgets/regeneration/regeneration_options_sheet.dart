@@ -1,11 +1,11 @@
-// lib/widgets/regeneration/regeneration_options_sheet.dart
 import 'package:flutter/material.dart';
+import 'package:gymgenius/models/hive/training_program_model.dart';
+import 'package:gymgenius/models/hive/weekly_workout_model.dart';
 import 'package:gymgenius/models/onboarding.dart';
-import 'package:gymgenius/models/routine.dart';
 import 'package:gymgenius/services/logger_service.dart';
 
 enum RegenerationType {
-  fullRoutine,
+  fullProgram,
   specificDay,
   singleExercise,
   withPreferences,
@@ -27,6 +27,7 @@ class RegenerationOptions {
   final IntensityLevel intensity;
   final int? exerciseCount;
   final bool keepStructure;
+
   const RegenerationOptions({
     required this.type,
     this.targetDay,
@@ -38,6 +39,7 @@ class RegenerationOptions {
     this.exerciseCount,
     this.keepStructure = true,
   });
+
   Map<String, dynamic> toMap() {
     return {
       'type': type.name,
@@ -56,18 +58,22 @@ class RegenerationOptions {
 
 class RegenerationOptionsSheet extends StatefulWidget {
   final OnboardingData onboardingData;
-  final WeeklyRoutine? currentRoutine;
+  final TrainingProgramModel? currentProgram;
+  final WeeklyWorkoutModel? currentWeeklyWorkout;
   final String? currentDay;
   final String? targetExerciseId;
   final Function(RegenerationOptions) onApply;
+
   const RegenerationOptionsSheet({
     super.key,
     required this.onboardingData,
-    this.currentRoutine,
+    this.currentProgram,
+    this.currentWeeklyWorkout,
     this.currentDay,
     this.targetExerciseId,
     required this.onApply,
   });
+
   @override
   State<RegenerationOptionsSheet> createState() =>
       _RegenerationOptionsSheetState();
@@ -78,17 +84,17 @@ class _RegenerationOptionsSheetState extends State<RegenerationOptionsSheet> {
   String? _targetDay;
   String? _targetExerciseId;
   String? _newEquipment;
-  List<String> _musclesToFocus = [];
-  List<String> _musclesToAvoid = [];
+  final List<String> _musclesToFocus = [];
+  final List<String> _musclesToAvoid = [];
   IntensityLevel _intensity = IntensityLevel.similar;
   bool _keepStructure = true;
   int? _exerciseCount;
   List<String> _availableWorkoutDays = [];
-  List<RoutineExercise> _availableExercises = [];
-// Get muscle groups from user's focus areas
+  List<Map<String, dynamic>> _availableExercises = [];
+
   late final List<String> _userMuscleGroups;
-// Get equipment from user's onboarding data
   late final List<String> _availableEquipment;
+
   @override
   void initState() {
     super.initState();
@@ -96,18 +102,18 @@ class _RegenerationOptionsSheetState extends State<RegenerationOptionsSheet> {
         ? RegenerationType.singleExercise
         : (widget.currentDay != null
             ? RegenerationType.specificDay
-            : RegenerationType.fullRoutine);
+            : RegenerationType.fullProgram);
 
     _targetDay = widget.currentDay;
     _targetExerciseId = widget.targetExerciseId;
 
-// Get equipment from user's profile
+    // Get equipment from user's profile
     _availableEquipment = widget.onboardingData.equipment ?? [];
     if (_availableEquipment.isEmpty) {
       _availableEquipment.add('bodyweight');
     }
 
-// Get muscle groups from user's focus areas
+    // Get muscle groups from user's focus areas
     _userMuscleGroups = _getMuscleGroupsFromFocusAreas();
 
     _loadAvailableWorkoutDays();
@@ -120,7 +126,6 @@ class _RegenerationOptionsSheetState extends State<RegenerationOptionsSheet> {
   List<String> _getMuscleGroupsFromFocusAreas() {
     if (widget.onboardingData.focusAreas == null ||
         widget.onboardingData.focusAreas!.isEmpty) {
-// Return default muscle groups if user has no focus areas
       return [
         'chest',
         'back',
@@ -136,26 +141,34 @@ class _RegenerationOptionsSheetState extends State<RegenerationOptionsSheet> {
         'forearms',
       ];
     }
-// Return user's focus areas
     return widget.onboardingData.focusAreas!;
   }
 
   void _loadAvailableWorkoutDays() {
-    if (widget.currentRoutine != null) {
-      _availableWorkoutDays = widget.currentRoutine!.dailyWorkouts.entries
-          .where((entry) => entry.value.isNotEmpty)
+    final program = widget.currentProgram;
+    if (program != null && program.weeklySchedule.isNotEmpty) {
+      _availableWorkoutDays = program.weeklySchedule.entries
+          .where((entry) =>
+              entry.value is List && (entry.value as List).isNotEmpty)
           .map((entry) => entry.key)
           .toList();
+    } else {
+      _availableWorkoutDays = [];
     }
   }
 
   void _loadAvailableExercises(String day) {
-    if (widget.currentRoutine != null) {
-      final exercises = widget.currentRoutine!.dailyWorkouts[day];
-      if (exercises != null) {
+    final program = widget.currentProgram;
+    if (program != null) {
+      final exercises = program.weeklySchedule[day];
+      if (exercises is List) {
         setState(() {
-          _availableExercises = exercises;
+          _availableExercises = exercises
+              .map((e) => e is Map<String, dynamic> ? e : <String, dynamic>{})
+              .toList();
         });
+      } else {
+        _availableExercises = [];
       }
     }
   }
@@ -239,8 +252,8 @@ class _RegenerationOptionsSheetState extends State<RegenerationOptionsSheet> {
           runSpacing: 8,
           children: [
             _buildTypeChip(
-              RegenerationType.fullRoutine,
-              'Complete Routine',
+              RegenerationType.fullProgram,
+              'Complete Program',
               Icons.refresh,
             ),
             _buildTypeChip(
@@ -286,7 +299,8 @@ class _RegenerationOptionsSheetState extends State<RegenerationOptionsSheet> {
           }
         });
       },
-      selectedColor: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+      selectedColor:
+          Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
     );
   }
 
@@ -354,7 +368,11 @@ class _RegenerationOptionsSheetState extends State<RegenerationOptionsSheet> {
             itemCount: _availableExercises.length,
             itemBuilder: (context, index) {
               final exercise = _availableExercises[index];
-              final isSelected = _targetExerciseId == exercise.id;
+              final exerciseId = exercise['id'] ?? 'exercise_$index';
+              final isSelected = _targetExerciseId == exerciseId;
+              final name = exercise['name'] as String? ?? 'Unknown Exercise';
+              final sets = exercise['sets'] ?? 3;
+              final reps = exercise['reps'] ?? '8-12';
               return Card(
                 margin: const EdgeInsets.only(bottom: 8),
                 color: isSelected
@@ -367,8 +385,8 @@ class _RegenerationOptionsSheetState extends State<RegenerationOptionsSheet> {
                         ? Theme.of(context).colorScheme.primary
                         : null,
                   ),
-                  title: Text(exercise.name),
-                  subtitle: Text('${exercise.sets} sets × ${exercise.reps}'),
+                  title: Text(name),
+                  subtitle: Text('$sets sets × $reps'),
                   trailing: isSelected
                       ? Icon(
                           Icons.check_circle,
@@ -377,7 +395,7 @@ class _RegenerationOptionsSheetState extends State<RegenerationOptionsSheet> {
                       : null,
                   onTap: () {
                     setState(() {
-                      _targetExerciseId = isSelected ? null : exercise.id;
+                      _targetExerciseId = isSelected ? null : exerciseId;
                     });
                   },
                 ),
@@ -477,7 +495,7 @@ class _RegenerationOptionsSheetState extends State<RegenerationOptionsSheet> {
                 });
               },
               selectedColor:
-                  Theme.of(context).colorScheme.error.withOpacity(0.2),
+                  Theme.of(context).colorScheme.error.withValues(alpha: 0.2),
             );
           }).toList(),
         ),
@@ -538,7 +556,7 @@ class _RegenerationOptionsSheetState extends State<RegenerationOptionsSheet> {
 
   bool _canApply() {
     switch (_selectedType) {
-      case RegenerationType.fullRoutine:
+      case RegenerationType.fullProgram:
       case RegenerationType.withPreferences:
         return true;
       case RegenerationType.specificDay:
@@ -561,7 +579,7 @@ class _RegenerationOptionsSheetState extends State<RegenerationOptionsSheet> {
       'pull_up_bar': 'Pull-up Bar',
       'yoga_mat': 'Yoga Mat',
     };
-    return displayNames[equipment] ?? equipment.replaceAll('', ' ');
+    return displayNames[equipment] ?? equipment.replaceAll('_', ' ');
   }
 
   String _formatMuscleName(String muscle) {
@@ -579,7 +597,7 @@ class _RegenerationOptionsSheetState extends State<RegenerationOptionsSheet> {
       'traps': 'Traps',
       'forearms': 'Forearms',
     };
-    return displayNames[muscle] ?? muscle.replaceAll('', ' ');
+    return displayNames[muscle] ?? muscle.replaceAll('_', ' ');
   }
 
   String _formatDayName(String day) {
@@ -588,8 +606,8 @@ class _RegenerationOptionsSheetState extends State<RegenerationOptionsSheet> {
 
   String _getTitle() {
     switch (_selectedType) {
-      case RegenerationType.fullRoutine:
-        return 'Regenerate Complete Routine';
+      case RegenerationType.fullProgram:
+        return 'Regenerate Complete Program';
       case RegenerationType.specificDay:
         return 'Regenerate Specific Day';
       case RegenerationType.singleExercise:
@@ -601,8 +619,8 @@ class _RegenerationOptionsSheetState extends State<RegenerationOptionsSheet> {
 
   String _getActionButtonText() {
     switch (_selectedType) {
-      case RegenerationType.fullRoutine:
-        return 'GENERATE NEW ROUTINE';
+      case RegenerationType.fullProgram:
+        return 'GENERATE NEW PROGRAM';
       case RegenerationType.specificDay:
         return _targetDay != null
             ? 'REGENERATE ${_targetDay!.toUpperCase()}'

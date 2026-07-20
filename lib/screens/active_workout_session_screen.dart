@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:gymgenius/models/routine.dart';
+import 'package:gymgenius/models/exercise.dart';
 import 'package:gymgenius/providers/workout_session_manager.dart';
 import 'package:gymgenius/repositories/workout_repository.dart';
 import 'package:gymgenius/viewmodels/active_workout_viewmodel.dart';
@@ -289,7 +289,7 @@ class _EndWorkoutButton extends StatelessWidget {
 
 /// A stateless widget for displaying a single exercise in the list.
 class ExerciseTile extends StatelessWidget {
-  final RoutineExercise exercise;
+  final Exercise exercise;
   final bool isCompleted;
   final bool isCurrent;
   final int index;

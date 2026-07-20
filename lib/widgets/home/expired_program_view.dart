@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-class ExpiredRoutineView extends StatelessWidget {
-  final String routineName;
+class ExpiredProgramView extends StatelessWidget {
+  final String programName;
   final VoidCallback onGenerate;
   final VoidCallback onDismiss;
 
-  const ExpiredRoutineView({
+  const ExpiredProgramView({
     super.key,
-    required this.routineName,
+    required this.programName,
     required this.onGenerate,
     required this.onDismiss,
   });
@@ -29,14 +29,14 @@ class ExpiredRoutineView extends StatelessWidget {
                   size: 50, color: theme.colorScheme.onTertiaryContainer),
               const SizedBox(height: 16),
               Text(
-                "Routine Expired!",
+                "Program Expired!",
                 style: theme.textTheme.headlineSmall
                     ?.copyWith(color: theme.colorScheme.onTertiaryContainer),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 10),
               Text(
-                "Your routine '$routineName' has completed. It's time to generate a new plan to continue your fitness journey!",
+                "Your program '$programName' has completed. It's time to generate a new plan to continue your fitness journey!",
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyLarge
                     ?.copyWith(color: theme.colorScheme.onTertiaryContainer),
@@ -44,7 +44,7 @@ class ExpiredRoutineView extends StatelessWidget {
               const SizedBox(height: 24),
               ElevatedButton.icon(
                 icon: const Icon(Icons.autorenew_rounded),
-                label: const Text("Generate New Routine"),
+                label: const Text("Generate New Program"),
                 onPressed: onGenerate,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: theme.colorScheme.primary,
@@ -55,7 +55,7 @@ class ExpiredRoutineView extends StatelessWidget {
               TextButton(
                 onPressed: onDismiss,
                 child: Text(
-                  "Dismiss (Clear Old Routine)",
+                  "Dismiss (Clear Old Program)",
                   style: TextStyle(
                       color: theme.colorScheme.onSurfaceVariant.withAlpha(200)),
                 ),

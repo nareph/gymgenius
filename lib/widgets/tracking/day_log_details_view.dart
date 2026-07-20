@@ -241,7 +241,7 @@ class DayLogDetailsView extends StatelessWidget {
                                                     ],
                                                   ),
                                                 );
-                                              }).toList(),
+                                              }),
 
                                               // Small spacing between exercises
                                               if (exercise !=

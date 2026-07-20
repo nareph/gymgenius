@@ -1,5 +1,4 @@
 // lib/repositories/tracking_repository.dart
-import 'package:gymgenius/models/hive/workout_log_model.dart';
 import 'package:gymgenius/models/workout_log.dart';
 import 'package:gymgenius/services/database_service.dart';
 import 'package:gymgenius/services/logger_service.dart';

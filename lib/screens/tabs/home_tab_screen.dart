@@ -1,14 +1,15 @@
+// lib/screens/tabs/home_tab_screen.dart
 import 'package:flutter/material.dart';
 import 'package:gymgenius/viewmodels/home_viewmodel.dart';
 import 'package:gymgenius/widgets/home/complete_profile_view.dart';
 import 'package:gymgenius/widgets/home/error_view.dart';
-import 'package:gymgenius/widgets/home/expired_routine_view.dart';
+import 'package:gymgenius/widgets/home/expired_program_view.dart';
 import 'package:gymgenius/widgets/home/loading_view.dart';
-import 'package:gymgenius/widgets/home/no_routine_view.dart';
-import 'package:gymgenius/widgets/home/routine_dashboard_view.dart';
+import 'package:gymgenius/widgets/home/no_program_view.dart';
+import 'package:gymgenius/widgets/home/program_dashboard_view.dart';
 import 'package:provider/provider.dart';
 
-import '../main_dashboard_screen.dart'; // Pour kProfileTabIndex
+import '../main_dashboard_screen.dart';
 
 class HomeTabScreen extends StatelessWidget {
   final Function(int) onNavigateToTab;
@@ -46,17 +47,20 @@ class HomeTabScreen extends StatelessWidget {
       );
     }
 
-    if (viewModel.isGeneratingRoutine) {
+    if (viewModel.isGeneratingProgram) {
       return const LoadingView(
-          key: ValueKey('generating'),
-          message: "Generating your new routine...");
+        key: ValueKey('generating'),
+        message: "Generating your new training program...",
+      );
     }
 
     switch (viewModel.state) {
       case HomeState.initial:
       case HomeState.loading:
         return const LoadingView(
-            key: ValueKey('loading'), message: "Loading your dashboard...");
+          key: ValueKey('loading'),
+          message: "Loading your dashboard...",
+        );
 
       case HomeState.error:
         return wrapInScrollable(ErrorView(
@@ -75,22 +79,27 @@ class HomeTabScreen extends StatelessWidget {
             isInsufficient: true,
           ));
         }
-        if (viewModel.currentRoutine == null) {
-          return wrapInScrollable(NoRoutineView(
-              key: const ValueKey('no_routine'),
-              onGenerate: viewModel.generateNewRoutine));
-        }
-        if (viewModel.currentRoutine!.isExpired()) {
-          return wrapInScrollable(ExpiredRoutineView(
-            key: const ValueKey('expired_routine'),
-            routineName: viewModel.currentRoutine!.name,
-            onGenerate: viewModel.generateNewRoutine,
-            onDismiss: viewModel.dismissExpiredRoutine,
+
+        if (viewModel.currentProgram == null) {
+          return wrapInScrollable(NoProgramView(
+            key: const ValueKey('no_program'),
+            onGenerate: viewModel.generateNewProgram,
           ));
         }
-        return RoutineDashboardView(
+
+        if (viewModel.currentProgram!.isExpired()) {
+          return wrapInScrollable(ExpiredProgramView(
+            key: const ValueKey('expired_program'),
+            programName: viewModel.currentProgram!.name,
+            onGenerate: viewModel.generateNewProgram,
+            onDismiss: viewModel.dismissExpiredProgram,
+          ));
+        }
+
+        return ProgramDashboardView(
           key: const ValueKey('dashboard'),
-          routine: viewModel.currentRoutine!,
+          program: viewModel.currentProgram!,
+          weeklyWorkout: viewModel.currentWeeklyWorkout,
           onboardingData: viewModel.onboardingData!,
         );
     }

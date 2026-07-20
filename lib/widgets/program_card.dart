@@ -1,36 +1,31 @@
-// lib/widgets/routine_card.dart
+// lib/widgets/program_card.dart
 import 'package:flutter/material.dart';
-import 'package:gymgenius/models/onboarding.dart'; // For OnboardingData
-import 'package:gymgenius/models/routine.dart'; // For RoutineExercise and WeeklyRoutine
-import 'package:gymgenius/screens/daily_workout_detail_screen.dart'; // To navigate to
+import 'package:gymgenius/models/exercise.dart';
+import 'package:gymgenius/models/onboarding.dart';
+import 'package:gymgenius/models/hive/training_program_model.dart';
+import 'package:gymgenius/screens/daily_workout_detail_screen.dart';
 
-// RoutineCard: A widget to display a summary of a single day's workout or rest day
-// within a weekly routine schedule.
-class RoutineCard extends StatelessWidget {
-  final String dayKey; // e.g., "monday", "tuesday"
-  final List<RoutineExercise> exercises; // List of exercises for this day
-  final bool isToday; // Flag if this card represents the current day
-  final WeeklyRoutine parentRoutine; // The parent routine this day belongs to
-  final OnboardingData
-      onboardingData; // User's onboarding data, passed to detail screen
+class ProgramCard extends StatelessWidget {
+  final String dayKey;
+  final List<Exercise> exercises;
+  final bool isToday;
+  final TrainingProgramModel program;
+  final OnboardingData onboardingData;
 
-  const RoutineCard({
+  const ProgramCard({
     super.key,
     required this.dayKey,
     required this.exercises,
-    required this.parentRoutine,
-    required this.onboardingData, // Ensure this is passed when RoutineCard is created
+    required this.program,
+    required this.onboardingData,
     this.isToday = false,
   });
 
-  // Helper to capitalize the first letter of a string.
   String _capitalize(String s) {
     if (s.isEmpty) return s;
     return s[0].toUpperCase() + s.substring(1);
   }
 
-  // Navigates to the DailyWorkoutDetailScreen for the selected day.
-  // Navigation only occurs if it's not a rest day (i.e., exercises list is not empty).
   void _navigateToDetail(BuildContext context) {
     if (exercises.isNotEmpty) {
       Navigator.push(
@@ -39,9 +34,9 @@ class RoutineCard extends StatelessWidget {
           builder: (context) => DailyWorkoutDetailScreen(
             dayTitle: "${_capitalize(dayKey)} Workout Details",
             initialExercises: exercises,
-            routineIdForLog: parentRoutine.id,
+            programIdForLog: program.id,
             dayKeyForLog: dayKey.toLowerCase(),
-            onboardingData: onboardingData, // Pass onboardingData
+            onboardingData: onboardingData,
           ),
         ),
       );
@@ -65,8 +60,7 @@ class RoutineCard extends StatelessWidget {
             ? BorderSide(color: colorScheme.primary, width: 1.5)
             : (isRestDay
                 ? BorderSide(
-                    color: colorScheme.outline.withAlpha((77).round()),
-                    width: 0.8)
+                    color: colorScheme.outline.withAlpha(77), width: 0.8)
                 : BorderSide.none),
       ),
       color: isRestDay ? colorScheme.surfaceContainerLowest : null,
@@ -103,7 +97,7 @@ class RoutineCard extends StatelessWidget {
                       size: 18,
                       color: isToday
                           ? colorScheme.primary
-                          : colorScheme.onSurface.withAlpha((178).round()),
+                          : colorScheme.onSurface.withAlpha(178),
                     )
                   else
                     Chip(
@@ -115,8 +109,8 @@ class RoutineCard extends StatelessWidget {
                           letterSpacing: 0.5,
                         ),
                       ),
-                      backgroundColor: colorScheme.secondaryContainer
-                          .withAlpha((178).round()),
+                      backgroundColor:
+                          colorScheme.secondaryContainer.withAlpha(178),
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 2),
                       visualDensity: VisualDensity.compact,
@@ -143,8 +137,7 @@ class RoutineCard extends StatelessWidget {
                       "...and ${exercises.length - 3} more.",
                       style: textTheme.bodySmall?.copyWith(
                         fontStyle: FontStyle.italic,
-                        color: colorScheme.onSurfaceVariant
-                            .withAlpha((150).round()),
+                        color: colorScheme.onSurfaceVariant.withAlpha(150),
                       ),
                     ),
                   ),

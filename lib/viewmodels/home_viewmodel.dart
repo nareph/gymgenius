@@ -1,9 +1,8 @@
-// lib/viewmodels/home_viewmodel_simple.dart
 import 'package:flutter/material.dart';
+import 'package:gymgenius/models/hive/training_program_model.dart';
+import 'package:gymgenius/models/hive/weekly_workout_model.dart';
 import 'package:gymgenius/models/onboarding.dart';
-import 'package:gymgenius/models/routine.dart';
 import 'package:gymgenius/repositories/home_repository.dart';
-import 'package:gymgenius/services/database_service.dart';
 import 'package:gymgenius/services/logger_service.dart';
 import 'package:gymgenius/widgets/regeneration/regeneration_options_sheet.dart';
 
@@ -18,7 +17,7 @@ class HomeViewModel extends ChangeNotifier {
   }
 
   HomeViewModel(this._repository) {
-    Log.info("HomeViewModel: Created");
+    Log.info('HomeViewModel: Created');
     _loadData();
   }
 
@@ -28,151 +27,123 @@ class HomeViewModel extends ChangeNotifier {
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
 
-  bool _isGeneratingRoutine = false;
-  bool get isGeneratingRoutine => _isGeneratingRoutine;
+  bool _isGeneratingProgram = false;
+  bool get isGeneratingProgram => _isGeneratingProgram;
 
   OnboardingData? _onboardingData;
   OnboardingData? get onboardingData => _onboardingData;
 
-  WeeklyRoutine? _currentRoutine;
-  WeeklyRoutine? get currentRoutine => _currentRoutine;
+  TrainingProgramModel? _currentProgram;
+  TrainingProgramModel? get currentProgram => _currentProgram;
+
+  WeeklyWorkoutModel? _currentWeeklyWorkout;
+  WeeklyWorkoutModel? get currentWeeklyWorkout => _currentWeeklyWorkout;
 
   bool _isProfileComplete = false;
   bool get isProfileComplete => _isProfileComplete;
 
   Future<void> _loadData() async {
-    Log.info("HomeViewModel: Loading data...");
+    Log.info('HomeViewModel: Loading data...');
     _state = HomeState.loading;
     notifyListeners();
 
     try {
-      // Get current user
-      final userId = DatabaseService.instance.getCurrentUserId();
-      Log.info("HomeViewModel: User ID: $userId");
+      final data = await _repository.loadHomeScreenData();
 
-      if (userId == null) {
-        throw Exception("User not authenticated");
-      }
+      _onboardingData = data.onboardingData;
+      _isProfileComplete = data.isProfileComplete;
+      _currentProgram = data.currentProgram;
+      _currentWeeklyWorkout = data.currentWeeklyWorkout;
 
-      final user = DatabaseService.instance.getUser(userId);
-      Log.info("HomeViewModel: User: ${user?.email}");
-
-      if (user == null) {
-        throw Exception("User profile not found");
-      }
-
-      // Load onboarding data
-      if (user.onboardingData != null) {
-        _onboardingData = OnboardingData.fromMap(user.onboardingData!);
-        Log.info("HomeViewModel: Onboarding data loaded");
-      }
-
-      _isProfileComplete = user.onboardingCompleted;
-      Log.info("HomeViewModel: Profile complete: $_isProfileComplete");
-
-      // Load routine
-      final routine = DatabaseService.instance.getCurrentRoutine(userId);
-      Log.info("HomeViewModel: Routine found: ${routine != null}");
-
-      if (routine != null && !routine.isExpired()) {
-        _currentRoutine = WeeklyRoutine.fromMap(routine.toMap());
-        Log.info("HomeViewModel: Current routine: ${_currentRoutine?.name}");
-      }
+      Log.info('HomeViewModel: Profile complete: $_isProfileComplete');
+      Log.info('HomeViewModel: Program found: ${_currentProgram != null}');
+      Log.info(
+          'HomeViewModel: Weekly workout found: ${_currentWeeklyWorkout != null}');
 
       _state = HomeState.loaded;
-      Log.info("HomeViewModel: State set to LOADED");
       notifyListeners();
     } catch (error, stackTrace) {
-      Log.error("HomeViewModel: Error loading data",
-          error: error, stackTrace: stackTrace);
+      Log.error(
+        'HomeViewModel: Error loading data',
+        error: error,
+        stackTrace: stackTrace,
+      );
       _errorMessage = error.toString();
       _state = HomeState.error;
       notifyListeners();
     }
   }
 
-  Future<void> generateNewRoutine() async {
+  Future<void> generateNewProgram() async {
     if (_onboardingData == null ||
         !_onboardingData!.isSufficientForAiGeneration) {
-      _errorMessage = "Profile data is incomplete.";
+      _errorMessage = 'Profile data is incomplete.';
       _state = HomeState.error;
       notifyListeners();
       return;
     }
 
-    _isGeneratingRoutine = true;
+    _isGeneratingProgram = true;
     notifyListeners();
 
     try {
-      await _repository.generateNewRoutine(_onboardingData!, _currentRoutine);
-      // Reload data after generating new routine
+      await _repository.generateNewProgram(_onboardingData!, _currentProgram);
       await _loadData();
     } catch (e) {
-      _errorMessage = "Failed to generate routine: $e";
+      _errorMessage = 'Failed to generate program: $e';
       _state = HomeState.error;
       notifyListeners();
     } finally {
-      _isGeneratingRoutine = false;
+      _isGeneratingProgram = false;
       notifyListeners();
     }
   }
 
-  Future<void> regenerateRoutine(RegenerationOptions options) async {
+  Future<void> regenerateProgram(RegenerationOptions options) async {
     if (_onboardingData == null ||
         !_onboardingData!.isSufficientForAiGeneration) {
-      _errorMessage = "Profile data is incomplete.";
+      _errorMessage = 'Profile data is incomplete.';
       _state = HomeState.error;
       notifyListeners();
       return;
     }
 
-    _isGeneratingRoutine = true;
+    _isGeneratingProgram = true;
     notifyListeners();
 
     try {
-      await _repository.regenerateRoutineWithOptions(
+      await _repository.regenerateProgramWithOptions(
         _onboardingData!,
-        _currentRoutine,
+        _currentProgram,
         options,
       );
 
-      // Reload data after regeneration
       await _loadData();
 
-      // Show success feedback
       if (_context != null && _context!.mounted) {
         _showSuccessMessage(_context!, options);
       }
     } catch (e) {
-      _errorMessage = "Failed to regenerate routine: $e";
+      _errorMessage = 'Failed to regenerate program: $e';
       _state = HomeState.error;
       notifyListeners();
       if (_context != null && _context!.mounted) {
         _showErrorMessage(_context!, e.toString());
       }
     } finally {
-      _isGeneratingRoutine = false;
+      _isGeneratingProgram = false;
       notifyListeners();
     }
   }
 
   void _showSuccessMessage(BuildContext context, RegenerationOptions options) {
-    String message;
-
-    switch (options.type) {
-      case RegenerationType.fullRoutine:
-        message = 'New routine generated successfully!';
-        break;
-      case RegenerationType.specificDay:
-        message = 'Day regenerated successfully!';
-        break;
-      case RegenerationType.singleExercise:
-        message = 'Exercise replaced successfully!';
-        break;
-      case RegenerationType.withPreferences:
-        message = 'Routine customized successfully!';
-        break;
-    }
+    final message = switch (options.type) {
+      RegenerationType.fullProgram =>
+        'New training program generated successfully!',
+      RegenerationType.specificDay => 'Workout day regenerated successfully!',
+      RegenerationType.singleExercise => 'Exercise replaced successfully!',
+      RegenerationType.withPreferences => 'Program customized successfully!',
+    };
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -192,13 +163,14 @@ class HomeViewModel extends ChangeNotifier {
     );
   }
 
-  Future<void> dismissExpiredRoutine() async {
-    await _repository.clearCurrentRoutine();
-    _currentRoutine = null;
+  Future<void> dismissExpiredProgram() async {
+    await _repository.clearCurrentProgram();
+    _currentProgram = null;
+    _currentWeeklyWorkout = null;
     notifyListeners();
   }
 
   Future<void> refresh() async {
     await _loadData();
-  }
+  } // or map if needed
 }

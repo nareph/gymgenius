@@ -41,7 +41,7 @@ class PreferenceEditItem extends StatelessWidget {
             isDense: true,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
           ),
-          value: currentValueInEdit,
+          initialValue: currentValueInEdit,
           items: question.options
               .map(
                 (option) => DropdownMenuItem<String>(

@@ -1,50 +1,50 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'routine_model.dart';
+part of 'weekly_workout_model.dart';
 
 // **************************************************************************
 // TypeAdapterGenerator
 // **************************************************************************
 
-class RoutineModelAdapter extends TypeAdapter<RoutineModel> {
+class WeeklyWorkoutModelAdapter extends TypeAdapter<WeeklyWorkoutModel> {
   @override
-  final int typeId = 1;
+  final int typeId = 3;
 
   @override
-  RoutineModel read(BinaryReader reader) {
+  WeeklyWorkoutModel read(BinaryReader reader) {
     final numOfFields = reader.readByte();
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
-    return RoutineModel(
+    return WeeklyWorkoutModel(
       id: fields[0] as String,
-      userId: fields[1] as String,
-      name: fields[2] as String,
-      durationInWeeks: fields[3] as int,
-      dailyWorkouts: (fields[4] as Map).cast<String, dynamic>(),
-      generatedAt: fields[5] as DateTime,
-      expiresAt: fields[6] as DateTime,
+      programId: fields[1] as String,
+      weekNumber: fields[2] as int,
+      schedule: (fields[3] as Map).cast<String, dynamic>(),
+      createdAt: fields[4] as DateTime,
+      isActive: fields[5] as bool,
+      progressionData: (fields[6] as Map?)?.cast<String, dynamic>(),
     );
   }
 
   @override
-  void write(BinaryWriter writer, RoutineModel obj) {
+  void write(BinaryWriter writer, WeeklyWorkoutModel obj) {
     writer
       ..writeByte(7)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
-      ..write(obj.userId)
+      ..write(obj.programId)
       ..writeByte(2)
-      ..write(obj.name)
+      ..write(obj.weekNumber)
       ..writeByte(3)
-      ..write(obj.durationInWeeks)
+      ..write(obj.schedule)
       ..writeByte(4)
-      ..write(obj.dailyWorkouts)
+      ..write(obj.createdAt)
       ..writeByte(5)
-      ..write(obj.generatedAt)
+      ..write(obj.isActive)
       ..writeByte(6)
-      ..write(obj.expiresAt);
+      ..write(obj.progressionData);
   }
 
   @override
@@ -53,7 +53,7 @@ class RoutineModelAdapter extends TypeAdapter<RoutineModel> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is RoutineModelAdapter &&
+      other is WeeklyWorkoutModelAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }

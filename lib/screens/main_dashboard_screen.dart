@@ -29,6 +29,7 @@ class MainDashboardScreen extends StatefulWidget {
 class _MainDashboardScreenState extends State<MainDashboardScreen> {
   int _selectedIndex = kHomeTabIndex;
   late final PageController _pageController;
+
   @override
   void initState() {
     super.initState();
@@ -119,12 +120,13 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                 return RegenerateButton(
                   onboardingData: viewModel.onboardingData ??
                       OnboardingData(completed: false),
-                  currentRoutine: viewModel.currentRoutine,
+                  currentProgram: viewModel.currentProgram,
+                  currentWeeklyWorkout: viewModel.currentWeeklyWorkout,
                   onRegenerate: (options) {
                     _handleRegeneration(context, viewModel, options);
                   },
-                  isGenerating: viewModel.isGeneratingRoutine,
-                  tooltip: 'Edit Routine',
+                  isGenerating: viewModel.isGeneratingProgram,
+                  tooltip: 'Edit Program',
                 );
               },
             ),
@@ -164,9 +166,9 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     RegenerationOptions options,
   ) async {
     try {
-      await viewModel.regenerateRoutine(options);
+      await viewModel.regenerateProgram(options);
     } catch (e) {
-// Error is already handled in the ViewModel
+      // Error is already handled in the ViewModel
     }
   }
 }

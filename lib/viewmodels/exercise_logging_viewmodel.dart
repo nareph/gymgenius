@@ -1,13 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:gymgenius/models/routine.dart';
+import 'package:gymgenius/models/exercise.dart';
 import 'package:gymgenius/providers/workout_session_manager.dart';
 import 'package:gymgenius/services/logger_service.dart';
 
 /// ViewModel for handling exercise logging logic, especially for timed exercises
 class ExerciseLoggingViewModel extends ChangeNotifier {
   final WorkoutSessionManager _sessionManager;
-  final RoutineExercise exercise;
+  final Exercise exercise;
 
   // Form controllers
   final TextEditingController repsController = TextEditingController();

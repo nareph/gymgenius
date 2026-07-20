@@ -1333,6 +1333,39 @@ The database therefore follows six immutable principles:
 
 ---
 
+# Migration Strategy
+
+## From v2 (RoutineModel) to v3 (TrainingProgramModel)
+
+### Overview
+
+The v3 architecture introduces a clearer separation between long-term Training Programs and weekly execution (WeeklyWorkout). This migration was performed automatically during the first launch of v3.
+
+### Changes
+
+| v2 Concept | v3 Concept |
+|------------|------------|
+| `RoutineModel` | `TrainingProgramModel` (multi-week program) |
+| `WeeklyRoutine` (domain) | `WeeklyWorkoutModel` (weekly schedule) |
+| `dailyWorkouts` field | `weeklySchedule` field |
+| `RoutineExercise` | `Exercise` (simplified, no validation logic) |
+
+### Migration Steps (Executed in Code)
+
+1. **V0 → V1** : Convert every `RoutineModel` to `TrainingProgramModel` using the same Hive TypeId (1) to preserve data.
+2. **V1 → V2** : Generate a `WeeklyWorkoutModel` for the first week of each `TrainingProgramModel` (TypeId 3).
+3. **Legacy boxes** : `routines` box is kept for rollback safety but will be removed in a future version.
+
+### Rollback Safety
+
+The migration does not delete `RoutineModel` data until a future version, ensuring data can be restored if needed.
+
+### Future Migrations
+
+New engines (Nutrition, Recovery, Progress) will add their own Hive boxes (TypeIds 4, 5, 6) without affecting existing data.
+
+---
+
 # Final Principle
 
 > "A database should never merely store information.
