@@ -1,53 +1,86 @@
-// lib/engines/workout_engine/shared/exercise_pool_entry.dart
-
-enum EquipmentType {
-  bodyweight,
-  barbell,
-  dumbbell,
-  kettlebell,
-  resistanceBand,
-  cable,
-  machine,
-  pullUpBar,
-  bench,
-}
-
-enum ExerciseCategory {
-  compound,
-  isolation,
-}
+import '../../../domain/enums/exports.dart';
 
 class ExercisePoolEntry {
+  /// Unique identifier.
+  final String id;
+
+  /// Exercise name.
   final String name;
+
+  /// Compound / Isolation.
   final ExerciseCategory category;
+
+  /// Beginner / Intermediate / Advanced.
+  final ExerciseDifficulty difficulty;
+
+  /// Required equipment.
   final EquipmentType equipmentType;
-  final List<String> targetMuscles; // e.g., ['chest', 'triceps', 'shoulders']
-  final String?
-      weightSuggestion; // 'Light', 'Moderate', 'Heavy', or null for bodyweight
+
+  /// Main muscles.
+  final List<MuscleGroup> targetMuscles;
+
+  /// Secondary muscles.
+  final List<MuscleGroup> secondaryMuscles;
+
+  /// Suggested weight.
+  final String? weightSuggestion;
+
+  /// Uses external weight.
   final bool usesWeight;
+
+  /// Timed exercise.
   final bool isTimed;
-  final String description; // Detailed description with steps
+
+  /// Movement information.
+  final MovementPattern movementPattern;
+  final Mechanics mechanics;
+  final ForceType forceType;
+  final Laterality laterality;
+  final PlaneOfMotion planeOfMotion;
+
+  /// Coach description.
+  final String description;
 
   const ExercisePoolEntry({
+    required this.id,
     required this.name,
     required this.category,
+    required this.difficulty,
     required this.equipmentType,
     required this.targetMuscles,
+    this.secondaryMuscles = const [],
     this.weightSuggestion,
     this.usesWeight = false,
     this.isTimed = false,
+    required this.movementPattern,
+    required this.mechanics,
+    required this.forceType,
+    required this.laterality,
+    required this.planeOfMotion,
     required this.description,
   });
 
+  bool get isCompound => category == ExerciseCategory.compound;
+
+  bool get isIsolation => category == ExerciseCategory.isolation;
+
   Map<String, dynamic> toMap() {
     return {
+      'id': id,
       'name': name,
       'type': category.name,
+      'difficulty': difficulty.name,
       'equipmentType': equipmentType.name,
-      'targetMuscles': targetMuscles,
+      'targetMuscles': targetMuscles.map((e) => e.name).toList(),
+      'secondaryMuscles': secondaryMuscles.map((e) => e.name).toList(),
       if (weightSuggestion != null) 'weightSuggestion': weightSuggestion,
       'usesWeight': usesWeight,
       'isTimed': isTimed,
+      'movementPattern': movementPattern.name,
+      'mechanics': mechanics.name,
+      'forceType': forceType.name,
+      'laterality': laterality.name,
+      'planeOfMotion': planeOfMotion.name,
       'description': description,
     };
   }

@@ -1,4 +1,3 @@
-/// Result of workout day frequency calculation.
 class WorkoutDaysResult {
   final int count;
   final bool useSpecifiedDays;

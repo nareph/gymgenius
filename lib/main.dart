@@ -1,28 +1,26 @@
 // lib/main.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:gymgenius/blocs/auth/auth_bloc.dart';
-import 'package:gymgenius/providers/workout_session_manager.dart';
-import 'package:gymgenius/repositories/auth_repository.dart';
-import 'package:gymgenius/repositories/home_repository.dart';
-import 'package:gymgenius/repositories/profile_repository.dart';
-import 'package:gymgenius/repositories/tracking_repository.dart';
-import 'package:gymgenius/repositories/workout_repository.dart';
-import 'package:gymgenius/services/ai_service.dart';
-import 'package:gymgenius/services/database_service.dart';
-import 'package:gymgenius/services/logger_service.dart';
-import 'package:gymgenius/services/workout_service.dart';
-import 'package:gymgenius/theme/app_theme.dart';
-import 'package:gymgenius/viewmodels/home_viewmodel.dart';
-import 'package:gymgenius/viewmodels/profile_viewmodel.dart';
-import 'package:gymgenius/viewmodels/tracking_viewmodel.dart';
-import 'package:gymgenius/widgets/auth_wrapper.dart';
+import 'package:gymgenius/core/logger/logger_service.dart';
+import 'package:gymgenius/data/datasources/local/hive/boxes/hive_datasource.dart';
+import 'package:gymgenius/di/injection.dart';
+import 'package:gymgenius/presentation/blocs/auth/auth_bloc.dart';
+import 'package:gymgenius/presentation/blocs/login/login_bloc.dart';
+import 'package:gymgenius/presentation/blocs/signup/signup_bloc.dart';
+import 'package:gymgenius/presentation/providers/workout_session_manager.dart';
+import 'package:gymgenius/presentation/theme/app_theme.dart';
+import 'package:gymgenius/presentation/viewmodels/home_viewmodel.dart';
+import 'package:gymgenius/presentation/viewmodels/profile_viewmodel.dart';
+import 'package:gymgenius/presentation/viewmodels/tracking_viewmodel.dart';
+import 'package:gymgenius/presentation/widgets/auth_wrapper.dart';
 import 'package:provider/provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await DatabaseService.initialize();
+  await HiveDatasource.initialize();
+  setupDependencies();
 
   Log.info('--- GymGenius Started (Local Database Mode) ---');
 
@@ -34,58 +32,33 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MultiRepositoryProvider(
+    return MultiProvider(
       providers: [
-        RepositoryProvider<AuthRepository>(
-          create: (_) => AuthRepository(),
+        // BLoC
+        BlocProvider<AuthBloc>(
+          create: (context) => getIt<AuthBloc>(),
         ),
-        RepositoryProvider<WorkoutRepository>(
-          create: (_) => WorkoutRepository(),
+        BlocProvider<LoginBloc>(
+          create: (context) => getIt<LoginBloc>(),
         ),
-        RepositoryProvider<AIService>(
-          create: (_) => AIService(),
+        BlocProvider<SignUpBloc>(
+          create: (context) => getIt<SignUpBloc>(),
         ),
-        RepositoryProvider<WorkoutService>(
-          create: (context) => WorkoutService(
-            repository: context.read<WorkoutRepository>(),
-            aiService: context.read<AIService>(),
-          ),
+        // Providers
+        ChangeNotifierProvider(
+          create: (context) => getIt<WorkoutSessionManager>(),
         ),
-        RepositoryProvider<HomeRepository>(
-          create: (context) => HomeRepository(
-            workoutRepository: context.read<WorkoutRepository>(),
-            workoutService: context.read<WorkoutService>(),
-          ),
+        ChangeNotifierProvider<HomeViewModel>(
+          create: (context) => getIt<HomeViewModel>(),
         ),
-        RepositoryProvider<TrackingRepository>(
-          create: (_) => TrackingRepository(),
+        ChangeNotifierProvider<TrackingViewModel>(
+          create: (context) => getIt<TrackingViewModel>(),
         ),
-        RepositoryProvider<ProfileRepository>(
-          create: (_) => ProfileRepository(),
+        ChangeNotifierProvider<ProfileViewModel>(
+          create: (context) => getIt<ProfileViewModel>(),
         ),
       ],
-      child: MultiBlocProvider(
-        providers: [
-          BlocProvider<AuthBloc>(
-            create: (context) => AuthBloc(
-              authRepository: context.read<AuthRepository>(),
-            ),
-          ),
-          ChangeNotifierProvider(
-            create: (context) => WorkoutSessionManager(),
-          ),
-          ChangeNotifierProvider(
-            create: (context) => HomeViewModel(context.read<HomeRepository>()),
-          ),
-          ChangeNotifierProvider(
-            create: (context) => TrackingViewModel(context.read()),
-          ),
-          ChangeNotifierProvider(
-            create: (context) => ProfileViewModel(context.read()),
-          ),
-        ],
-        child: const AppView(),
-      ),
+      child: const AppView(),
     );
   }
 }

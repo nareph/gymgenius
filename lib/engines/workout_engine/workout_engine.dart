@@ -1,58 +1,129 @@
-// lib/engines/workout_engine/workout_engine.dart
-import 'dart:math';
+import 'package:gymgenius/data/repositories/user_repository_impl.dart';
+import 'package:gymgenius/domain/entities/health_profile.dart';
+import 'package:gymgenius/domain/entities/training_program.dart';
+import 'package:gymgenius/domain/entities/weekly_workout.dart';
+import 'package:gymgenius/domain/repositories/user_repository.dart';
+import 'package:gymgenius/engines/workout_engine/services/generation_service.dart';
+import 'package:gymgenius/engines/workout_engine/services/persistence_service.dart';
+import 'package:gymgenius/engines/workout_engine/services/regeneration_service.dart';
+import 'package:gymgenius/core/logger/logger_service.dart';
 
-import 'package:gymgenius/engines/workout_engine/models/muscle_split.dart';
-import 'package:gymgenius/engines/workout_engine/models/workout_days_result.dart';
-import 'package:gymgenius/engines/workout_engine/models/workout_profile.dart';
-import 'package:gymgenius/engines/workout_engine/program_generator.dart';
-import 'package:gymgenius/engines/workout_engine/program_validator.dart';
-import 'package:gymgenius/engines/workout_engine/split_generator.dart';
-
-/// Central deterministic engine for workout programming.
+/// Public facade for the Workout Engine.
 ///
-/// Stateless — all inputs are passed explicitly, no side effects.
+/// This is the only entry point that the rest of the application should use.
+/// It encapsulates all internal complexity: generation, optimization, validation,
+/// and persistence of programs and weekly workouts.
 class WorkoutEngine {
-  WorkoutEngine({int? seed})
-      : _programGenerator = ProgramGenerator(
-          random: seed != null ? Random(seed) : Random(),
-        );
+  final GenerationService _generationService;
+  final RegenerationService _regenerationService;
+  final PersistenceService _persistenceService;
+  final UserRepository _userRepository;
 
-  final ProgramGenerator _programGenerator;
+  WorkoutEngine({
+    GenerationService? generationService,
+    RegenerationService? regenerationService,
+    PersistenceService? persistenceService,
+    UserRepository? userRepository,
+  })  : _generationService = generationService ?? GenerationService(),
+        _regenerationService = regenerationService ?? RegenerationService(),
+        _persistenceService = persistenceService ?? PersistenceService(),
+        _userRepository = userRepository ?? UserRepositoryImpl();
 
-  WorkoutDaysResult calculateWorkoutDays({
-    String? frequency,
-    List<String>? preferredDays,
-  }) {
-    return SplitGenerator.calculateWorkoutDays(
-      frequency: frequency,
-      preferredDays: preferredDays,
-    );
-  }
-
-  List<MuscleSplit> determineMuscleSplit(
-    int workoutDaysCount,
-    String experience,
-  ) {
-    return SplitGenerator.determineMuscleSplit(workoutDaysCount, experience);
-  }
-
-  /// Generates a training program using deterministic rules (local mode).
-  Map<String, dynamic> generateTrainingProgram({
-    required WorkoutProfile profile,
-    required List<MuscleSplit> selectedSplit,
-    required int workoutDaysCount,
-    required bool useSpecifiedDays,
-  }) {
-    final program = _programGenerator.generate(
+  /// Generates a new training program.
+  ///
+  /// 1. Local generator produces a valid program immediately.
+  /// 2. Optimizers (local + optional Gemini) improve the program.
+  /// 3. Final program is validated and persisted.
+  Future<TrainingProgram> generateProgram({
+    required HealthProfile profile,
+    TrainingProgram? previousProgram,
+    Map<String, dynamic>? options,
+  }) async {
+    final program = await _generationService.generate(
       profile: profile,
-      selectedSplit: selectedSplit,
-      workoutDaysCount: workoutDaysCount,
-      useSpecifiedDays: useSpecifiedDays,
+      previousProgram: previousProgram,
+      options: options,
     );
-    return validateAndNormalize(program);
+
+    // Persist the program and its first weekly workout
+    await _persistenceService.saveProgram(program);
+    //final weekly = WeeklyWorkout.fromProgram(program);
+    //await _persistenceService.saveWeeklyWorkout(weekly);
+
+    Log.debug('WorkoutEngine: Program and weekly workout saved');
+    return program;
   }
 
-  Map<String, dynamic> validateAndNormalize(Map<String, dynamic> program) {
-    return ProgramValidator.validateAndNormalize(program);
+  /// Regenerates a program with specific options.
+  ///
+  /// Useful for user-triggered regenerations (e.g., change equipment, focus areas).
+  Future<TrainingProgram> regenerateProgram({
+    required HealthProfile profile,
+    required TrainingProgram previousProgram,
+    required Map<String, dynamic> options,
+  }) async {
+    final program = await _regenerationService.regenerate(
+      profile: profile,
+      previousProgram: previousProgram,
+      options: options,
+    );
+
+    // Save the new program and update weekly workout
+    await _persistenceService.saveProgram(program);
+
+    // Update the weekly workout
+    final currentWeekly =
+        await _persistenceService.getCurrentWeeklyWorkout(program.id);
+    if (currentWeekly != null) {
+      final updatedWeekly = currentWeekly.copyWith(
+        schedule: program.weeklySchedule,
+        createdAt: DateTime.now(),
+      );
+      await _persistenceService.saveWeeklyWorkout(updatedWeekly);
+    } else {
+      // final weekly = WeeklyWorkout.fromProgram(program);
+      //await _persistenceService.saveWeeklyWorkout(weekly);
+    }
+
+    Log.debug('WorkoutEngine: Program regenerated and saved');
+    return program;
+  }
+
+  // ============================================================
+  // Convenience methods for ViewModels
+  // ============================================================
+
+  /// Gets the current program and its active weekly workout.
+  ///
+  /// Returns a tuple: (program, weeklyWorkout).
+  Future<(TrainingProgram?, WeeklyWorkout?)>
+      getCurrentProgramWithWeekly() async {
+    final user = await _userRepository.getCurrentUser();
+    if (user == null) return (null, null);
+
+    final program = await _persistenceService.loadProgram(user.id);
+    if (program == null) return (null, null);
+
+    final weekly =
+        await _persistenceService.getCurrentWeeklyWorkout(program.id);
+    return (program, weekly);
+  }
+
+  /// Clears the current program and all associated weekly workouts.
+  Future<void> clearCurrentProgram() async {
+    final user = await _userRepository.getCurrentUser();
+    if (user == null) return;
+
+    final program = await _persistenceService.loadProgram(user.id);
+    if (program != null) {
+      // Delete associated weekly workouts
+      final weeklies =
+          await _persistenceService.getProgramWeeklyWorkouts(program.id);
+      for (final w in weeklies) {
+        await _persistenceService.deleteWeeklyWorkout(w.id);
+      }
+      await _persistenceService.deleteProgram(program.id);
+      Log.debug('WorkoutEngine: Current program and weekly workouts cleared');
+    }
   }
 }
