@@ -128,7 +128,6 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                 return RegenerateButton(
                   healthProfile: viewModel.healthProfile,
                   currentProgram: viewModel.currentProgram,
-                  currentWeeklyWorkout: viewModel.currentWeeklyWorkout,
                   onRegenerate: (options) {
                     _handleRegeneration(context, viewModel, options);
                   },

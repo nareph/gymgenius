@@ -5,7 +5,6 @@ import 'package:gymgenius/core/logger/logger_service.dart';
 import 'package:gymgenius/domain/entities/exercise.dart';
 import 'package:gymgenius/domain/entities/health_profile.dart';
 import 'package:gymgenius/domain/entities/training_program.dart';
-import 'package:gymgenius/domain/entities/weekly_workout.dart';
 
 enum RegenerationType {
   fullProgram,
@@ -62,7 +61,6 @@ class RegenerationOptions {
 class RegenerationOptionsSheet extends StatefulWidget {
   final HealthProfile? healthProfile;
   final TrainingProgram? currentProgram;
-  final WeeklyWorkout? currentWeeklyWorkout;
   final String? currentDay;
   final String? targetExerciseId;
   final Function(RegenerationOptions) onApply;
@@ -71,7 +69,6 @@ class RegenerationOptionsSheet extends StatefulWidget {
     super.key,
     this.healthProfile,
     this.currentProgram,
-    this.currentWeeklyWorkout,
     this.currentDay,
     this.targetExerciseId,
     required this.onApply,

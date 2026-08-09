@@ -1,9 +1,6 @@
 // lib/presentation/blocs/exercise_library/exercise_library_bloc.dart
 
 import 'package:bloc/bloc.dart';
-import 'package:gymgenius/domain/enums/equipment_type.dart';
-import 'package:gymgenius/domain/enums/exercise_category.dart';
-import 'package:gymgenius/domain/enums/muscle_group.dart';
 import 'package:gymgenius/engines/workout_engine/shared/exercise_pool_entry.dart';
 import 'package:gymgenius/engines/workout_engine/shared/exercises/splits/exports.dart';
 import 'package:gymgenius/presentation/blocs/exercise_library/exercise_library_event.dart';
@@ -27,7 +24,6 @@ class ExerciseLibraryBloc
     emit(state.copyWith(isLoading: true));
 
     try {
-      // Load all exercises from the exports
       final allExercises = _loadAllExercises();
       emit(state.copyWith(
         allExercises: allExercises,
@@ -49,13 +45,14 @@ class ExerciseLibraryBloc
       ...backExercises,
       ...legsExercises,
       ...armsExercises,
-      ...shouldersCoreExercises,
+      ...shouldersExercises,
       ...pullExercises,
       ...pushExercises,
       ...chestTricepsExercises,
       ...backBicepsExercises,
       ...upperBodyExercises,
       ...lowerBodyExercises,
+      ...coreExercises,
     ];
   }
 

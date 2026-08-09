@@ -21,7 +21,7 @@ const List<ExercisePoolEntry> pushSmithExercises = [
       MuscleGroup.shoulders,
       MuscleGroup.triceps
     ],
-    secondaryMuscles: const [],
+    secondaryMuscles: [],
     usesWeight: true,
     weightSuggestion: 'Moderate',
     movementPattern: MovementPattern.push,
@@ -79,7 +79,7 @@ const List<ExercisePoolEntry> pushSmithExercises = [
     difficulty: ExerciseDifficulty.beginner,
     equipmentType: EquipmentType.smithMachine,
     targetMuscles: [MuscleGroup.shoulders, MuscleGroup.triceps],
-    secondaryMuscles: const [],
+    secondaryMuscles: [],
     usesWeight: true,
     weightSuggestion: 'Moderate',
     movementPattern: MovementPattern.push,

@@ -1,5 +1,3 @@
-// lib/presentation/screens/tabs/home_tab_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:gymgenius/presentation/viewmodels/home_viewmodel.dart';
 import 'package:gymgenius/presentation/widgets/home/complete_profile_view.dart';
@@ -74,7 +72,6 @@ class HomeTabScreen extends StatelessWidget {
         // Check profile completeness via healthProfile
         final isProfileComplete = viewModel.healthProfile?.isComplete ?? false;
         if (!isProfileComplete) {
-          // Navigate to profile setup or show a completion prompt
           return wrapInScrollable(CompleteProfileView(
             key: const ValueKey('complete_profile'),
             onNavigate: () => onNavigateToTab(kProfileTabIndex),
@@ -98,12 +95,12 @@ class HomeTabScreen extends StatelessWidget {
           ));
         }
 
-        // Program exists and is valid – show dashboard with HealthProfile
+        // Program exists and is valid – show dashboard with DailyPlan
         return ProgramDashboardView(
           key: const ValueKey('dashboard'),
           program: viewModel.currentProgram!,
-          weeklyWorkout: viewModel.currentWeeklyWorkout,
           healthProfile: viewModel.healthProfile!,
+          dailyPlan: viewModel.dailyPlan!,
         );
     }
   }

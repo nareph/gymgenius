@@ -1,5 +1,3 @@
-// lib/presentation/viewmodels/profile_viewmodel.dart
-
 import 'package:flutter/material.dart';
 import 'package:gymgenius/core/logger/logger_service.dart';
 import 'package:gymgenius/domain/entities/health_profile.dart';
@@ -110,18 +108,12 @@ class ProfileViewModel extends ChangeNotifier {
 
   void _primeControllers(Map<String, dynamic> data) {
     _disposeControllers();
-    for (var question in defaultProfileQuestions) {
-      if (question.type == QuestionType.numericInput) {
-        if (question.id == 'physical_stats') {
-          final stats = data[question.id] as Map<String, dynamic>? ?? {};
-          for (var subKeyEntry in statSubKeyEntries) {
-            final controllerKey = '${question.id}_${subKeyEntry.key}';
-            final textValue = stats[subKeyEntry.key]?.toString() ?? '';
-            _controllers[controllerKey] =
-                TextEditingController(text: textValue);
-          }
-        }
-      }
+    final stats = data['physical_stats'] as Map<String, dynamic>? ?? {};
+    for (var entry in statSubKeyEntries) {
+      final controllerKey = 'physical_stats_${entry.key}';
+      final value = stats[entry.key];
+      final textValue = value?.toString() ?? '';
+      _controllers[controllerKey] = TextEditingController(text: textValue);
     }
   }
 
@@ -139,15 +131,46 @@ class ProfileViewModel extends ChangeNotifier {
   }
 
   Future<void> saveChanges() async {
+    // 1. Récupérer les valeurs des champs simples (non numériques)
     _controllers.forEach((key, controller) {
-      if (key.startsWith('physical_stats_')) {
-        final subKey = key.substring('physical_stats_'.length);
-        (_editValues['physical_stats'] as Map<String, dynamic>)[subKey] =
-            controller.text;
-      } else {
+      if (!key.startsWith('physical_stats_')) {
         _editValues[key] = controller.text;
       }
     });
+
+    // 2. Traiter les stats physiques avec le bon typage
+    final statsMap =
+        (_editValues['physical_stats'] as Map<String, dynamic>?) ?? {};
+    for (final entry in statSubKeyEntries) {
+      final controllerKey = 'physical_stats_${entry.key}';
+      final controller = _controllers[controllerKey];
+      if (controller != null) {
+        final text = controller.text.trim();
+        if (text.isNotEmpty) {
+          if (entry.key == 'age') {
+            // L'âge doit être un int
+            final value = int.tryParse(text);
+            if (value != null) {
+              statsMap[entry.key] = value;
+            } else {
+              Log.warning('Invalid integer for age: "$text"');
+            }
+          } else {
+            // Poids, taille → double
+            final value = double.tryParse(text);
+            if (value != null) {
+              statsMap[entry.key] = value;
+            } else {
+              Log.warning('Invalid number for ${entry.key}: "$text"');
+            }
+          }
+        } else {
+          // Champ vide → on le met à null (ou on garde l'ancienne valeur)
+          statsMap[entry.key] = null;
+        }
+      }
+    }
+    _editValues['physical_stats'] = statsMap;
 
     Log.debug("ProfileViewModel: Saving changes: $_editValues");
 
@@ -163,11 +186,14 @@ class ProfileViewModel extends ChangeNotifier {
       _disposeControllers();
       Log.debug("ProfileViewModel: Changes saved successfully");
       _setState(ProfileState.loaded);
+      // On notifie un succès via un message stocké (pour la vue)
+      _errorMessage = null; // pas d'erreur
     } catch (e, s) {
       Log.error("ProfileViewModel: Failed to save profile",
           error: e, stackTrace: s);
       _errorMessage = "Failed to save changes. Please try again.";
       _setState(ProfileState.error);
+      // Ne pas réinitialiser l'état d'édition, l'utilisateur peut réessayer
     }
   }
 

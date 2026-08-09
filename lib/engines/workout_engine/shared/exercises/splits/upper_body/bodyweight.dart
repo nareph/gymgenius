@@ -157,7 +157,7 @@ const List<ExercisePoolEntry> upperBodyBodyweightExercises = [
     difficulty: ExerciseDifficulty.beginner,
     equipmentType: EquipmentType.bodyweight,
     targetMuscles: [MuscleGroup.back, MuscleGroup.shoulders],
-    secondaryMuscles: const [],
+    secondaryMuscles: [],
     usesWeight: false,
     movementPattern: MovementPattern.pull,
     mechanics: Mechanics.openChain,
@@ -168,24 +168,5 @@ const List<ExercisePoolEntry> upperBodyBodyweightExercises = [
         '1. Lie face down, arms out to sides.\n'
         '2. Raise arms, squeeze shoulder blades.\n'
         '3. Lower slowly.',
-  ),
-  ExercisePoolEntry(
-    id: 'upper_bw_mountain_climbers',
-    name: 'Mountain Climbers',
-    category: ExerciseCategory.compound,
-    difficulty: ExerciseDifficulty.beginner,
-    equipmentType: EquipmentType.bodyweight,
-    targetMuscles: [MuscleGroup.absCore, MuscleGroup.shoulders],
-    secondaryMuscles: [MuscleGroup.chest],
-    usesWeight: false,
-    movementPattern: MovementPattern.core,
-    mechanics: Mechanics.closedChain,
-    forceType: ForceType.push,
-    laterality: Laterality.alternating,
-    planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Core, Shoulders**\n\n'
-        '1. Plank position.\n'
-        '2. Drive one knee towards chest.\n'
-        '3. Alternate quickly.',
   ),
 ];

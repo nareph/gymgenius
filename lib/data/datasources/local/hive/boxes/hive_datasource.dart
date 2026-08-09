@@ -5,7 +5,6 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../models/user_hive_model.dart';
 import '../models/health_profile_hive_model.dart';
 import '../models/training_program_hive_model.dart';
-import '../models/weekly_workout_hive_model.dart';
 import '../models/workout_log_hive_model.dart';
 import 'hive_boxes.dart';
 
@@ -22,14 +21,12 @@ class HiveDatasource {
     Hive.registerAdapter(UserHiveModelAdapter());
     Hive.registerAdapter(HealthProfileHiveModelAdapter());
     Hive.registerAdapter(TrainingProgramHiveModelAdapter());
-    Hive.registerAdapter(WeeklyWorkoutHiveModelAdapter());
     Hive.registerAdapter(WorkoutLogHiveModelAdapter());
 
     // Open boxes
     await Hive.openBox<UserHiveModel>(HiveBoxes.users);
     await Hive.openBox<HealthProfileHiveModel>(HiveBoxes.healthProfiles);
     await Hive.openBox<TrainingProgramHiveModel>(HiveBoxes.trainingPrograms);
-    await Hive.openBox<WeeklyWorkoutHiveModel>(HiveBoxes.weeklyWorkouts);
     await Hive.openBox<WorkoutLogHiveModel>(HiveBoxes.workoutLogs);
     await Hive.openBox(HiveBoxes.currentUser);
   }
@@ -137,39 +134,6 @@ class HiveDatasource {
   }
 
   // ============================================================
-  // WEEKLY WORKOUT
-  // ============================================================
-
-  static Future<void> saveWeeklyWorkout(WeeklyWorkoutHiveModel weekly) async {
-    await HiveBoxes.weeklyWorkoutsBox.put(weekly.id, weekly);
-  }
-
-  static WeeklyWorkoutHiveModel? getWeeklyWorkout(String id) {
-    return HiveBoxes.weeklyWorkoutsBox.get(id);
-  }
-
-  static List<WeeklyWorkoutHiveModel> getProgramWeeklyWorkouts(
-      String programId) {
-    return HiveBoxes.weeklyWorkoutsBox.values
-        .where((w) => w.programId == programId)
-        .toList()
-      ..sort((a, b) => a.weekNumber.compareTo(b.weekNumber));
-  }
-
-  static WeeklyWorkoutHiveModel? getCurrentWeeklyWorkout(String programId) {
-    final workouts = getProgramWeeklyWorkouts(programId);
-    return workouts.where((w) => w.isActive).toList().lastOrNull;
-  }
-
-  static Future<void> deleteWeeklyWorkout(String id) async {
-    await HiveBoxes.weeklyWorkoutsBox.delete(id);
-  }
-
-  static Stream<BoxEvent> watchWeeklyWorkouts() {
-    return HiveBoxes.weeklyWorkoutsBox.watch();
-  }
-
-  // ============================================================
   // WORKOUT LOG
   // ============================================================
 
@@ -217,7 +181,6 @@ class HiveDatasource {
     await HiveBoxes.usersBox.clear();
     await HiveBoxes.healthProfilesBox.clear();
     await HiveBoxes.trainingProgramsBox.clear();
-    await HiveBoxes.weeklyWorkoutsBox.clear();
     await HiveBoxes.workoutLogsBox.clear();
     await HiveBoxes.currentUserBox.clear();
   }

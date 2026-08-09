@@ -1,11 +1,8 @@
-import 'dart:math';
-
 import 'package:gymgenius/domain/entities/exercise.dart';
 import 'package:gymgenius/domain/entities/health_profile.dart';
 import 'package:gymgenius/domain/entities/training_program.dart';
 import 'package:gymgenius/domain/enums/generator_type.dart';
 import 'package:gymgenius/domain/enums/muscle_group.dart';
-import 'package:gymgenius/domain/enums/program_phase.dart';
 import 'package:gymgenius/domain/enums/split_type.dart';
 import 'package:gymgenius/domain/value_objects/workout_preferences.dart';
 
@@ -14,16 +11,34 @@ import 'package:gymgenius/engines/workout_engine/models/muscle_split.dart';
 import 'package:gymgenius/engines/workout_engine/overload/overload_rules.dart';
 import 'package:gymgenius/engines/workout_engine/shared/workout_constants.dart';
 
+/// ---------------------------------------------------------------------------
+/// ProgramGenerator
+/// ---------------------------------------------------------------------------
+///
+/// Generates a complete TrainingProgram from:
+///
+/// • HealthProfile
+/// • selected workout splits
+/// • workout frequency
+/// • previous program
+///
+/// The generator itself does not receive or manage Random.
+///
+/// Exercise selection and workout composition are delegated to
+/// WorkoutDayGenerator.
+///
+/// The generator is therefore a pure orchestration layer.
+/// ---------------------------------------------------------------------------
 class ProgramGenerator {
   ProgramGenerator({
-    Random? random,
-  })  : _random = random ?? Random(),
-        _dayGenerator = WorkoutDayGenerator(
-          random: random,
-        );
+    WorkoutDayGenerator? dayGenerator,
+  }) : _dayGenerator = dayGenerator ?? WorkoutDayGenerator();
 
-  final Random _random;
   final WorkoutDayGenerator _dayGenerator;
+
+  //===========================================================================
+  // Program generation
+  //===========================================================================
 
   TrainingProgram generate({
     required HealthProfile profile,
@@ -36,19 +51,34 @@ class ProgramGenerator {
   }) {
     final training = profile.training;
 
+    //-----------------------------------------------------------------------
+    // Resolve workout days
+    //-----------------------------------------------------------------------
+
     final workoutDays = _resolveWorkoutDays(
       training: training,
       workoutDaysCount: workoutDaysCount,
       useSpecifiedDays: useSpecifiedDays,
     );
 
+    //-----------------------------------------------------------------------
+    // Initialize weekly schedule
+    //-----------------------------------------------------------------------
+
     final weeklySchedule = <String, List<Exercise>>{
       for (final day in WorkoutConstants.daysOfWeek) day: <Exercise>[],
     };
 
+    //-----------------------------------------------------------------------
+    // Generate each workout day
+    //-----------------------------------------------------------------------
+
     for (var i = 0; i < workoutDays.length && i < selectedSplit.length; i++) {
-      weeklySchedule[workoutDays[i]] = _dayGenerator.generate(
-        split: selectedSplit[i],
+      final day = workoutDays[i];
+      final split = selectedSplit[i];
+
+      weeklySchedule[day] = _dayGenerator.generate(
+        split: split,
         profile: profile,
         previousProgram: previousProgram,
         excludeMuscles: excludeMuscles,
@@ -56,12 +86,20 @@ class ProgramGenerator {
       );
     }
 
-    final now = DateTime.now();
+    //-----------------------------------------------------------------------
+    // Program duration
+    //-----------------------------------------------------------------------
 
     final durationWeeks = OverloadRules.programDurationWeeks(
       training.experience.name,
-      _random.nextInt(3),
+      0,
     );
+
+    //-----------------------------------------------------------------------
+    // Program metadata
+    //-----------------------------------------------------------------------
+
+    final now = DateTime.now();
 
     return TrainingProgram(
       id: '',
@@ -73,9 +111,6 @@ class ProgramGenerator {
       goal: training.goal,
       split: _splitType(selectedSplit),
       experience: training.experience,
-      programPhase: ProgramPhase.base,
-      mesocycle: 1,
-      microcycle: 1,
       durationWeeks: durationWeeks,
       weeklySchedule: weeklySchedule,
       generatorType: GeneratorType.local,
@@ -87,13 +122,17 @@ class ProgramGenerator {
     );
   }
 
+  //===========================================================================
+  // Workout days
+  //===========================================================================
+
   List<String> _resolveWorkoutDays({
     required WorkoutPreferences training,
     required int workoutDaysCount,
     required bool useSpecifiedDays,
   }) {
     if (useSpecifiedDays && training.preferredDays.isNotEmpty) {
-      return training.preferredDays.map((e) => e.name).toList();
+      return training.preferredDays.map((day) => day.name).toList();
     }
 
     return WorkoutConstants.defaultWorkoutDays(
@@ -101,10 +140,14 @@ class ProgramGenerator {
     );
   }
 
+  //===========================================================================
+  // Split type
+  //===========================================================================
+
   SplitType _splitType(
     List<MuscleSplit> splits,
   ) {
-    final names = splits.map((e) => e.name.toLowerCase()).join(' ');
+    final names = splits.map((split) => split.name.toLowerCase()).join(' ');
 
     if (names.contains('push') &&
         names.contains('pull') &&
@@ -123,22 +166,17 @@ class ProgramGenerator {
     return SplitType.custom;
   }
 
+  //===========================================================================
+  // Program name
+  //===========================================================================
+
   String _programName(
     int workoutDays,
     List<MuscleSplit> splits,
   ) {
-    const prefixes = [
-      'Progressive',
-      'Ultimate',
-      'Complete',
-      'Dynamic',
-      'Performance',
-    ];
+    final splitNames =
+        splits.take(workoutDays).map((split) => split.name).join('/');
 
-    final prefix = prefixes[_random.nextInt(prefixes.length)];
-
-    final splitNames = splits.take(workoutDays).map((e) => e.name).join('/');
-
-    return '$prefix $workoutDays-Day $splitNames Split';
+    return '$workoutDays-Day $splitNames Split';
   }
 }

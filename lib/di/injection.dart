@@ -1,5 +1,3 @@
-// lib/di/injection.dart
-
 import 'package:get_it/get_it.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -14,8 +12,28 @@ import 'package:gymgenius/domain/repositories/health_repository.dart';
 import 'package:gymgenius/domain/repositories/tracking_repository.dart';
 import 'package:gymgenius/domain/repositories/user_repository.dart';
 import 'package:gymgenius/domain/repositories/workout_repository.dart';
+
+import 'package:gymgenius/engines/decision_engine/decision_engine.dart';
+import 'package:gymgenius/engines/decision_engine/Progression/program_progress_service.dart';
+import 'package:gymgenius/engines/decision_engine/rules/deload_rule.dart';
+import 'package:gymgenius/engines/decision_engine/rules/equipment_rule.dart';
+import 'package:gymgenius/engines/decision_engine/rules/injury_rule.dart';
+import 'package:gymgenius/engines/decision_engine/rules/nutrition_rule.dart';
+import 'package:gymgenius/engines/decision_engine/rules/progression_rule.dart';
+import 'package:gymgenius/engines/decision_engine/rules/recovery_rule.dart';
+import 'package:gymgenius/engines/decision_engine/rules/safety_rule.dart';
+import 'package:gymgenius/engines/decision_engine/services/conflict_resolver.dart';
+import 'package:gymgenius/engines/decision_engine/services/deload_service.dart';
+import 'package:gymgenius/engines/decision_engine/services/exercise_substitution_service.dart';
+import 'package:gymgenius/engines/decision_engine/services/intensity_adjustment_service.dart';
+import 'package:gymgenius/engines/decision_engine/services/recovery_session_service.dart';
+import 'package:gymgenius/engines/decision_engine/services/volume_adjustment_service.dart';
+import 'package:gymgenius/engines/decision_engine/services/workout_adaptation_service.dart';
+import 'package:gymgenius/engines/decision_engine/builders/today_workout_builder.dart';
+
 import 'package:gymgenius/engines/workout_engine/optimizers/local_program_optimizer.dart';
 import 'package:gymgenius/engines/workout_engine/optimizers/program_optimizer.dart';
+import 'package:gymgenius/engines/workout_engine/providers/exercise_replacement_provider.dart';
 import 'package:gymgenius/engines/workout_engine/services/generation_service.dart';
 import 'package:gymgenius/engines/workout_engine/workout_engine.dart';
 
@@ -29,8 +47,6 @@ import 'package:gymgenius/presentation/providers/workout_session_manager.dart';
 import 'package:gymgenius/presentation/viewmodels/home_viewmodel.dart';
 import 'package:gymgenius/presentation/viewmodels/profile_viewmodel.dart';
 import 'package:gymgenius/presentation/viewmodels/tracking_viewmodel.dart';
-// ExerciseLoggingViewModel and ActiveWorkoutViewModel are not registered here
-// because they require BuildContext or dynamic Exercise parameters.
 
 final getIt = GetIt.instance;
 
@@ -73,9 +89,126 @@ void setupDependencies() {
   // Workout Engine
   // ============================================================
   getIt.registerFactory<ProgramOptimizer>(() => const LocalProgramOptimizer());
+  getIt.registerLazySingleton<ExerciseReplacementProvider>(
+    () => const ExerciseReplacementProvider(),
+  );
 
   getIt.registerLazySingleton<GenerationService>(() => GenerationService());
   getIt.registerLazySingleton<WorkoutEngine>(() => WorkoutEngine());
+
+  // ============================================================
+// Decision Engine
+// ============================================================
+
+// Progression
+
+  getIt.registerLazySingleton<ProgramProgressService>(
+    () => const ProgramProgressService(),
+  );
+
+// Builder
+
+  getIt.registerLazySingleton<TodayWorkoutBuilder>(
+    () => const TodayWorkoutBuilder(),
+  );
+
+// Adaptation services
+
+  getIt.registerLazySingleton<VolumeAdjustmentService>(
+    () => const VolumeAdjustmentService(),
+  );
+
+  getIt.registerLazySingleton<IntensityAdjustmentService>(
+    () => const IntensityAdjustmentService(),
+  );
+
+  getIt.registerLazySingleton<ExerciseSubstitutionService>(
+    () => ExerciseSubstitutionService(
+      replacementProvider: getIt<ExerciseReplacementProvider>(),
+    ),
+  );
+
+  getIt.registerLazySingleton<RecoverySessionService>(
+    () => const RecoverySessionService(),
+  );
+
+  getIt.registerLazySingleton<DeloadService>(
+    () => const DeloadService(),
+  );
+
+// Workout adaptation
+
+  getIt.registerLazySingleton<WorkoutAdaptationService>(
+    () => WorkoutAdaptationService(
+      volumeAdjustmentService: getIt(),
+      intensityAdjustmentService: getIt(),
+      exerciseSubstitutionService: getIt(),
+      recoverySessionService: getIt(),
+      deloadService: getIt(),
+    ),
+  );
+
+// ------------------------------------------------------------
+// Rules
+// ------------------------------------------------------------
+
+  getIt.registerLazySingleton<DeloadRule>(
+    () => const DeloadRule(),
+  );
+
+  getIt.registerLazySingleton<ProgressionRule>(
+    () => const ProgressionRule(),
+  );
+
+  getIt.registerLazySingleton<RecoveryRule>(
+    () => const RecoveryRule(),
+  );
+
+  getIt.registerLazySingleton<NutritionRule>(
+    () => const NutritionRule(),
+  );
+
+  getIt.registerLazySingleton<SafetyRule>(
+    () => const SafetyRule(),
+  );
+
+  getIt.registerLazySingleton<EquipmentRule>(
+    () => const EquipmentRule(),
+  );
+
+  getIt.registerLazySingleton<InjuryRule>(
+    () => const InjuryRule(),
+  );
+
+// ------------------------------------------------------------
+// Conflict Resolver
+// ------------------------------------------------------------
+
+  getIt.registerLazySingleton<ConflictResolver>(
+    () => const ConflictResolver(),
+  );
+
+// ------------------------------------------------------------
+// Decision Engine
+// ------------------------------------------------------------
+
+  getIt.registerLazySingleton<DecisionEngine>(
+    () => DecisionEngine(
+      programProgressService: getIt(),
+      todayWorkoutBuilder: getIt(),
+      workoutAdaptationService: getIt(),
+      conflictResolver: getIt(),
+      rules: [
+        getIt<InjuryRule>(),
+        getIt<SafetyRule>(),
+        getIt<RecoveryRule>(),
+        getIt<DeloadRule>(),
+        getIt<ProgressionRule>(),
+        getIt<NutritionRule>(),
+        getIt<EquipmentRule>(),
+      ],
+    ),
+  );
 
   // ============================================================
   // Providers (ChangeNotifier)
@@ -106,7 +239,6 @@ void setupDependencies() {
     ),
   );
 
-  // Exercise Library
   getIt.registerFactory(() => ExerciseLibraryBloc());
 
   // ============================================================
@@ -117,6 +249,7 @@ void setupDependencies() {
       workoutEngine: getIt<WorkoutEngine>(),
       userRepository: getIt<UserRepository>(),
       healthRepository: getIt<HealthRepository>(),
+      decisionEngine: getIt<DecisionEngine>(),
     ),
   );
 

@@ -1,3 +1,4 @@
+import '../core/core_exercises.dart';
 import 'bodyweight.dart';
 import 'dumbbells.dart';
 import 'barbell.dart';
@@ -12,7 +13,7 @@ import 'dip.dart';
 import 'package:gymgenius/engines/workout_engine/shared/exercise_pool_entry.dart';
 
 /// All exercises for the Push split, organised by equipment type.
-const List<ExercisePoolEntry> pushExercises = [
+List<ExercisePoolEntry> pushExercises = [
   ...pushBodyweightExercises,
   ...pushDumbbellExercises,
   ...pushBarbellExercises,
@@ -23,4 +24,5 @@ const List<ExercisePoolEntry> pushExercises = [
   ...pushResistanceBandsExercises,
   ...pushChairExercises,
   ...pushDipExercises,
+  ...coreExercises,
 ];

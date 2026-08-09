@@ -3,13 +3,11 @@
 import 'package:flutter/material.dart';
 import 'package:gymgenius/domain/entities/health_profile.dart';
 import 'package:gymgenius/domain/entities/training_program.dart';
-import 'package:gymgenius/domain/entities/weekly_workout.dart';
 import 'package:gymgenius/presentation/widgets/regeneration/regeneration_options_sheet.dart';
 
 class RegenerateButton extends StatelessWidget {
   final HealthProfile? healthProfile;
   final TrainingProgram? currentProgram;
-  final WeeklyWorkout? currentWeeklyWorkout;
   final String? currentDay;
   final String? targetExerciseId;
   final Function(RegenerationOptions) onRegenerate;
@@ -22,7 +20,6 @@ class RegenerateButton extends StatelessWidget {
     this.healthProfile,
     required this.onRegenerate,
     this.currentProgram,
-    this.currentWeeklyWorkout,
     this.currentDay,
     this.targetExerciseId,
     this.isGenerating = false,
@@ -55,7 +52,6 @@ class RegenerateButton extends StatelessWidget {
       builder: (context) => RegenerationOptionsSheet(
         healthProfile: healthProfile,
         currentProgram: currentProgram,
-        currentWeeklyWorkout: currentWeeklyWorkout,
         currentDay: currentDay,
         targetExerciseId: targetExerciseId,
         onApply: onRegenerate,

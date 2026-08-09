@@ -2,43 +2,90 @@ import 'dart:math';
 
 import 'package:gymgenius/domain/entities/health_profile.dart';
 import 'package:gymgenius/domain/entities/training_program.dart';
+
 import 'package:gymgenius/domain/enums/equipment_type.dart';
 import 'package:gymgenius/domain/enums/muscle_group.dart';
+
 import 'package:gymgenius/domain/value_objects/workout_preferences.dart';
+import 'package:gymgenius/engines/workout_engine/models/focus_plan.dart';
+
 import 'package:gymgenius/engines/workout_engine/models/muscle_split.dart';
+
+import 'package:gymgenius/engines/workout_engine/selectors/exercise_scorer.dart';
+import 'package:gymgenius/engines/workout_engine/selectors/focus_quota_planner.dart';
+import 'package:gymgenius/engines/workout_engine/selectors/selection_candidate.dart';
+import 'package:gymgenius/engines/workout_engine/selectors/selection_state.dart';
+
 import 'package:gymgenius/engines/workout_engine/shared/exercises/exercise_pool.dart';
 import 'package:gymgenius/engines/workout_engine/shared/exercise_pool_entry.dart';
 
-/// Mutable accumulator threaded through every pass — tracks what's been
-/// picked so far so later passes never re-add or duplicate an exercise.
-class _SelectionState {
-  final List<ExercisePoolEntry> selected = [];
-  final Set<String> usedNames = {};
-  final Set<String> usedPatterns = {};
-
-  //bool get isFull => false; // replaced per-call against desiredCount
-}
-
-/// Selects exercises for a workout day from the local exercise pool.
+/// ---------------------------------------------------------------------------
+/// ExerciseSelector
+/// ---------------------------------------------------------------------------
 ///
-/// Never gives up before `desiredCount` is reached as long as the pool
-/// has enough distinct exercises somewhere across the passes below.
-/// Progressively more permissive:
+/// Intelligent greedy selector.
 ///
-/// 1. Requested equipment, unused vs previousProgram, pattern variety.
-/// 2. Requested equipment, unused vs previousProgram, patterns may repeat.
-/// 3. Bodyweight fallback, unused vs previousProgram, pattern variety.
-/// 4. Bodyweight fallback, unused vs previousProgram, patterns may repeat.
-/// 5. Final fallback: reuse exercises from previousProgram if still short.
+/// Pipeline
 ///
-/// Guarantees `selected.length == desiredCount` unless the combined
-/// requested-equipment + bodyweight pool for this split genuinely has
-/// fewer than `desiredCount` distinct exercises in total — a real pool
-/// content limit, not a selection bug.
+/// 1.
+/// Build candidate pool
+///
+///      - requested equipment
+///      - bodyweight fallback
+///      - deduplicate
+///
+/// 2.
+/// Build a FocusPlan
+///
+///      - primary muscles
+///      - secondary muscles
+///      - quotas
+///      - specialization ratio
+///
+/// 3.
+/// Greedy selection
+///
+///      while workout not complete
+///
+///          score every remaining candidate
+///
+///          pick best candidate
+///
+///          update selection state
+///
+/// 4.
+/// return selected exercises
+///
+///
+/// Every decision is delegated to:
+///
+/// • FocusQuotaPlanner
+///
+/// • ExerciseScorer
+///
+/// • SelectionState
+///
+/// making ExerciseSelector only responsible for orchestration.
 class ExerciseSelector {
-  ExerciseSelector({Random? random}) : _random = random ?? Random();
+  ExerciseSelector({
+    Random? random,
+    ExerciseScorer? scorer,
+  })  : _random = random ?? Random(),
+        _scorer = scorer ?? const ExerciseScorer();
+
+  //---------------------------------------------------------------------------
+  // Dependencies
+  //---------------------------------------------------------------------------
 
   final Random _random;
+
+  final ExerciseScorer _scorer;
+
+  final FocusQuotaPlanner _quotaPlanner = const FocusQuotaPlanner();
+
+  //---------------------------------------------------------------------------
+  // Public API
+  //---------------------------------------------------------------------------
 
   List<ExercisePoolEntry> select({
     required MuscleSplit split,
@@ -48,177 +95,170 @@ class ExerciseSelector {
     List<MuscleGroup>? excludeMuscles,
   }) {
     final training = profile.training;
+
+    //----------------------------------------------------------
+    // Previous program
+    //----------------------------------------------------------
+
     final previousNames = _previousExerciseNames(previousProgram);
 
-    final requestedPool = ExercisePool.getExercises(
-      splitName: split.name,
-      allowedEquipment: training.equipment,
-      focusMuscles: training.focusAreas,
-      excludeMuscles: excludeMuscles,
-    );
+    //----------------------------------------------------------
+    // Candidate pool
+    //----------------------------------------------------------
 
-    final bodyweightPool = _bodyweightPool(
+    final candidatePool = _buildCandidatePool(
       split: split,
       training: training,
       excludeMuscles: excludeMuscles,
     );
 
-    final state = _SelectionState();
+    //----------------------------------------------------------
+    // Focus plan
+    //----------------------------------------------------------
 
-    _firstPass(requestedPool, previousNames, desiredCount, state);
-    _secondPass(requestedPool, previousNames, desiredCount, state);
-    _thirdPassBodyweight(bodyweightPool, previousNames, desiredCount, state);
-    _fourthPassBodyweight(bodyweightPool, previousNames, desiredCount, state);
-    _finalFallback(requestedPool, bodyweightPool, desiredCount, state);
+    final FocusPlan focusPlan = _quotaPlanner.buildPlan(
+      split: split,
+      focusMuscles: training.focusAreas,
+      desiredExerciseCount: desiredCount,
+    );
+
+    //----------------------------------------------------------
+    // Mutable state
+    //----------------------------------------------------------
+
+    final state = SelectionState();
+
+    //----------------------------------------------------------
+    // Greedy selection
+    //----------------------------------------------------------
+
+    while (!state.isComplete(desiredCount)) {
+      final SelectionCandidate? candidate = _scorer.bestCandidate(
+        pool: candidatePool,
+        split: split,
+        state: state,
+        focusPlan: focusPlan,
+        previousNames: previousNames,
+      );
+
+      //--------------------------------------------------------
+      // Pool exhausted
+      //--------------------------------------------------------
+
+      if (candidate == null) {
+        break;
+      }
+
+      //--------------------------------------------------------
+      // Register exercise
+      //--------------------------------------------------------
+
+      state.add(candidate.entry);
+    }
+
+    //----------------------------------------------------------
+    // Finished
+    //----------------------------------------------------------
 
     return state.selected;
   }
+  //----------------------------------------------------------------------------
+  // Candidate Pool
+  //----------------------------------------------------------------------------
 
-  // ------------------------------------------------------------------
-  // Passes
-  // ------------------------------------------------------------------
-
-  /// PASS 1: requested equipment, not in previousProgram, pattern variety.
-  void _firstPass(
-    List<ExercisePoolEntry> pool,
-    Set<String> previousNames,
-    int desiredCount,
-    _SelectionState state,
-  ) {
-    _addExercises(
-      pool: pool,
-      desiredCount: desiredCount,
-      state: state,
-      excludeNames: previousNames,
-      enforceVariety: true,
-    );
-  }
-
-  /// PASS 2: requested equipment, not in previousProgram, patterns may repeat.
-  void _secondPass(
-    List<ExercisePoolEntry> pool,
-    Set<String> previousNames,
-    int desiredCount,
-    _SelectionState state,
-  ) {
-    _addExercises(
-      pool: pool,
-      desiredCount: desiredCount,
-      state: state,
-      excludeNames: previousNames,
-      enforceVariety: false,
-    );
-  }
-
-  /// PASS 3: bodyweight fallback, not in previousProgram, pattern variety.
-  void _thirdPassBodyweight(
-    List<ExercisePoolEntry> pool,
-    Set<String> previousNames,
-    int desiredCount,
-    _SelectionState state,
-  ) {
-    _addExercises(
-      pool: pool,
-      desiredCount: desiredCount,
-      state: state,
-      excludeNames: previousNames,
-      enforceVariety: true,
-    );
-  }
-
-  /// PASS 4: bodyweight fallback, not in previousProgram, patterns may repeat.
-  void _fourthPassBodyweight(
-    List<ExercisePoolEntry> pool,
-    Set<String> previousNames,
-    int desiredCount,
-    _SelectionState state,
-  ) {
-    _addExercises(
-      pool: pool,
-      desiredCount: desiredCount,
-      state: state,
-      excludeNames: previousNames,
-      enforceVariety: false,
-    );
-  }
-
-  /// PASS 5: last resort — allow reusing previousProgram exercises, from
-  /// the combined requested-equipment + bodyweight pool.
-  void _finalFallback(
-    List<ExercisePoolEntry> requestedPool,
-    List<ExercisePoolEntry> bodyweightPool,
-    int desiredCount,
-    _SelectionState state,
-  ) {
-    if (state.selected.length >= desiredCount) return;
-
-    final combined = <String, ExercisePoolEntry>{};
-    for (final entry in [...requestedPool, ...bodyweightPool]) {
-      combined[entry.name] = entry;
-    }
-
-    _addExercises(
-      pool: combined.values.toList(),
-      desiredCount: desiredCount,
-      state: state,
-      excludeNames: const {},
-      enforceVariety: false,
-    );
-  }
-
-  // ------------------------------------------------------------------
-  // Shared pass logic
-  // ------------------------------------------------------------------
-
-  void _addExercises({
-    required List<ExercisePoolEntry> pool,
-    required int desiredCount,
-    required _SelectionState state,
-    required Set<String> excludeNames,
-    required bool enforceVariety,
-  }) {
-    if (state.selected.length >= desiredCount || pool.isEmpty) return;
-
-    for (final entry in _shuffle(pool)) {
-      if (state.selected.length >= desiredCount) break;
-      if (state.usedNames.contains(entry.name)) continue;
-      if (excludeNames.contains(entry.name)) continue;
-
-      final pattern = entry.movementPattern.name;
-      if (enforceVariety && state.usedPatterns.contains(pattern)) continue;
-
-      state.selected.add(entry);
-      state.usedNames.add(entry.name);
-      state.usedPatterns.add(pattern);
-    }
-  }
-
-  List<ExercisePoolEntry> _shuffle(List<ExercisePoolEntry> pool) {
-    return List<ExercisePoolEntry>.from(pool)..shuffle(_random);
-  }
-
-  List<ExercisePoolEntry> _bodyweightPool({
+  /// Builds the candidate pool used by the greedy selector.
+  ///
+  /// The pool is intentionally larger than the final workout.
+  ///
+  /// Sources:
+  ///
+  /// • User equipment
+  /// • Bodyweight fallback
+  ///
+  /// Rules:
+  ///
+  /// • remove duplicates
+  /// • preserve only one instance per exercise name
+  /// • shuffle once so tie-breaks vary naturally
+  List<ExercisePoolEntry> _buildCandidatePool({
     required MuscleSplit split,
     required WorkoutPreferences training,
     List<MuscleGroup>? excludeMuscles,
   }) {
-    return ExercisePool.getExercises(
+    //----------------------------------------------------------
+    // Requested equipment
+    //----------------------------------------------------------
+
+    final requestedPool = ExercisePool.getExercises(
       splitName: split.name,
-      allowedEquipment: const [EquipmentType.bodyweight],
-      focusMuscles: training.focusAreas,
+      allowedEquipment: training.equipment,
       excludeMuscles: excludeMuscles,
     );
+
+    //----------------------------------------------------------
+    // Bodyweight fallback
+    //----------------------------------------------------------
+
+    final bodyweightPool = ExercisePool.getExercises(
+      splitName: split.name,
+      allowedEquipment: const [
+        EquipmentType.bodyweight,
+      ],
+      excludeMuscles: excludeMuscles,
+    );
+
+    //----------------------------------------------------------
+    // Merge without duplicates
+    //----------------------------------------------------------
+
+    final merged = <String, ExercisePoolEntry>{};
+
+    for (final exercise in requestedPool) {
+      merged[exercise.name] = exercise;
+    }
+
+    for (final exercise in bodyweightPool) {
+      merged.putIfAbsent(
+        exercise.name,
+        () => exercise,
+      );
+    }
+
+    //----------------------------------------------------------
+    // Shuffle
+    //----------------------------------------------------------
+
+    final pool = merged.values.toList();
+
+    pool.shuffle(_random);
+
+    return pool;
   }
 
-  Set<String> _previousExerciseNames(TrainingProgram? previousProgram) {
-    if (previousProgram == null) return {};
+  //----------------------------------------------------------------------------
+  // Previous Program
+  //----------------------------------------------------------------------------
+
+  /// Collects every exercise already used in the previous generated
+  /// program.
+  ///
+  /// ExerciseScorer applies only a soft penalty to these names,
+  /// allowing reuse only when no better alternative exists.
+  Set<String> _previousExerciseNames(
+    TrainingProgram? previousProgram,
+  ) {
+    if (previousProgram == null) {
+      return {};
+    }
 
     final names = <String>{};
+
     for (final exercises in previousProgram.weeklySchedule.values) {
       for (final exercise in exercises) {
         names.add(exercise.name);
       }
     }
+
     return names;
   }
 }

@@ -1,12 +1,11 @@
-// lib/presentation/viewmodels/home_viewmodel.dart
-
 import 'package:flutter/material.dart';
 import 'package:gymgenius/core/logger/logger_service.dart';
 import 'package:gymgenius/domain/entities/health_profile.dart';
 import 'package:gymgenius/domain/entities/training_program.dart';
-import 'package:gymgenius/domain/entities/weekly_workout.dart';
 import 'package:gymgenius/domain/repositories/health_repository.dart';
 import 'package:gymgenius/domain/repositories/user_repository.dart';
+import 'package:gymgenius/engines/decision_engine/decision_engine.dart';
+import 'package:gymgenius/engines/decision_engine/models/daily_plan.dart';
 import 'package:gymgenius/engines/workout_engine/workout_engine.dart';
 import 'package:gymgenius/presentation/widgets/regeneration/regeneration_options_sheet.dart';
 
@@ -16,19 +15,25 @@ class HomeViewModel extends ChangeNotifier {
   final WorkoutEngine _workoutEngine;
   final UserRepository _userRepository;
   final HealthRepository _healthRepository;
+  final DecisionEngine _decisionEngine;
   BuildContext? _context;
 
   HomeViewModel({
     required WorkoutEngine workoutEngine,
     required UserRepository userRepository,
     required HealthRepository healthRepository,
+    required DecisionEngine decisionEngine,
   })  : _workoutEngine = workoutEngine,
         _userRepository = userRepository,
-        _healthRepository = healthRepository {
+        _healthRepository = healthRepository,
+        _decisionEngine = decisionEngine {
     Log.info('HomeViewModel: Created');
     _loadData();
   }
 
+  // =========================================================================
+  // State
+  // =========================================================================
   HomeState _state = HomeState.initial;
   HomeState get state => _state;
 
@@ -38,18 +43,30 @@ class HomeViewModel extends ChangeNotifier {
   bool _isGeneratingProgram = false;
   bool get isGeneratingProgram => _isGeneratingProgram;
 
+  // -------------------------------------------------------------------------
+  // Health profile
+  // -------------------------------------------------------------------------
   HealthProfile? _healthProfile;
   HealthProfile? get healthProfile => _healthProfile;
-
-  TrainingProgram? _currentProgram;
-  TrainingProgram? get currentProgram => _currentProgram;
-
-  WeeklyWorkout? _currentWeeklyWorkout;
-  WeeklyWorkout? get currentWeeklyWorkout => _currentWeeklyWorkout;
 
   bool _isProfileComplete = false;
   bool get isProfileComplete => _isProfileComplete;
 
+  // -------------------------------------------------------------------------
+  // Current program
+  // -------------------------------------------------------------------------
+  TrainingProgram? _currentProgram;
+  TrainingProgram? get currentProgram => _currentProgram;
+
+  // -------------------------------------------------------------------------
+  // Daily plan (orchestrated by the DecisionEngine)
+  // -------------------------------------------------------------------------
+  DailyPlan? _dailyPlan;
+  DailyPlan? get dailyPlan => _dailyPlan;
+
+  // =========================================================================
+  // Data loading
+  // =========================================================================
   Future<void> _loadData() async {
     Log.info('HomeViewModel: Loading data...');
     _state = HomeState.loading;
@@ -65,15 +82,17 @@ class HomeViewModel extends ChangeNotifier {
       _healthProfile = healthProfile;
       _isProfileComplete = healthProfile != null && healthProfile.isComplete;
 
-      final (program, weekly) =
-          await _workoutEngine.getCurrentProgramWithWeekly();
+      final program = await _workoutEngine.getCurrentProgram();
       _currentProgram = program;
-      _currentWeeklyWorkout = weekly;
+
+      // Build DailyPlan using DecisionEngine ----
+      _dailyPlan = program == null
+          ? null
+          : _decisionEngine.buildDailyPlan(program, healthProfile!);
 
       Log.info('HomeViewModel: Profile complete: $_isProfileComplete');
       Log.info('HomeViewModel: Program found: ${_currentProgram != null}');
-      Log.info(
-          'HomeViewModel: Weekly workout found: ${_currentWeeklyWorkout != null}');
+      Log.info('HomeViewModel: DailyPlan loaded: ${_dailyPlan != null}');
 
       _state = HomeState.loaded;
       notifyListeners();
@@ -86,6 +105,9 @@ class HomeViewModel extends ChangeNotifier {
     }
   }
 
+  // =========================================================================
+  // Program generation
+  // =========================================================================
   Future<void> generateNewProgram() async {
     if (_healthProfile == null || !_healthProfile!.isComplete) {
       _errorMessage = 'Health profile is incomplete.';
@@ -176,17 +198,28 @@ class HomeViewModel extends ChangeNotifier {
     );
   }
 
+  // =========================================================================
+  // Program dismissal
+  // =========================================================================
   Future<void> dismissExpiredProgram() async {
     await _workoutEngine.clearCurrentProgram();
+
     _currentProgram = null;
-    _currentWeeklyWorkout = null;
+    _dailyPlan = null; // also clear the daily plan
+
     notifyListeners();
   }
 
+  // =========================================================================
+  // Manual refresh
+  // =========================================================================
   Future<void> refresh() async {
     await _loadData();
   }
 
+  // =========================================================================
+  // Context setter (for SnackBars)
+  // =========================================================================
   void setContext(BuildContext context) {
     _context = context;
   }

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gymgenius/domain/entities/exercise.dart';
 import 'package:gymgenius/domain/entities/health_profile.dart';
 import 'package:gymgenius/domain/entities/training_program.dart';
-import 'package:gymgenius/domain/entities/weekly_workout.dart';
+import 'package:gymgenius/engines/decision_engine/models/daily_plan.dart';
 import 'package:gymgenius/presentation/blocs/auth/auth_bloc.dart';
 import 'package:gymgenius/presentation/providers/workout_session_manager.dart';
 import 'package:gymgenius/presentation/screens/active_workout_session_screen.dart';
@@ -12,14 +12,14 @@ import 'package:provider/provider.dart';
 
 class ProgramDashboardView extends StatelessWidget {
   final TrainingProgram program;
-  final WeeklyWorkout? weeklyWorkout;
   final HealthProfile healthProfile;
+  final DailyPlan dailyPlan;
 
   const ProgramDashboardView({
     super.key,
     required this.program,
-    this.weeklyWorkout,
     required this.healthProfile,
+    required this.dailyPlan,
   });
 
   String capitalize(String s) {
@@ -200,8 +200,11 @@ class ProgramDashboardView extends StatelessWidget {
     final todayDayKey = daysOfWeek[today.weekday - 1];
     final weeklySchedule = program.weeklySchedule;
 
-    // ✅ Déjà des List<Exercise> – aucune conversion nécessaire
-    final todaysExercises = weeklySchedule[todayDayKey] ?? [];
+    // --------------------------------------------------------------
+    // The DecisionEngine's final decision for today's workout.
+    // If empty, today is a rest day.
+    // --------------------------------------------------------------
+    final todaysExercises = dailyPlan.todayWorkout?.finalExercises ?? [];
 
     final user = context.read<AuthBloc>().state.user;
 
@@ -218,14 +221,17 @@ class ProgramDashboardView extends StatelessWidget {
           style: textTheme.bodySmall
               ?.copyWith(color: colorScheme.onSurfaceVariant),
         ),
-        if (weeklyWorkout != null)
-          Text(
-            "Week ${weeklyWorkout!.weekNumber} of ${program.durationWeeks}",
-            style: textTheme.bodySmall?.copyWith(color: colorScheme.primary),
+        Text(
+          "Week ${dailyPlan.programProgress.currentWeek} of ${program.durationWeeks}",
+          style: textTheme.bodySmall?.copyWith(
+            color: colorScheme.primary,
           ),
+        ),
         const SizedBox(height: 16),
 
-        // Today's workout card
+        // ------------------------------------------------------------------
+        // Today's workout card (only if not expired and not a rest day)
+        // ------------------------------------------------------------------
         if (todaysExercises.isNotEmpty && !program.isExpired)
           Card(
             color: _getSplitThemeColor(todaysExercises, colorScheme)
@@ -283,6 +289,9 @@ class ProgramDashboardView extends StatelessWidget {
               ),
             ),
           )
+        // ------------------------------------------------------------------
+        // Rest day message (when todaysExercises is empty and program valid)
+        // ------------------------------------------------------------------
         else if (!program.isExpired)
           Card(
             color: colorScheme.surfaceContainerHighest,

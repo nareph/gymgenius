@@ -2,7 +2,6 @@ import 'package:hive/hive.dart';
 import '../models/user_hive_model.dart';
 import '../models/health_profile_hive_model.dart';
 import '../models/training_program_hive_model.dart';
-import '../models/weekly_workout_hive_model.dart';
 import '../models/workout_log_hive_model.dart';
 
 class HiveBoxes {
@@ -18,8 +17,6 @@ class HiveBoxes {
       Hive.box<HealthProfileHiveModel>(healthProfiles);
   static Box<TrainingProgramHiveModel> get trainingProgramsBox =>
       Hive.box<TrainingProgramHiveModel>(trainingPrograms);
-  static Box<WeeklyWorkoutHiveModel> get weeklyWorkoutsBox =>
-      Hive.box<WeeklyWorkoutHiveModel>(weeklyWorkouts);
   static Box<WorkoutLogHiveModel> get workoutLogsBox =>
       Hive.box<WorkoutLogHiveModel>(workoutLogs);
   static Box get currentUserBox => Hive.box(currentUser);

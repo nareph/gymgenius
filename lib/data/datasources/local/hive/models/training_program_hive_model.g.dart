@@ -24,22 +24,19 @@ class TrainingProgramHiveModelAdapter
       goal: fields[3] as String,
       split: fields[4] as String,
       experience: fields[5] as String,
-      phase: fields[6] as String,
-      mesocycle: fields[7] as int,
-      microcycle: fields[8] as int,
-      durationWeeks: fields[9] as int,
-      weeklySchedule: (fields[10] as Map).cast<String, dynamic>(),
-      generatorType: fields[11] as String,
-      generatorVersion: fields[12] as String,
-      createdAt: fields[13] as DateTime,
-      expiresAt: fields[14] as DateTime,
+      durationWeeks: fields[6] as int,
+      weeklySchedule: (fields[7] as Map).cast<String, dynamic>(),
+      generatorType: fields[8] as String,
+      generatorVersion: fields[9] as String,
+      createdAt: fields[10] as DateTime,
+      expiresAt: fields[11] as DateTime,
     );
   }
 
   @override
   void write(BinaryWriter writer, TrainingProgramHiveModel obj) {
     writer
-      ..writeByte(15)
+      ..writeByte(12)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -53,22 +50,16 @@ class TrainingProgramHiveModelAdapter
       ..writeByte(5)
       ..write(obj.experience)
       ..writeByte(6)
-      ..write(obj.phase)
-      ..writeByte(7)
-      ..write(obj.mesocycle)
-      ..writeByte(8)
-      ..write(obj.microcycle)
-      ..writeByte(9)
       ..write(obj.durationWeeks)
-      ..writeByte(10)
+      ..writeByte(7)
       ..write(obj.weeklySchedule)
-      ..writeByte(11)
+      ..writeByte(8)
       ..write(obj.generatorType)
-      ..writeByte(12)
+      ..writeByte(9)
       ..write(obj.generatorVersion)
-      ..writeByte(13)
+      ..writeByte(10)
       ..write(obj.createdAt)
-      ..writeByte(14)
+      ..writeByte(11)
       ..write(obj.expiresAt);
   }
 

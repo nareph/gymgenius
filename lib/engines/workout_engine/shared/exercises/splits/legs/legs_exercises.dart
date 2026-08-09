@@ -1,3 +1,4 @@
+import '../core/core_exercises.dart';
 import 'bodyweight.dart';
 import 'chair.dart';
 import 'stairs.dart';
@@ -16,7 +17,7 @@ import 'resistance_bands.dart';
 import 'package:gymgenius/engines/workout_engine/shared/exercise_pool_entry.dart';
 
 /// All exercises for the Legs split, organised by equipment type.
-const List<ExercisePoolEntry> legsExercises = [
+List<ExercisePoolEntry> legsExercises = [
   ...legsBodyweightExercises,
   ...legsChairExercises,
   ...legsStairsExercises,
@@ -31,4 +32,5 @@ const List<ExercisePoolEntry> legsExercises = [
   ...legsCableExercises,
   ...legsSelectorizedExercises,
   ...legsResistanceBandsExercises,
+  ...coreExercises,
 ];

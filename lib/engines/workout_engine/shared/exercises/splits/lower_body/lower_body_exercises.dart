@@ -1,3 +1,4 @@
+import '../core/core_exercises.dart';
 import 'bodyweight.dart';
 import 'chair.dart';
 import 'stairs.dart';
@@ -16,7 +17,7 @@ import 'smith.dart';
 import 'package:gymgenius/engines/workout_engine/shared/exercise_pool_entry.dart';
 
 /// All exercises for the Lower Body split, organised by equipment type.
-const List<ExercisePoolEntry> lowerBodyExercises = [
+List<ExercisePoolEntry> lowerBodyExercises = [
   ...lowerBodyBodyweightExercises,
   ...lowerBodyChairExercises,
   ...lowerBodyStairsExercises,
@@ -31,4 +32,5 @@ const List<ExercisePoolEntry> lowerBodyExercises = [
   ...lowerBodyResistanceBandsExercises,
   ...lowerBodyKettlebellExercises,
   ...lowerBodySmithExercises,
+  ...coreExercises,
 ];

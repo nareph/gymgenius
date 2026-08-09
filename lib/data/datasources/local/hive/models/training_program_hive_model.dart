@@ -1,5 +1,3 @@
-// lib/data/datasources/local/hive/models/training_program_hive_model.dart
-
 import 'package:hive/hive.dart';
 
 part 'training_program_hive_model.g.dart';
@@ -25,30 +23,21 @@ class TrainingProgramHiveModel extends HiveObject {
   String experience;
 
   @HiveField(6)
-  String phase;
-
-  @HiveField(7)
-  int mesocycle;
-
-  @HiveField(8)
-  int microcycle;
-
-  @HiveField(9)
   int durationWeeks;
 
-  @HiveField(10)
+  @HiveField(7)
   Map<String, dynamic> weeklySchedule;
 
-  @HiveField(11)
+  @HiveField(8)
   String generatorType;
 
-  @HiveField(12)
+  @HiveField(9)
   String generatorVersion;
 
-  @HiveField(13)
+  @HiveField(10)
   DateTime createdAt;
 
-  @HiveField(14)
+  @HiveField(11)
   DateTime expiresAt;
 
   TrainingProgramHiveModel({
@@ -58,9 +47,6 @@ class TrainingProgramHiveModel extends HiveObject {
     required this.goal,
     required this.split,
     required this.experience,
-    required this.phase,
-    required this.mesocycle,
-    required this.microcycle,
     required this.durationWeeks,
     required this.weeklySchedule,
     required this.generatorType,
@@ -77,9 +63,6 @@ class TrainingProgramHiveModel extends HiveObject {
       'goal': goal,
       'split': split,
       'experience': experience,
-      'phase': phase,
-      'mesocycle': mesocycle,
-      'microcycle': microcycle,
       'durationWeeks': durationWeeks,
       'weeklySchedule': weeklySchedule,
       'generatorType': generatorType,
@@ -97,9 +80,6 @@ class TrainingProgramHiveModel extends HiveObject {
       goal: map['goal'] as String,
       split: map['split'] as String,
       experience: map['experience'] as String,
-      phase: map['phase'] as String,
-      mesocycle: map['mesocycle'] as int,
-      microcycle: map['microcycle'] as int,
       durationWeeks: map['durationWeeks'] as int,
       weeklySchedule: map['weeklySchedule'] as Map<String, dynamic>,
       generatorType: map['generatorType'] as String,

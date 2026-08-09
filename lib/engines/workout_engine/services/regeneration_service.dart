@@ -1,14 +1,16 @@
+import 'package:gymgenius/core/logger/logger_service.dart';
+
 import 'package:gymgenius/domain/entities/exercise.dart';
 import 'package:gymgenius/domain/entities/health_profile.dart';
 import 'package:gymgenius/domain/entities/training_program.dart';
-import 'package:gymgenius/engines/workout_engine/generators/split_generator.dart';
+import 'package:gymgenius/domain/enums/exports.dart';
+
 import 'package:gymgenius/engines/workout_engine/generators/workout_day_generator.dart';
 import 'package:gymgenius/engines/workout_engine/models/muscle_split.dart';
+import 'package:gymgenius/engines/workout_engine/planner/split_planner.dart';
+import 'package:gymgenius/engines/workout_engine/planner/workout_frequency_planner.dart';
 import 'package:gymgenius/engines/workout_engine/services/generation_service.dart';
 import 'package:gymgenius/engines/workout_engine/shared/workout_constants.dart';
-import 'package:gymgenius/core/logger/logger_service.dart';
-
-import '../../../domain/enums/exports.dart';
 
 /// Handles program regeneration with specific options.
 ///
@@ -28,13 +30,20 @@ import '../../../domain/enums/exports.dart';
 class RegenerationService {
   final GenerationService _generationService;
   final WorkoutDayGenerator _dayGenerator;
+  final WorkoutFrequencyPlanner _frequencyPlanner;
+  final SplitPlanner _splitPlanner;
+
   static const _tag = 'RegenerationService';
 
   RegenerationService({
     GenerationService? generationService,
     WorkoutDayGenerator? dayGenerator,
+    WorkoutFrequencyPlanner? frequencyPlanner,
+    SplitPlanner? splitPlanner,
   })  : _generationService = generationService ?? GenerationService(),
-        _dayGenerator = dayGenerator ?? WorkoutDayGenerator();
+        _dayGenerator = dayGenerator ?? WorkoutDayGenerator(),
+        _frequencyPlanner = frequencyPlanner ?? const WorkoutFrequencyPlanner(),
+        _splitPlanner = splitPlanner ?? const SplitPlanner();
 
   Future<TrainingProgram> regenerate({
     required HealthProfile profile,
@@ -280,10 +289,25 @@ class RegenerationService {
       );
     }
 
-    final selectedSplit = SplitGenerator.determineMuscleSplit(
-      workoutDays.length,
-      training.experience.value,
+    // Use SplitPlanner to get the splits for this week.
+    final selectedSplit = _splitPlanner.plan(
+      workoutDays: workoutDays.length,
+      experience: training.experience,
+      focusMuscles: training.focusAreas,
     );
+
+    if (selectedSplit.length < workoutDays.length) {
+      Log.warning(
+          'SplitPlanner returned fewer splits (${selectedSplit.length}) '
+          'than workout days (${workoutDays.length}) — falling back to '
+          'from-scratch generation.',
+          tag: _tag);
+      return _generationService.generate(
+        profile: profile,
+        previousProgram: previousProgram,
+        options: options,
+      );
+    }
 
     final updatedSchedule = <String, List<Exercise>>{
       for (final day in WorkoutConstants.daysOfWeek) day: <Exercise>[],
@@ -292,7 +316,7 @@ class RegenerationService {
     final excludeMuscles = _parseExcludeMuscles(options);
     final intensityOverride = _intensityString(options);
 
-    for (var i = 0; i < workoutDays.length && i < selectedSplit.length; i++) {
+    for (var i = 0; i < workoutDays.length; i++) {
       final day = workoutDays[i];
       final desiredCount = previousProgram.weeklySchedule[day]!.length;
 
@@ -319,26 +343,37 @@ class RegenerationService {
   // Shared helpers
   // ------------------------------------------------------------------
 
+  /// Returns the MuscleSplit for the given target day, or null if the day
+  /// is not a scheduled workout day.
   MuscleSplit? _findSplitForDay(HealthProfile profile, String targetDay) {
     final training = profile.training;
 
-    final daysResult = SplitGenerator.calculateWorkoutDays(
-      frequency: _frequencyValue(training.frequency),
+    // 1. Determine workout days using WorkoutFrequencyPlanner.
+    final daysResult = _frequencyPlanner.calculateWorkoutDays(
+      frequency: training.frequency,
       preferredDays: training.preferredDays.map((d) => d.value).toList(),
     );
 
-    final workoutDays =
-        (daysResult.useSpecifiedDays && training.preferredDays.isNotEmpty)
-            ? training.preferredDays.map((d) => d.value).toList()
-            : WorkoutConstants.defaultWorkoutDays(daysResult.count);
+    // 2. Build the actual list of days (preferred days if available, else defaults).
+    final List<String> workoutDays;
+    if (daysResult.useSpecifiedDays && training.preferredDays.isNotEmpty) {
+      workoutDays = training.preferredDays.map((d) => d.value).toList();
+    } else {
+      workoutDays = WorkoutConstants.defaultWorkoutDays(daysResult.count);
+    }
 
-    final selectedSplit = SplitGenerator.determineMuscleSplit(
-      daysResult.count,
-      training.experience.value,
+    // 3. Use SplitPlanner to get the splits for this week.
+    final selectedSplit = _splitPlanner.plan(
+      workoutDays: daysResult.count,
+      experience: training.experience,
+      focusMuscles: training.focusAreas,
     );
 
+    // 4. Find the index of the target day.
     final dayIndex = workoutDays.indexOf(targetDay);
-    if (dayIndex == -1 || dayIndex >= selectedSplit.length) return null;
+    if (dayIndex == -1 || dayIndex >= selectedSplit.length) {
+      return null;
+    }
 
     return selectedSplit[dayIndex];
   }
@@ -385,16 +420,5 @@ class RegenerationService {
 
   String? _intensityString(Map<String, dynamic> options) {
     return options['intensity'] as String?;
-  }
-
-  String _frequencyValue(WorkoutFrequency frequency) {
-    switch (frequency) {
-      case WorkoutFrequency.oneToTwo:
-        return '1-2';
-      case WorkoutFrequency.threeToFour:
-        return '3-4';
-      case WorkoutFrequency.fivePlus:
-        return '5-plus';
-    }
   }
 }

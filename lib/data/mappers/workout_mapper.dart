@@ -6,17 +6,13 @@ import 'package:gymgenius/data/datasources/local/hive/models/exercise_hive_model
 import 'package:gymgenius/domain/entities/logged_exercise.dart';
 import 'package:gymgenius/domain/entities/logged_set.dart';
 import 'package:gymgenius/domain/entities/training_program.dart';
-import 'package:gymgenius/domain/entities/weekly_workout.dart';
 import 'package:gymgenius/domain/entities/workout_log.dart';
 import 'package:gymgenius/domain/entities/exercise.dart';
 import 'package:gymgenius/domain/enums/fitness_goal.dart';
 import 'package:gymgenius/domain/enums/split_type.dart';
 import 'package:gymgenius/domain/enums/experience_level.dart';
-import 'package:gymgenius/domain/enums/program_phase.dart';
 import 'package:gymgenius/domain/enums/generator_type.dart';
-import 'package:gymgenius/domain/enums/week_type.dart';
 import 'package:gymgenius/data/datasources/local/hive/models/training_program_hive_model.dart';
-import 'package:gymgenius/data/datasources/local/hive/models/weekly_workout_hive_model.dart';
 import 'package:gymgenius/data/datasources/local/hive/models/workout_log_hive_model.dart';
 import 'exercise_mapper.dart';
 
@@ -32,7 +28,6 @@ class WorkoutMapper {
     final schedule = <String, List<Exercise>>{};
     for (final entry in model.weeklySchedule.entries) {
       final exercises = (entry.value as List).map((e) {
-        // Convert dynamic map to ExerciseHiveModel using the safe fromMap factory
         return ExerciseMapper.toDomain(ExerciseHiveModel.fromMap(e));
       }).toList();
       schedule[entry.key] = exercises;
@@ -45,9 +40,6 @@ class WorkoutMapper {
       goal: _mapFitnessGoal(model.goal),
       split: _mapSplitType(model.split),
       experience: _mapExperienceLevel(model.experience),
-      programPhase: _mapProgramPhase(model.phase),
-      mesocycle: model.mesocycle,
-      microcycle: model.microcycle,
       durationWeeks: model.durationWeeks,
       weeklySchedule: schedule,
       generatorType: _mapGeneratorType(model.generatorType),
@@ -71,9 +63,6 @@ class WorkoutMapper {
       goal: entity.goal.name,
       split: entity.split.name,
       experience: entity.experience.name,
-      phase: entity.programPhase.name,
-      mesocycle: entity.mesocycle,
-      microcycle: entity.microcycle,
       durationWeeks: entity.durationWeeks,
       weeklySchedule: schedule,
       generatorType: entity.generatorType.name,
@@ -82,53 +71,6 @@ class WorkoutMapper {
       expiresAt: entity.expiresAt,
     );
   }
-
-  // ============================================================
-  // Weekly Workout
-  // ============================================================
-
-  static WeeklyWorkout toWeeklyWorkout(WeeklyWorkoutHiveModel model) {
-    final schedule = <String, List<Exercise>>{};
-    for (final entry in model.schedule.entries) {
-      final exercises = (entry.value as List).map((e) {
-        return ExerciseMapper.toDomain(ExerciseHiveModel.fromMap(e));
-      }).toList();
-      schedule[entry.key] = exercises;
-    }
-
-    return WeeklyWorkout(
-      id: model.id,
-      programId: model.programId,
-      weekNumber: model.weekNumber,
-      weekType: _mapWeekType(model.weekType),
-      volumeMultiplier: model.volumeMultiplier,
-      intensityMultiplier: model.intensityMultiplier,
-      schedule: schedule,
-      isActive: model.isActive,
-      createdAt: model.createdAt,
-    );
-  }
-
-  static WeeklyWorkoutHiveModel fromWeeklyWorkout(WeeklyWorkout entity) {
-    final schedule = <String, dynamic>{};
-    for (final entry in entity.schedule.entries) {
-      schedule[entry.key] =
-          entry.value.map((e) => ExerciseMapper.toHive(e).toMap()).toList();
-    }
-
-    return WeeklyWorkoutHiveModel(
-      id: entity.id,
-      programId: entity.programId,
-      weekNumber: entity.weekNumber,
-      weekType: entity.weekType.name,
-      volumeMultiplier: entity.volumeMultiplier,
-      intensityMultiplier: entity.intensityMultiplier,
-      schedule: schedule,
-      isActive: entity.isActive,
-      createdAt: entity.createdAt,
-    );
-  }
-
   // ============================================================
   // Workout Log
   // ============================================================
@@ -242,24 +184,10 @@ class WorkoutMapper {
     );
   }
 
-  static ProgramPhase _mapProgramPhase(String value) {
-    return ProgramPhase.values.firstWhere(
-      (e) => e.name == value,
-      orElse: () => ProgramPhase.base,
-    );
-  }
-
   static GeneratorType _mapGeneratorType(String value) {
     return GeneratorType.values.firstWhere(
       (e) => e.name == value,
       orElse: () => GeneratorType.local,
-    );
-  }
-
-  static WeekType _mapWeekType(String value) {
-    return WeekType.values.firstWhere(
-      (e) => e.name == value,
-      orElse: () => WeekType.normal,
     );
   }
 }

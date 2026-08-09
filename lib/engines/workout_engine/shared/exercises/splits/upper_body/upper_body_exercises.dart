@@ -6,11 +6,11 @@ import 'barbell.dart';
 import 'selectorized.dart';
 import 'resistance_bands.dart';
 import 'smith.dart';
+import '../core/core_exercises.dart';
 
 import 'package:gymgenius/engines/workout_engine/shared/exercise_pool_entry.dart';
 
-/// All exercises for the Upper Body split, organised by equipment type.
-const List<ExercisePoolEntry> upperBodyExercises = [
+final List<ExercisePoolEntry> upperBodyExercises = [
   ...upperBodyBodyweightExercises,
   ...upperBodyPullUpBarExercises,
   ...upperBodyDumbbellExercises,
@@ -19,4 +19,5 @@ const List<ExercisePoolEntry> upperBodyExercises = [
   ...upperBodySelectorizedExercises,
   ...upperBodyResistanceBandsExercises,
   ...upperBodySmithExercises,
+  ...coreExercises,
 ];

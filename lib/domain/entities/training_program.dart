@@ -1,11 +1,10 @@
 import 'package:gymgenius/domain/enums/experience_level.dart';
 import 'package:gymgenius/domain/enums/fitness_goal.dart';
 import 'package:gymgenius/domain/enums/split_type.dart';
-import 'package:gymgenius/domain/enums/program_phase.dart';
 import 'package:gymgenius/domain/enums/generator_type.dart';
 import 'package:gymgenius/domain/entities/exercise.dart';
 
-/// Domain Entity representing a multi-week training program.
+/// Domain Entity representing a multi‑week training program.
 class TrainingProgram {
   final String id;
   final String userId;
@@ -13,9 +12,6 @@ class TrainingProgram {
   final FitnessGoal goal;
   final SplitType split;
   final ExperienceLevel experience;
-  final ProgramPhase programPhase;
-  final int mesocycle;
-  final int microcycle;
   final int durationWeeks;
   final Map<String, List<Exercise>> weeklySchedule;
   final GeneratorType generatorType;
@@ -30,9 +26,6 @@ class TrainingProgram {
     required this.goal,
     required this.split,
     required this.experience,
-    required this.programPhase,
-    required this.mesocycle,
-    required this.microcycle,
     required this.durationWeeks,
     required this.weeklySchedule,
     required this.generatorType,
@@ -43,13 +36,6 @@ class TrainingProgram {
 
   bool get isExpired => DateTime.now().isAfter(expiresAt);
 
-  int get currentWeek {
-    final daysSinceStart = DateTime.now().difference(createdAt).inDays;
-    return (daysSinceStart ~/ 7) + 1;
-  }
-
-  bool get isActive => !isExpired && currentWeek <= durationWeeks;
-
   TrainingProgram copyWith({
     String? id,
     String? userId,
@@ -57,9 +43,6 @@ class TrainingProgram {
     FitnessGoal? goal,
     SplitType? split,
     ExperienceLevel? experience,
-    ProgramPhase? programPhase,
-    int? mesocycle,
-    int? microcycle,
     int? durationWeeks,
     Map<String, List<Exercise>>? weeklySchedule,
     GeneratorType? generatorType,
@@ -74,9 +57,6 @@ class TrainingProgram {
       goal: goal ?? this.goal,
       split: split ?? this.split,
       experience: experience ?? this.experience,
-      programPhase: programPhase ?? this.programPhase,
-      mesocycle: mesocycle ?? this.mesocycle,
-      microcycle: microcycle ?? this.microcycle,
       durationWeeks: durationWeeks ?? this.durationWeeks,
       weeklySchedule: weeklySchedule ?? this.weeklySchedule,
       generatorType: generatorType ?? this.generatorType,
@@ -94,9 +74,6 @@ class TrainingProgram {
       'goal': goal.name,
       'split': split.name,
       'experience': experience.name,
-      'programPhase': programPhase.name,
-      'mesocycle': mesocycle,
-      'microcycle': microcycle,
       'durationWeeks': durationWeeks,
       'weeklySchedule': weeklySchedule.map(
           (key, value) => MapEntry(key, value.map((e) => e.toMap()).toList())),

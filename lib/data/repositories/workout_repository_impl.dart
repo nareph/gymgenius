@@ -5,7 +5,6 @@ import 'package:gymgenius/data/datasources/local/hive/boxes/hive_datasource.dart
 
 import '../../domain/entities/exercise.dart';
 import '../../domain/entities/training_program.dart';
-import '../../domain/entities/weekly_workout.dart';
 import '../../domain/entities/workout_log.dart';
 import '../../domain/repositories/workout_repository.dart';
 import '../mappers/workout_mapper.dart';
@@ -33,34 +32,6 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
   @override
   Future<void> deleteProgram(String programId) async {
     await HiveDatasource.deleteTrainingProgram(programId);
-  }
-
-// ============================================================
-// Weekly Workout
-// ============================================================
-
-  @override
-  Future<WeeklyWorkout?> getCurrentWeeklyWorkout(String programId) async {
-    final model = HiveDatasource.getCurrentWeeklyWorkout(programId);
-    if (model == null) return null;
-    return WorkoutMapper.toWeeklyWorkout(model);
-  }
-
-  @override
-  Future<void> saveWeeklyWorkout(WeeklyWorkout weekly) async {
-    final model = WorkoutMapper.fromWeeklyWorkout(weekly);
-    await HiveDatasource.saveWeeklyWorkout(model);
-  }
-
-  @override
-  Future<void> deleteWeeklyWorkout(String weeklyId) async {
-    await HiveDatasource.deleteWeeklyWorkout(weeklyId);
-  }
-
-  /// Get all weekly workouts for a program (convenience method, not in interface)
-  Future<List<WeeklyWorkout>> getProgramWeeklyWorkouts(String programId) async {
-    final models = HiveDatasource.getProgramWeeklyWorkouts(programId);
-    return models.map(WorkoutMapper.toWeeklyWorkout).toList();
   }
 
   // ============================================================
@@ -122,16 +93,6 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
   // Convenience methods (not in interface)
   // ============================================================
 
-  /// Gets current program and its active weekly workout together.
-  (TrainingProgram?, WeeklyWorkout?) getCurrentProgramAndWeekly() {
-    final userId = HiveDatasource.getCurrentUserId();
-    if (userId == null) return (null, null);
-    final program = getCurrentProgramSync(userId);
-    if (program == null) return (null, null);
-    final weekly = getCurrentWeeklyWorkoutSync(program.id);
-    return (program, weekly);
-  }
-
   /// Returns true if the user has an active (non-expired) program.
   bool hasActiveProgram() {
     final userId = HiveDatasource.getCurrentUserId();
@@ -144,10 +105,5 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
   TrainingProgram? getCurrentProgramSync(String userId) {
     final model = HiveDatasource.getCurrentTrainingProgram(userId);
     return model != null ? WorkoutMapper.toTrainingProgram(model) : null;
-  }
-
-  WeeklyWorkout? getCurrentWeeklyWorkoutSync(String programId) {
-    final model = HiveDatasource.getCurrentWeeklyWorkout(programId);
-    return model != null ? WorkoutMapper.toWeeklyWorkout(model) : null;
   }
 }

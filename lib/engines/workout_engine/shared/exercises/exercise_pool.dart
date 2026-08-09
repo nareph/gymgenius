@@ -5,13 +5,18 @@ import 'package:gymgenius/engines/workout_engine/shared/exercise_pool_entry.dart
 import 'splits/exports.dart';
 
 /// Central repository of exercises, aggregated from individual split files.
+///
+/// IMPORTANT distinction between the three filters below:
+///
+/// - [allowedEquipment] and [excludeMuscles] are HARD constraints.
+/// - [focusMuscles] is a SOFT preference — biases sort order, never
+///   excludes (a strict filter here previously caused entire training
+///   days to come back EMPTY whenever the requested focus didn't
+///   overlap with that split's inherent target muscles).
+
 class ExercisePool {
   ExercisePool._();
 
-  /// Returns the exercise entries for the given split, filtered by allowed
-  /// equipment, optionally excluding entries that target any muscle in
-  /// [excludeMuscles], and optionally sorted by relevance to
-  /// [focusMuscles].
   static List<ExercisePoolEntry> getExercises({
     required String splitName,
     required List<EquipmentType> allowedEquipment,
@@ -44,16 +49,6 @@ class ExercisePool {
     return filtered;
   }
 
-  /// Searches EVERY split's pool for an exercise named [name]
-  /// (case-insensitive, trimmed), restricted to [allowedEquipment].
-  ///
-  /// Used to validate exercise names suggested by an AI optimizer against
-  /// the real local catalog before trusting them: a suggested name not
-  /// found here (wrong name, hallucinated exercise, or requires equipment
-  /// the user doesn't have) is treated as unavailable and the caller
-  /// should ignore it rather than fabricate an Exercise from AI text
-  /// alone. Returns the first match found (split search order is
-  /// unspecified — fine here since only equipment + a valid name matter).
   static ExercisePoolEntry? findByName(
     String name, {
     required List<EquipmentType> allowedEquipment,
@@ -72,6 +67,69 @@ class ExercisePool {
     return null;
   }
 
+  static ExercisePoolEntry? findAlternative({
+    required List<MuscleGroup> targetMuscles,
+    required List<EquipmentType> allowedEquipment,
+    Set<String> excludeNames = const {},
+  }) {
+    ExercisePoolEntry? bestCandidate;
+    var bestScore = -1;
+
+    for (final entries in _exercisePools.values) {
+      for (final entry in entries) {
+        if (!allowedEquipment.contains(entry.equipmentType)) continue;
+        if (excludeNames.contains(entry.name)) continue;
+
+        final score = entry.targetMuscles.where(targetMuscles.contains).length;
+        if (score == 0) continue;
+
+        if (score > bestScore) {
+          bestScore = score;
+          bestCandidate = entry;
+        }
+      }
+    }
+
+    return bestCandidate;
+  }
+
+  // ============================================================
+  // Combined pools
+  // ============================================================
+
+  /// Pool for the 'Shoulders & Core' split – combines shoulder + core.
+  static final List<ExercisePoolEntry> _shouldersAndCoreExercises =
+      _dedupeByName([
+    ...shouldersExercises,
+    ...coreExercises,
+  ]);
+
+  /// 'Full Body' split composition.
+  static final List<ExercisePoolEntry> _fullBodyExercises = _dedupeByName([
+    ...pushExercises,
+    ...pullExercises,
+    ...legsExercises,
+    ...shouldersExercises,
+    ...coreExercises,
+  ]);
+
+  static List<ExercisePoolEntry> _dedupeByName(
+    List<ExercisePoolEntry> entries,
+  ) {
+    final seenNames = <String>{};
+    final result = <ExercisePoolEntry>[];
+    for (final entry in entries) {
+      if (seenNames.add(entry.name)) {
+        result.add(entry);
+      }
+    }
+    return result;
+  }
+
+  // ============================================================
+  // Main mapping
+  // ============================================================
+
   static final Map<String, List<ExercisePoolEntry>> _exercisePools = {
     'Push': pushExercises,
     'Pull': pullExercises,
@@ -81,8 +139,9 @@ class ExercisePool {
     'Arms': armsExercises,
     'Chest & Triceps': chestTricepsExercises,
     'Back & Biceps': backBicepsExercises,
-    'Shoulders & Core': shouldersCoreExercises,
+    'Shoulders & Core': _shouldersAndCoreExercises,
     'Upper Body': upperBodyExercises,
     'Lower Body': lowerBodyExercises,
+    'Full Body': _fullBodyExercises,
   };
 }

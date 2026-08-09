@@ -1,7 +1,6 @@
 import 'package:gymgenius/data/repositories/user_repository_impl.dart';
 import 'package:gymgenius/domain/entities/health_profile.dart';
 import 'package:gymgenius/domain/entities/training_program.dart';
-import 'package:gymgenius/domain/entities/weekly_workout.dart';
 import 'package:gymgenius/domain/repositories/user_repository.dart';
 import 'package:gymgenius/engines/workout_engine/services/generation_service.dart';
 import 'package:gymgenius/engines/workout_engine/services/persistence_service.dart';
@@ -47,10 +46,8 @@ class WorkoutEngine {
 
     // Persist the program and its first weekly workout
     await _persistenceService.saveProgram(program);
-    //final weekly = WeeklyWorkout.fromProgram(program);
-    //await _persistenceService.saveWeeklyWorkout(weekly);
 
-    Log.debug('WorkoutEngine: Program and weekly workout saved');
+    Log.debug('WorkoutEngine: Program workout saved');
     return program;
   }
 
@@ -71,20 +68,6 @@ class WorkoutEngine {
     // Save the new program and update weekly workout
     await _persistenceService.saveProgram(program);
 
-    // Update the weekly workout
-    final currentWeekly =
-        await _persistenceService.getCurrentWeeklyWorkout(program.id);
-    if (currentWeekly != null) {
-      final updatedWeekly = currentWeekly.copyWith(
-        schedule: program.weeklySchedule,
-        createdAt: DateTime.now(),
-      );
-      await _persistenceService.saveWeeklyWorkout(updatedWeekly);
-    } else {
-      // final weekly = WeeklyWorkout.fromProgram(program);
-      //await _persistenceService.saveWeeklyWorkout(weekly);
-    }
-
     Log.debug('WorkoutEngine: Program regenerated and saved');
     return program;
   }
@@ -96,17 +79,14 @@ class WorkoutEngine {
   /// Gets the current program and its active weekly workout.
   ///
   /// Returns a tuple: (program, weeklyWorkout).
-  Future<(TrainingProgram?, WeeklyWorkout?)>
-      getCurrentProgramWithWeekly() async {
+  Future<TrainingProgram?> getCurrentProgram() async {
     final user = await _userRepository.getCurrentUser();
-    if (user == null) return (null, null);
+    if (user == null) return null;
 
     final program = await _persistenceService.loadProgram(user.id);
-    if (program == null) return (null, null);
+    if (program == null) return null;
 
-    final weekly =
-        await _persistenceService.getCurrentWeeklyWorkout(program.id);
-    return (program, weekly);
+    return program;
   }
 
   /// Clears the current program and all associated weekly workouts.
@@ -116,12 +96,6 @@ class WorkoutEngine {
 
     final program = await _persistenceService.loadProgram(user.id);
     if (program != null) {
-      // Delete associated weekly workouts
-      final weeklies =
-          await _persistenceService.getProgramWeeklyWorkouts(program.id);
-      for (final w in weeklies) {
-        await _persistenceService.deleteWeeklyWorkout(w.id);
-      }
       await _persistenceService.deleteProgram(program.id);
       Log.debug('WorkoutEngine: Current program and weekly workouts cleared');
     }
