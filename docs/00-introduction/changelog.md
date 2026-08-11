@@ -13,6 +13,16 @@ The changelog highlights architectural changes, new features, improvements, and 
 
 # [Unreleased]
 
+### Added
+
+- Phase 3 Nutrition Intelligence vertical slice:
+  - deterministic Nutrition Engine (calories, macros, meals)
+  - Cameroon Food Knowledge Base starter dataset
+  - DecisionEngine + DailyPlan nutrition integration
+  - nutrition Hive persistence (`nutrition_profiles`, `nutrition_plans`)
+  - Home nutrition summary + dedicated Nutrition screen
+  - integration and unit tests for nutrition workflows
+
 ### Planned
 
 - FOOD_KNOWLEDGE_BASE

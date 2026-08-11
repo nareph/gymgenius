@@ -40,11 +40,45 @@ void main() {
         country: 'Cameroon',
         budget: BudgetLevel.high,
       );
+      final medium = fkb.filterTemplates(
+        country: 'Cameroon',
+        budget: BudgetLevel.medium,
+      );
       expect(low.length, lessThan(high.length));
+      expect(low.length, lessThanOrEqualTo(medium.length));
+      expect(medium.length, lessThanOrEqualTo(high.length));
       expect(
         low.every((m) => m.minBudget == BudgetLevel.low),
         isTrue,
       );
+    });
+
+    test('preferred foods bias meal selection', () {
+      final lowProfile = buildTestProfile(
+        budget: BudgetLevel.high,
+        restrictions: const [],
+      );
+      final preferredProfile = lowProfile.copyWith(
+        lifestyle: lowProfile.lifestyle.copyWith(
+          foodPreferences: const ['rice'],
+        ),
+      );
+
+      final planner = MealPlanner();
+      final meals = planner.plan(
+        profile: preferredProfile,
+        targets: const MacroTargets(
+          calories: 2500,
+          proteinG: 150,
+          carbsG: 300,
+          fatG: 70,
+        ),
+        isTrainingDay: true,
+      );
+
+      final anyRice = meals.any((m) =>
+          m.ingredients.join(' ').toLowerCase().contains('rice'));
+      expect(anyRice, isTrue);
     });
   });
 

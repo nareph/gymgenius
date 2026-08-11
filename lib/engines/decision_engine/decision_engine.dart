@@ -4,7 +4,7 @@ import 'package:gymgenius/domain/entities/training_program.dart';
 import 'package:gymgenius/domain/entities/workout_decision.dart';
 import 'package:gymgenius/engines/decision_engine/Progression/program_progress_service.dart';
 import 'package:gymgenius/engines/decision_engine/services/conflict_resolver.dart';
-import 'package:gymgenius/engines/nutrition_engine/nutrition_engine.dart';
+import 'package:gymgenius/engines/decision_engine/rules/nutrition/nutrition_rule.dart';
 
 import 'builders/today_workout_builder.dart';
 import 'models/daily_plan.dart';
@@ -31,7 +31,7 @@ class DecisionEngine {
   final TodayWorkoutBuilder _todayWorkoutBuilder;
   final WorkoutAdaptationService _workoutAdaptationService;
   final ConflictResolver _conflictResolver;
-  final NutritionEngine _nutritionEngine;
+  final NutritionRule _nutritionRule;
 
   final List<DecisionRule> _rules;
 
@@ -41,13 +41,13 @@ class DecisionEngine {
     required WorkoutAdaptationService workoutAdaptationService,
     required ConflictResolver conflictResolver,
     required List<DecisionRule> rules,
-    required NutritionEngine nutritionEngine,
+    required NutritionRule nutritionRule,
   })  : _programProgressService = programProgressService,
         _todayWorkoutBuilder = todayWorkoutBuilder,
         _workoutAdaptationService = workoutAdaptationService,
         _conflictResolver = conflictResolver,
         _rules = rules,
-        _nutritionEngine = nutritionEngine;
+        _nutritionRule = nutritionRule;
 
   // ============================================================
   // Daily Plan
@@ -59,26 +59,11 @@ class DecisionEngine {
     DateTime? now,
   }) {
     final currentDate = now ?? DateTime.now();
-
-    // ----------------------------------------------------------
-    // Program Progress
-    // ----------------------------------------------------------
-
     final progress = _programProgressService.calculate(trainingProgram);
-
-    // ----------------------------------------------------------
-    // Planned Workout
-    // ----------------------------------------------------------
-
     final plannedWorkout = _todayWorkoutBuilder.buildPlannedWorkout(
       program: trainingProgram,
       now: currentDate,
     );
-
-    // ----------------------------------------------------------
-    // Context
-    // ----------------------------------------------------------
-
     final context = DecisionContext(
       now: currentDate,
       healthProfile: healthProfile,
@@ -87,60 +72,97 @@ class DecisionEngine {
       todayWorkout: plannedWorkout,
     );
 
-    // ----------------------------------------------------------
-    // Evaluate every rule
-    // ----------------------------------------------------------
+    return _buildDailyPlanFromContext(
+      context: context,
+      progress: progress,
+      plannedWorkout: plannedWorkout,
+      healthProfile: healthProfile,
+      currentDate: currentDate,
+    );
+  }
 
-    final decisions = <WorkoutDecision>[];
-
-    for (final rule in _rules) {
-      decisions.add(
-        rule.evaluate(context),
-      );
-    }
-
-    // ----------------------------------------------------------
-    // Resolve conflicts
-    // ----------------------------------------------------------
-
-    final finalDecision = _conflictResolver.resolve(
-      decisions,
+  Future<DailyPlan> buildDailyPlanAndPersist(
+    TrainingProgram trainingProgram,
+    HealthProfile healthProfile, {
+    DateTime? now,
+  }) async {
+    final currentDate = now ?? DateTime.now();
+    final progress = _programProgressService.calculate(trainingProgram);
+    final plannedWorkout = _todayWorkoutBuilder.buildPlannedWorkout(
+      program: trainingProgram,
+      now: currentDate,
+    );
+    final context = DecisionContext(
+      now: currentDate,
+      healthProfile: healthProfile,
+      trainingProgram: trainingProgram,
+      programProgress: progress,
+      todayWorkout: plannedWorkout,
     );
 
-    // ----------------------------------------------------------
-    // Apply adaptations
-    // ----------------------------------------------------------
-
+    final decisions = _evaluateRules(context);
+    final finalDecision = _conflictResolver.resolve(decisions);
     final finalWorkout = _workoutAdaptationService.adapt(
       plannedWorkout: plannedWorkout,
       decision: finalDecision,
       profile: healthProfile,
     );
-
-    // ----------------------------------------------------------
-    // Nutrition (deterministic)
-    // ----------------------------------------------------------
-
-    final nutritionPlan = _nutritionEngine.computeDailyPlanSync(
-      profile: healthProfile,
-      isTrainingDay: finalWorkout.hasExercises && !finalWorkout.isRecoverySession,
-      date: currentDate,
+    final adaptedContext = context.copyWith(todayWorkout: finalWorkout);
+    final nutritionPlan = await _nutritionRule.buildAndPersistNutritionPlan(
+      context: adaptedContext,
+      finalWorkout: finalWorkout,
     );
 
-    // ----------------------------------------------------------
-    // Final Daily Plan
-    // ----------------------------------------------------------
-
     return DailyPlan(
-      context: context.copyWith(
-        todayWorkout: finalWorkout,
-      ),
+      context: adaptedContext,
       programProgress: progress,
       todayWorkout: finalWorkout,
       nutritionPlan: nutritionPlan,
       confidence: finalDecision.confidence,
       generatedAt: currentDate,
     );
+  }
+
+  DailyPlan _buildDailyPlanFromContext({
+    required DecisionContext context,
+    required ProgramProgress progress,
+    required TodayWorkout plannedWorkout,
+    required HealthProfile healthProfile,
+    required DateTime currentDate,
+  }) {
+    final decisions = _evaluateRules(context);
+    final finalDecision = _conflictResolver.resolve(
+      decisions,
+    );
+    final finalWorkout = _workoutAdaptationService.adapt(
+      plannedWorkout: plannedWorkout,
+      decision: finalDecision,
+      profile: healthProfile,
+    );
+    final adaptedContext = context.copyWith(todayWorkout: finalWorkout);
+    final nutritionPlan = _nutritionRule.buildNutritionPlan(
+      context: adaptedContext,
+      finalWorkout: finalWorkout,
+    );
+
+    return DailyPlan(
+      context: adaptedContext,
+      programProgress: progress,
+      todayWorkout: finalWorkout,
+      nutritionPlan: nutritionPlan,
+      confidence: finalDecision.confidence,
+      generatedAt: currentDate,
+    );
+  }
+
+  List<WorkoutDecision> _evaluateRules(DecisionContext context) {
+    final decisions = <WorkoutDecision>[];
+    for (final rule in _rules) {
+      decisions.add(
+        rule.evaluate(context),
+      );
+    }
+    return decisions;
   }
 
   // ============================================================

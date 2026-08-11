@@ -1,0 +1,52 @@
+### Phase 3 — Checklist avant clôture
+
+* [x] Finaliser les modèles domaine : `NutritionPlan`, `Meal`, `FoodItem`, enums et `NutritionStatus`
+* [x] Vérifier/compléter `NutritionProfile` et `NutritionRepository`
+* [x] Finaliser `CalorieEstimator`
+* [x] Finaliser `MacroCalculator`
+* [x] Ajouter les tests unitaires calories / BMR / TDEE / objectifs
+* [x] Ajouter les tests unitaires macros / protéines / lipides / glucides / hydratation
+* [x] Finaliser la FKB Cameroun (~40–60 aliments)
+* [x] Finaliser les ~10 `MealTemplate`
+* [x] Vérifier le filtrage restrictions / allergies / préférences / budget
+* [x] Finaliser `MealPlanner`
+* [x] Vérifier la répartition repas training day / rest day
+* [x] Vérifier que les macros/calories des repas restent cohérentes avec les targets
+* [x] Ajouter les tests FKB + `MealPlanner`
+* [x] Finaliser `NutritionEngine`
+* [x] Vérifier `computeDailyPlan()` et `computeDailyPlanSync()`
+* [x] Éviter toute divergence de logique entre les deux méthodes de calcul
+* [x] Finaliser la persistance Hive nutrition
+* [x] Ajouter les TypeIds nutrition sans conflit
+* [x] Finaliser `NutritionRepositoryImpl`
+* [x] Enregistrer boxes/adapters dans `HiveDataSource` / `HiveBoxes`
+* [x] Étendre `DailyPlan` avec `nutritionPlan`
+* [x] Intégrer `NutritionEngine` dans `DecisionEngine`
+* [x] Finaliser `NutritionRule`
+* [x] Vérifier que `NutritionRule` n'altère pas arbitrairement le workout
+* [x] Vérifier le calcul `isTrainingDay` à partir du workout final
+* [x] Finaliser l'injection DI de `NutritionEngine`
+* [x] Vérifier que Home lit uniquement `DailyPlan`
+* [x] Finaliser `NutritionSummaryCard`
+* [x] Finaliser l'écran Nutrition
+* [x] Vérifier navigation Home → Nutrition
+* [x] Ajouter les tests `DecisionEngine` avec `nutritionPlan != null`
+* [x] Ajouter un test d'intégration complet : `HealthProfile → DecisionEngine → DailyPlan → NutritionPlan`
+* [x] Tester un profil Cameroun complet
+* [x] Tester restrictions/allergies
+* [x] Tester budget faible/moyen/élevé
+* [x] Tester jour d'entraînement
+* [x] Tester jour de repos
+* [x] Tester pays inconnu → fallback Cameroun
+* [x] Tester profil avec préférences alimentaires
+* [x] Vérifier cohérence calories ↔ macros ↔ repas
+* [x] Vérifier persistance puis relecture du `NutritionPlan`
+* [x] Vérifier `flutter analyze`
+* [x] Vérifier tous les tests `flutter test`
+* [x] Corriger les warnings/errors restants
+* [x] Vérifier le fonctionnement offline
+* [x] Faire un smoke test complet Home → DailyPlan → Nutrition
+* [x] Mettre à jour la documentation de Phase 3
+* [x] Mettre à jour la version `generatorVersion` / version Nutrition si nécessaire
+* [x] Commit final de la Phase 3
+* [x] Créer le tag de release Phase 3

@@ -88,7 +88,10 @@ class HomeViewModel extends ChangeNotifier {
       // Build DailyPlan using DecisionEngine ----
       _dailyPlan = program == null
           ? null
-          : _decisionEngine.buildDailyPlan(program, healthProfile!);
+          : await _decisionEngine.buildDailyPlanAndPersist(
+              program,
+              healthProfile!,
+            );
 
       Log.info('HomeViewModel: Profile complete: $_isProfileComplete');
       Log.info('HomeViewModel: Program found: ${_currentProgram != null}');

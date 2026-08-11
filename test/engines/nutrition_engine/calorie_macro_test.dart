@@ -82,10 +82,20 @@ void main() {
       final profile = buildTestProfile(goal: FitnessGoal.buildMuscle);
       final estimate = estimator.estimate(profile: profile, isTrainingDay: true);
 
+      // maintenanceCalories should follow: bmr * activityMultiplier (rounded)
       expect(estimate.maintenanceCalories, greaterThan(estimate.bmr));
       expect(estimate.targetCalories, greaterThan(estimate.maintenanceCalories));
       expect(estimate.trainingDayBonus, greaterThan(0));
       expect(estimate.reasons, isNotEmpty);
+    });
+
+    test('maintenance calories follows activity multiplier', () {
+      final profile = buildTestProfile();
+      final estimate = estimator.estimate(profile: profile, isTrainingDay: false);
+
+      // ModeratelyActive = 1.55
+      final expectedMaintenance = (estimate.bmr * 1.55).round();
+      expect(estimate.maintenanceCalories, expectedMaintenance);
     });
 
     test('loseFat applies deficit', () {
@@ -95,6 +105,14 @@ void main() {
 
       expect(estimate.targetCalories, lessThan(estimate.maintenanceCalories));
       expect(estimate.trainingDayBonus, 0);
+    });
+
+    test('loseFat target ~= maintenance * 0.8 (no training bonus)', () {
+      final profile = buildTestProfile(goal: FitnessGoal.loseFat);
+      final estimate = estimator.estimate(profile: profile, isTrainingDay: false);
+
+      final expectedTarget = (estimate.maintenanceCalories * 0.80).round();
+      expect(estimate.targetCalories, expectedTarget);
     });
 
     test('rest day has no training bonus', () {

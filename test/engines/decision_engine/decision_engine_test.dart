@@ -12,6 +12,8 @@ import 'package:gymgenius/engines/decision_engine/services/recovery_session_serv
 import 'package:gymgenius/engines/decision_engine/services/volume_adjustment_service.dart';
 import 'package:gymgenius/engines/decision_engine/services/workout_adaptation_service.dart';
 import 'package:gymgenius/engines/workout_engine/providers/exercise_replacement_provider.dart';
+import 'package:gymgenius/engines/decision_engine/rules/nutrition/nutrition_plan_builder.dart';
+import 'package:gymgenius/engines/decision_engine/rules/nutrition/nutrition_rule.dart';
 import 'package:gymgenius/engines/nutrition_engine/nutrition_engine.dart';
 
 void main() {
@@ -34,7 +36,11 @@ void main() {
           deloadService: const DeloadService(),
         ),
         conflictResolver: const ConflictResolver(),
-        nutritionEngine: NutritionEngine(),
+        nutritionRule: NutritionRule(
+          planBuilder: NutritionPlanBuilder(
+            nutritionEngine: NutritionEngine(),
+          ),
+        ),
         rules: const <DecisionRule>[],
       );
     });

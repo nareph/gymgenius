@@ -20,7 +20,8 @@ import 'package:gymgenius/engines/decision_engine/Progression/program_progress_s
 import 'package:gymgenius/engines/decision_engine/rules/deload_rule.dart';
 import 'package:gymgenius/engines/decision_engine/rules/equipment_rule.dart';
 import 'package:gymgenius/engines/decision_engine/rules/injury_rule.dart';
-import 'package:gymgenius/engines/decision_engine/rules/nutrition_rule.dart';
+import 'package:gymgenius/engines/decision_engine/rules/nutrition/nutrition_plan_builder.dart';
+import 'package:gymgenius/engines/decision_engine/rules/nutrition/nutrition_rule.dart';
 import 'package:gymgenius/engines/decision_engine/rules/progression_rule.dart';
 import 'package:gymgenius/engines/decision_engine/rules/recovery_rule.dart';
 import 'package:gymgenius/engines/decision_engine/rules/safety_rule.dart';
@@ -180,8 +181,16 @@ void setupDependencies() {
     () => const RecoveryRule(),
   );
 
+  getIt.registerLazySingleton<NutritionPlanBuilder>(
+    () => NutritionPlanBuilder(
+      nutritionEngine: getIt<NutritionEngine>(),
+    ),
+  );
+
   getIt.registerLazySingleton<NutritionRule>(
-    () => const NutritionRule(),
+    () => NutritionRule(
+      planBuilder: getIt<NutritionPlanBuilder>(),
+    ),
   );
 
   getIt.registerLazySingleton<SafetyRule>(
@@ -214,7 +223,7 @@ void setupDependencies() {
       todayWorkoutBuilder: getIt(),
       workoutAdaptationService: getIt(),
       conflictResolver: getIt(),
-      nutritionEngine: getIt<NutritionEngine>(),
+      nutritionRule: getIt<NutritionRule>(),
       rules: [
         getIt<InjuryRule>(),
         getIt<SafetyRule>(),
