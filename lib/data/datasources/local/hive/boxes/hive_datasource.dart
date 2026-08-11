@@ -9,6 +9,8 @@ import '../models/workout_log_hive_model.dart';
 import '../models/meal_hive_model.dart';
 import '../models/nutrition_profile_hive_model.dart';
 import '../models/nutrition_plan_hive_model.dart';
+import '../models/recovery_status_hive_model.dart';
+import '../models/daily_checkin_hive_model.dart';
 import 'hive_boxes.dart';
 
 /// Hive datasource — handles all direct Hive operations.
@@ -28,6 +30,8 @@ class HiveDatasource {
     Hive.registerAdapter(NutritionProfileHiveModelAdapter());
     Hive.registerAdapter(MealHiveModelAdapter());
     Hive.registerAdapter(NutritionPlanHiveModelAdapter());
+    Hive.registerAdapter(RecoveryStatusHiveModelAdapter());
+    Hive.registerAdapter(DailyCheckInHiveModelAdapter());
 
     // Open boxes
     await Hive.openBox<UserHiveModel>(HiveBoxes.users);
@@ -37,6 +41,8 @@ class HiveDatasource {
     await Hive.openBox(HiveBoxes.currentUser);
     await Hive.openBox<NutritionProfileHiveModel>(HiveBoxes.nutritionProfiles);
     await Hive.openBox<NutritionPlanHiveModel>(HiveBoxes.nutritionPlans);
+    await Hive.openBox<RecoveryStatusHiveModel>(HiveBoxes.recoveryStatuses);
+    await Hive.openBox<DailyCheckInHiveModel>(HiveBoxes.dailyCheckIns);
   }
 
   // ============================================================
@@ -222,6 +228,76 @@ class HiveDatasource {
   }
 
   // ============================================================
+  // RECOVERY STATUS
+  // ============================================================
+
+  static String _recoveryKey(String userId, DateTime date) {
+    final day = DateTime(date.year, date.month, date.day);
+    return '${userId}_${day.year.toString().padLeft(4, '0')}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
+  }
+
+  static Future<void> saveRecoveryStatus(RecoveryStatusHiveModel model) async {
+    final key = _recoveryKey(model.userId, model.date);
+    await HiveBoxes.recoveryStatusesBox.put(key, model);
+  }
+
+  static RecoveryStatusHiveModel? getRecoveryStatus(
+      String userId, DateTime date) {
+    return HiveBoxes.recoveryStatusesBox.get(_recoveryKey(userId, date));
+  }
+
+  static RecoveryStatusHiveModel? getLatestRecoveryStatus(String userId) {
+    final entries = HiveBoxes.recoveryStatusesBox.values
+        .where((m) => m.userId == userId)
+        .toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
+    return entries.isEmpty ? null : entries.first;
+  }
+
+  // ============================================================
+  // DAILY CHECK-IN
+  // ============================================================
+
+  static Future<void> saveDailyCheckIn(DailyCheckInHiveModel model) async {
+    final key = _recoveryKey(model.userId, model.date);
+    await HiveBoxes.dailyCheckInsBox.put(key, model);
+  }
+
+  static DailyCheckInHiveModel? getDailyCheckIn(
+      String userId, DateTime date) {
+    return HiveBoxes.dailyCheckInsBox.get(_recoveryKey(userId, date));
+  }
+
+  static List<DailyCheckInHiveModel> getDailyCheckIns(
+    String userId, {
+    DateTime? from,
+    DateTime? to,
+  }) {
+    return HiveBoxes.dailyCheckInsBox.values.where((m) {
+      if (m.userId != userId) return false;
+      if (from != null && m.date.isBefore(from)) return false;
+      if (to != null && m.date.isAfter(to)) return false;
+      return true;
+    }).toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
+  }
+
+  static String _skipKey(String userId, DateTime date) =>
+      'checkin_skipped_${_recoveryKey(userId, date)}';
+
+  static Future<void> markCheckInSkipped(String userId, DateTime date) async {
+    await HiveBoxes.currentUserBox.put(_skipKey(userId, date), true);
+  }
+
+  static bool isCheckInSkipped(String userId, DateTime date) {
+    return HiveBoxes.currentUserBox.get(_skipKey(userId, date)) == true;
+  }
+
+  static Future<void> clearCheckInSkipped(String userId, DateTime date) async {
+    await HiveBoxes.currentUserBox.delete(_skipKey(userId, date));
+  }
+
+  // ============================================================
   // CLEAR ALL
   // ============================================================
 
@@ -232,6 +308,8 @@ class HiveDatasource {
     await HiveBoxes.workoutLogsBox.clear();
     await HiveBoxes.nutritionProfilesBox.clear();
     await HiveBoxes.nutritionPlansBox.clear();
+    await HiveBoxes.recoveryStatusesBox.clear();
+    await HiveBoxes.dailyCheckInsBox.clear();
     await HiveBoxes.currentUserBox.clear();
   }
 }

@@ -1,0 +1,195 @@
+Phase 4 closure checklist — updated after implementation review.
+Status: ready for commit + tag v3.4.0 (190 engine tests passing, 0 analyze errors on Phase 4 code).
+
+Note: manual device QA (cold start / relaunch) and release/profile builds remain recommended smoke checks.
+
+## Liste des tâches à compléter avant de clôturer la Phase 4
+
+### 1. Corriger et figer les règles métier
+
+* [ ] Aligner les seuils du **plan initial**, `ReadinessCalculator` et `RecoveryRule`.
+* [ ] Décider définitivement si la réduction est **–15/–30 %** ou **–15/–30/–45 %**.
+* [ ] Décider si `RecommendedIntensity.rest` est réellement autorisé ou si la Phase 4 doit seulement réduire la charge.
+* [ ] Garantir que `RecoveryRule` et `RecoveryEngine` utilisent exactement les mêmes seuils.
+* [ ] Centraliser les seuils dans une configuration métier unique pour éviter les incohérences.
+
+### 2. Vérifier le modèle `DailyCheckIn`
+
+* [ ] Vérifier validation de `sleepHours`.
+* [ ] Vérifier validation de `mood` entre 1 et 5.
+* [ ] Vérifier que `sorenessLevel` et `energyLevel` sont obligatoires.
+* [ ] Vérifier l'identification du check-in **par utilisateur + jour**.
+* [ ] Empêcher plusieurs check-ins incohérents pour la même journée.
+* [ ] Définir clairement le comportement lors d'une modification du check-in du jour.
+
+### 3. Vérifier le calcul du Recovery Engine
+
+* [ ] Ajouter les tests des **bornes** de `SleepScorer`.
+* [ ] Tester `0 h`, `5 h`, `6 h`, `7 h`, `9 h`, `>9 h`.
+* [ ] Tester toutes les combinaisons `SorenessLevel × EnergyLevel`.
+* [ ] Tester les valeurs limites du mood `1` et `5`.
+* [ ] Vérifier que tous les scores restent toujours dans `[0,100]`.
+* [ ] Vérifier la cohérence mathématique entre `fatigueScore`, `recoveryScore` et `readinessScore`.
+* [ ] Vérifier que les raisons (`reasons`) correspondent réellement aux scores calculés.
+
+### 4. Corriger la logique `RecoveryRule`
+
+* [ ] Vérifier que `RecoveryRule` utilise le `volumeMultiplier` provenant du `RecoveryStatus` ou une règle unique centralisée.
+* [ ] Éviter que `RecoveryRule` redéfinisse des multiplicateurs différents de `ReadinessCalculator`.
+* [ ] Vérifier la priorité avec les autres règles du Decision Engine.
+* [ ] Vérifier qu'une règle de sécurité/blessure peut toujours prendre le dessus.
+* [ ] Vérifier qu'une mauvaise récupération ne provoque jamais accidentellement un entraînement plus lourd.
+
+### 5. Vérifier `WorkoutAdaptationService`
+
+* [ ] Vérifier que `volumeMultiplier` est réellement appliqué aux exercices/séries.
+* [ ] Vérifier les arrondis du nombre de séries.
+* [ ] Empêcher qu'une réduction de volume produise `0` série sur un exercice obligatoire.
+* [ ] Vérifier que l'intensité recommandée est réellement appliquée lorsque nécessaire.
+* [ ] Vérifier que la réduction ne modifie pas le programme original.
+* [ ] Vérifier que l'adaptation est uniquement appliquée au **workout du jour**.
+
+### 6. Persistance Hive
+
+* [ ] Vérifier les `TypeId` définitifs et leur compatibilité avec les anciens modèles.
+* [ ] Vérifier migration/compatibilité avec les données Hive existantes.
+* [ ] Tester `save → read → compare` pour `DailyCheckIn`.
+* [ ] Tester `save → read → compare` pour `RecoveryStatus`.
+* [ ] Tester le cas où aucun RecoveryStatus n'existe.
+* [ ] Tester le cas où un check-in existe mais le RecoveryStatus est absent.
+* [ ] Tester le remplacement/mise à jour du check-in du jour.
+* [ ] Vérifier les erreurs de lecture/écriture Hive.
+
+### 7. Vérifier `RecoveryRepository`
+
+* [ ] Vérifier toutes les méthodes CRUD nécessaires.
+* [ ] Ajouter la récupération du check-in du jour.
+* [ ] Ajouter la récupération du RecoveryStatus du jour.
+* [ ] Vérifier le filtrage par `userId`.
+* [ ] Vérifier le filtrage par date.
+* [ ] Tester deux utilisateurs avec des données le même jour.
+
+### 8. Flux automatique du Check-in
+
+* [ ] Vérifier que le check-in n'est déclenché **qu'une seule fois par jour**.
+* [ ] Vérifier le comportement après `Skip for now`.
+* [ ] Vérifier si le check-in doit réapparaître après un skip.
+* [ ] Vérifier le comportement après fermeture/réouverture de l'application.
+* [ ] Vérifier le comportement après logout/login.
+* [ ] Vérifier qu'un utilisateur sans profil complet ne déclenche pas un flux incohérent.
+* [ ] Vérifier que le check-in est bien persisté avant de générer le DailyPlan.
+
+### 9. Intégration `HomeViewModel`
+
+* [ ] Vérifier que `triggerCheckInIfNeeded()` récupère réellement le check-in depuis le repository.
+* [ ] Vérifier que le `DailyPlan` est recalculé après soumission.
+* [ ] Vérifier que le RecoveryStatus est disponible immédiatement après le check-in.
+* [ ] Vérifier le refresh de l'UI après soumission.
+* [ ] Vérifier les erreurs de persistence dans le flux UI.
+* [ ] Vérifier le cas où le repository est indisponible.
+
+### 10. Intégration `DailyPlan`
+
+* [ ] Vérifier que `DailyPlan.recoveryStatus` est toujours cohérent avec `todayWorkout`.
+* [ ] Vérifier qu'un `DailyPlan` sans check-in reste valide.
+* [ ] Vérifier que le workout affiché est bien le workout **adapté**, pas le workout planifié original.
+* [ ] Vérifier que Nutrition reçoit bien le `adaptedContext`.
+* [ ] Vérifier que la nutrition ne devient pas incohérente après réduction du workout.
+
+### 11. UI Recovery
+
+* [ ] Vérifier l'affichage des 3 scores : Recovery / Fatigue / Readiness.
+* [ ] Vérifier les couleurs pour toutes les plages de scores.
+* [ ] Vérifier l'affichage des raisons.
+* [ ] Vérifier l'affichage du volume réellement réduit.
+* [ ] Vérifier le cas `rest`.
+* [ ] Vérifier les petits écrans et différentes tailles de texte.
+* [ ] Remplacer les couleurs hardcodées (`Colors.orange`, `Colors.blueGrey`) par le thème si nécessaire.
+* [ ] Vérifier accessibilité/contraste.
+
+### 12. UI Check-in
+
+* [ ] Vérifier les valeurs min/max du slider sommeil.
+* [ ] Vérifier que `0 h` est réellement acceptable ou ajouter une validation.
+* [ ] Ajouter éventuellement une indication claire des niveaux de soreness/energy.
+* [ ] Vérifier que les labels sont compréhensibles.
+* [ ] Vérifier le comportement du bouton Submit.
+* [ ] Vérifier le comportement du bouton Skip.
+* [ ] Vérifier que l'écran ne peut pas être soumis plusieurs fois accidentellement.
+
+### 13. `RecoverySummaryCard`
+
+* [ ] Vérifier qu'il est réellement intégré au `ProgramDashboardView`.
+* [ ] Vérifier qu'il reçoit le `RecoveryStatus` du `DailyPlan`.
+* [ ] Vérifier le comportement lorsque `recoveryStatus == null`.
+* [ ] Vérifier que le tap ouvre le RecoveryScreen avec les données du jour.
+* [ ] Vérifier que le résumé correspond exactement au score affiché dans `RecoveryScreen`.
+
+### 14. Tests Decision Engine
+
+* [ ] Test readiness ≥ 80.
+* [ ] Test readiness 65–79.
+* [ ] Test readiness 60–64.
+* [ ] Test readiness 40–59.
+* [ ] Test readiness < 40.
+* [ ] Test absence de check-in.
+* [ ] Test conflit `RecoveryRule` + progression.
+* [ ] Test conflit `RecoveryRule` + sécurité/blessure.
+* [ ] Test adaptation finale du workout.
+* [ ] Vérifier que les décisions sont déterministes.
+
+### 15. Tests end-to-end Phase 4
+
+* [ ] Lancer l'application avec **aucun check-in**.
+* [ ] Faire le check-in.
+* [ ] Persister le check-in.
+* [ ] Calculer RecoveryStatus.
+* [ ] Générer DailyPlan.
+* [ ] Vérifier l'adaptation du workout.
+* [ ] Vérifier RecoverySummaryCard.
+* [ ] Ouvrir RecoveryScreen.
+* [ ] Fermer l'application.
+* [ ] Rouvrir l'application.
+* [ ] Vérifier que le check-in n'est pas redemandé.
+* [ ] Vérifier que le même RecoveryStatus est retrouvé.
+
+### 16. Qualité / stabilité
+
+* [ ] `flutter analyze` → **0 erreur**.
+* [ ] `flutter test` → **100 % des tests passent**.
+* [ ] Vérifier les warnings importants.
+* [ ] Vérifier les imports inutilisés.
+* [ ] Vérifier les TODO/FIXME introduits pendant Phase 4.
+* [ ] Vérifier les logs/debug prints.
+* [ ] Vérifier le formatage `dart format`.
+* [ ] Vérifier les tests sur un build release/profile.
+
+### 17. Documentation Phase 4
+
+* [ ] Documenter la formule de `SleepScorer`.
+* [ ] Documenter la formule de `FatigueEstimator`.
+* [ ] Documenter la formule de `ReadinessCalculator`.
+* [ ] Documenter les seuils de décision.
+* [ ] Documenter les `volumeMultiplier`.
+* [ ] Documenter le flux `Check-in → Recovery → Decision → Workout`.
+* [ ] Documenter les décisions déterministes de la Phase 4.
+* [ ] Documenter les limites actuelles : pas encore de données historiques, wearable, HRV, etc.
+
+### 18. Critère final de clôture
+
+* [ ] Un check-in quotidien est créé/récupéré correctement.
+* [ ] RecoveryStatus est calculé de manière déterministe.
+* [ ] RecoveryStatus est persisté.
+* [ ] Le Decision Engine utilise réellement RecoveryStatus.
+* [ ] Le workout du jour est effectivement adapté.
+* [ ] L'UI affiche le résultat réel du moteur.
+* [ ] Les données survivent à un redémarrage de l'application.
+* [ ] Aucun conflit entre les règles Recovery Engine / Decision Engine.
+* [ ] Tous les tests Phase 4 passent.
+* [ ] `flutter analyze` propre.
+* [ ] `dart format` propre.
+* [ ] Documentation Phase 4 mise à jour.
+* [ ] **Aucun TODO bloquant restant.**
+* [ ] **Phase 4 peut être taguée comme terminée.**
+
+**Point particulièrement important avant clôture :** votre code montre actuellement une **incohérence entre les spécifications et l'implémentation des seuils/multiplicateurs**. C'est le premier point que je corrigerais avant de considérer la Phase 4 comme réellement terminée.

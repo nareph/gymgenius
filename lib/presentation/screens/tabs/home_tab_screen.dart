@@ -10,13 +10,28 @@ import 'package:provider/provider.dart';
 
 import '../main_dashboard_screen.dart';
 
-class HomeTabScreen extends StatelessWidget {
+class HomeTabScreen extends StatefulWidget {
   final Function(int) onNavigateToTab;
 
   const HomeTabScreen({
     super.key,
     required this.onNavigateToTab,
   });
+
+  @override
+  State<HomeTabScreen> createState() => _HomeTabScreenState();
+}
+
+class _HomeTabScreenState extends State<HomeTabScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Trigger check-in after the first frame so the context is fully mounted.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<HomeViewModel>().triggerCheckInIfNeeded(context);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -74,7 +89,7 @@ class HomeTabScreen extends StatelessWidget {
         if (!isProfileComplete) {
           return wrapInScrollable(CompleteProfileView(
             key: const ValueKey('complete_profile'),
-            onNavigate: () => onNavigateToTab(kProfileTabIndex),
+            onNavigate: () => widget.onNavigateToTab(kProfileTabIndex),
             isInsufficient: true,
           ));
         }

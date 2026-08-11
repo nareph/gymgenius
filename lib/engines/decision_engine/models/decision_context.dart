@@ -1,4 +1,5 @@
 import 'package:gymgenius/domain/entities/health_profile.dart';
+import 'package:gymgenius/domain/entities/recovery_status.dart';
 import 'package:gymgenius/domain/entities/today_workout.dart';
 import 'package:gymgenius/domain/entities/training_program.dart';
 import 'package:gymgenius/engines/decision_engine/models/program_progress.dart';
@@ -40,12 +41,16 @@ class DecisionContext {
   /// Workout planned for today before adaptations.
   final TodayWorkout todayWorkout;
 
+  /// Recovery status computed from today's check-in (null if no check-in yet).
+  final RecoveryStatus? recoveryStatus;
+
   const DecisionContext({
     required this.now,
     required this.healthProfile,
     required this.trainingProgram,
     required this.programProgress,
     required this.todayWorkout,
+    this.recoveryStatus,
   });
 
   DecisionContext copyWith({
@@ -54,6 +59,7 @@ class DecisionContext {
     TrainingProgram? trainingProgram,
     ProgramProgress? programProgress,
     TodayWorkout? todayWorkout,
+    RecoveryStatus? recoveryStatus,
   }) {
     return DecisionContext(
       now: now ?? this.now,
@@ -61,6 +67,7 @@ class DecisionContext {
       trainingProgram: trainingProgram ?? this.trainingProgram,
       programProgress: programProgress ?? this.programProgress,
       todayWorkout: todayWorkout ?? this.todayWorkout,
+      recoveryStatus: recoveryStatus ?? this.recoveryStatus,
     );
   }
 

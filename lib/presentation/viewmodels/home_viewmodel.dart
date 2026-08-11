@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:gymgenius/core/logger/logger_service.dart';
+import 'package:gymgenius/domain/entities/daily_checkin.dart';
 import 'package:gymgenius/domain/entities/health_profile.dart';
 import 'package:gymgenius/domain/entities/training_program.dart';
 import 'package:gymgenius/domain/repositories/health_repository.dart';
+import 'package:gymgenius/domain/repositories/recovery_repository.dart';
 import 'package:gymgenius/domain/repositories/user_repository.dart';
 import 'package:gymgenius/engines/decision_engine/decision_engine.dart';
 import 'package:gymgenius/engines/decision_engine/models/daily_plan.dart';
 import 'package:gymgenius/engines/workout_engine/workout_engine.dart';
+import 'package:gymgenius/presentation/screens/recovery/daily_checkin_screen.dart';
 import 'package:gymgenius/presentation/widgets/regeneration/regeneration_options_sheet.dart';
 
 enum HomeState { initial, loading, loaded, error }
@@ -16,6 +19,7 @@ class HomeViewModel extends ChangeNotifier {
   final UserRepository _userRepository;
   final HealthRepository _healthRepository;
   final DecisionEngine _decisionEngine;
+  final RecoveryRepository _recoveryRepository;
   BuildContext? _context;
 
   HomeViewModel({
@@ -23,10 +27,12 @@ class HomeViewModel extends ChangeNotifier {
     required UserRepository userRepository,
     required HealthRepository healthRepository,
     required DecisionEngine decisionEngine,
+    required RecoveryRepository recoveryRepository,
   })  : _workoutEngine = workoutEngine,
         _userRepository = userRepository,
         _healthRepository = healthRepository,
-        _decisionEngine = decisionEngine {
+        _decisionEngine = decisionEngine,
+        _recoveryRepository = recoveryRepository {
     Log.info('HomeViewModel: Created');
     _loadData();
   }
@@ -85,12 +91,21 @@ class HomeViewModel extends ChangeNotifier {
       final program = await _workoutEngine.getCurrentProgram();
       _currentProgram = program;
 
+      // Retrieve today's check-in if it exists (do NOT prompt here;
+      // prompting happens in the UI layer via [triggerCheckInIfNeeded]).
+      DailyCheckIn? checkIn;
+      checkIn = await _recoveryRepository.getDailyCheckIn(
+        user.id,
+        DateTime.now(),
+      );
+
       // Build DailyPlan using DecisionEngine ----
       _dailyPlan = program == null
           ? null
           : await _decisionEngine.buildDailyPlanAndPersist(
               program,
               healthProfile!,
+              checkIn: checkIn,
             );
 
       Log.info('HomeViewModel: Profile complete: $_isProfileComplete');
@@ -210,6 +225,63 @@ class HomeViewModel extends ChangeNotifier {
     _currentProgram = null;
     _dailyPlan = null; // also clear the daily plan
 
+    notifyListeners();
+  }
+
+  // =========================================================================
+  // Daily Check-in auto-trigger
+  // =========================================================================
+
+  /// Called by [HomeTabScreen] once the screen is mounted.
+  ///
+  /// If no check-in exists for today, opens [DailyCheckInScreen] as a
+  /// full-screen dialog. On submission the result is forwarded to the
+  /// DecisionEngine via [_applyCheckIn].
+  Future<void> triggerCheckInIfNeeded(BuildContext context) async {
+    final user = await _userRepository.getCurrentUser();
+    if (user == null) return;
+
+    // Incomplete profiles should not enter the check-in flow.
+    if (_healthProfile == null || !_healthProfile!.isComplete) return;
+
+    final today = DateTime.now();
+    final existing = await _recoveryRepository.getDailyCheckIn(user.id, today);
+    if (existing != null) return;
+
+    final skipped = await _recoveryRepository.isCheckInSkipped(user.id, today);
+    if (skipped) return;
+
+    if (!context.mounted) return;
+
+    final checkIn = await Navigator.of(context).push<DailyCheckIn?>(
+      DailyCheckInScreen.route(user.id),
+    );
+
+    if (!context.mounted) return;
+
+    if (checkIn != null) {
+      await _applyCheckIn(checkIn);
+    } else {
+      // Skip for now → do not re-prompt until the next calendar day.
+      await _recoveryRepository.markCheckInSkipped(user.id, today);
+    }
+  }
+
+  Future<void> _applyCheckIn(DailyCheckIn checkIn) async {
+    if (_currentProgram == null || _healthProfile == null) return;
+    _state = HomeState.loading;
+    notifyListeners();
+    try {
+      _dailyPlan = await _decisionEngine.buildDailyPlanAndPersist(
+        _currentProgram!,
+        _healthProfile!,
+        checkIn: checkIn,
+      );
+      _state = HomeState.loaded;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _state = HomeState.error;
+    }
     notifyListeners();
   }
 

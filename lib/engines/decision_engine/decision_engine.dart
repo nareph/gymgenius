@@ -1,10 +1,13 @@
+import 'package:gymgenius/domain/entities/daily_checkin.dart';
 import 'package:gymgenius/domain/entities/health_profile.dart';
+import 'package:gymgenius/domain/entities/recovery_status.dart';
 import 'package:gymgenius/domain/entities/today_workout.dart';
 import 'package:gymgenius/domain/entities/training_program.dart';
 import 'package:gymgenius/domain/entities/workout_decision.dart';
 import 'package:gymgenius/engines/decision_engine/Progression/program_progress_service.dart';
 import 'package:gymgenius/engines/decision_engine/services/conflict_resolver.dart';
 import 'package:gymgenius/engines/decision_engine/rules/nutrition/nutrition_rule.dart';
+import 'package:gymgenius/engines/recovery_engine/recovery_engine.dart';
 
 import 'builders/today_workout_builder.dart';
 import 'models/daily_plan.dart';
@@ -32,6 +35,7 @@ class DecisionEngine {
   final WorkoutAdaptationService _workoutAdaptationService;
   final ConflictResolver _conflictResolver;
   final NutritionRule _nutritionRule;
+  final RecoveryEngine _recoveryEngine;
 
   final List<DecisionRule> _rules;
 
@@ -42,12 +46,14 @@ class DecisionEngine {
     required ConflictResolver conflictResolver,
     required List<DecisionRule> rules,
     required NutritionRule nutritionRule,
+    RecoveryEngine recoveryEngine = const RecoveryEngine(),
   })  : _programProgressService = programProgressService,
         _todayWorkoutBuilder = todayWorkoutBuilder,
         _workoutAdaptationService = workoutAdaptationService,
         _conflictResolver = conflictResolver,
         _rules = rules,
-        _nutritionRule = nutritionRule;
+        _nutritionRule = nutritionRule,
+        _recoveryEngine = recoveryEngine;
 
   // ============================================================
   // Daily Plan
@@ -57,6 +63,7 @@ class DecisionEngine {
     TrainingProgram trainingProgram,
     HealthProfile healthProfile, {
     DateTime? now,
+    DailyCheckIn? checkIn,
   }) {
     final currentDate = now ?? DateTime.now();
     final progress = _programProgressService.calculate(trainingProgram);
@@ -64,12 +71,15 @@ class DecisionEngine {
       program: trainingProgram,
       now: currentDate,
     );
+    final recoveryStatus =
+        checkIn != null ? _recoveryEngine.compute(checkIn) : null;
     final context = DecisionContext(
       now: currentDate,
       healthProfile: healthProfile,
       trainingProgram: trainingProgram,
       programProgress: progress,
       todayWorkout: plannedWorkout,
+      recoveryStatus: recoveryStatus,
     );
 
     return _buildDailyPlanFromContext(
@@ -78,6 +88,7 @@ class DecisionEngine {
       plannedWorkout: plannedWorkout,
       healthProfile: healthProfile,
       currentDate: currentDate,
+      recoveryStatus: recoveryStatus,
     );
   }
 
@@ -85,6 +96,7 @@ class DecisionEngine {
     TrainingProgram trainingProgram,
     HealthProfile healthProfile, {
     DateTime? now,
+    DailyCheckIn? checkIn,
   }) async {
     final currentDate = now ?? DateTime.now();
     final progress = _programProgressService.calculate(trainingProgram);
@@ -92,12 +104,19 @@ class DecisionEngine {
       program: trainingProgram,
       now: currentDate,
     );
+
+    RecoveryStatus? recoveryStatus;
+    if (checkIn != null) {
+      recoveryStatus = await _recoveryEngine.computeAndPersist(checkIn);
+    }
+
     final context = DecisionContext(
       now: currentDate,
       healthProfile: healthProfile,
       trainingProgram: trainingProgram,
       programProgress: progress,
       todayWorkout: plannedWorkout,
+      recoveryStatus: recoveryStatus,
     );
 
     final decisions = _evaluateRules(context);
@@ -118,6 +137,7 @@ class DecisionEngine {
       programProgress: progress,
       todayWorkout: finalWorkout,
       nutritionPlan: nutritionPlan,
+      recoveryStatus: recoveryStatus,
       confidence: finalDecision.confidence,
       generatedAt: currentDate,
     );
@@ -129,11 +149,10 @@ class DecisionEngine {
     required TodayWorkout plannedWorkout,
     required HealthProfile healthProfile,
     required DateTime currentDate,
+    RecoveryStatus? recoveryStatus,
   }) {
     final decisions = _evaluateRules(context);
-    final finalDecision = _conflictResolver.resolve(
-      decisions,
-    );
+    final finalDecision = _conflictResolver.resolve(decisions);
     final finalWorkout = _workoutAdaptationService.adapt(
       plannedWorkout: plannedWorkout,
       decision: finalDecision,
@@ -150,6 +169,7 @@ class DecisionEngine {
       programProgress: progress,
       todayWorkout: finalWorkout,
       nutritionPlan: nutritionPlan,
+      recoveryStatus: recoveryStatus,
       confidence: finalDecision.confidence,
       generatedAt: currentDate,
     );

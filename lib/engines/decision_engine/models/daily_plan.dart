@@ -1,5 +1,6 @@
-import 'package:gymgenius/domain/entities/today_workout.dart';
 import 'package:gymgenius/domain/entities/nutrition_plan.dart';
+import 'package:gymgenius/domain/entities/recovery_status.dart';
+import 'package:gymgenius/domain/entities/today_workout.dart';
 
 import 'decision_context.dart';
 import 'program_progress.dart';
@@ -36,6 +37,9 @@ class DailyPlan {
   /// Deterministic nutrition recommendation for today.
   final NutritionPlan? nutritionPlan;
 
+  /// Recovery status computed from today's check-in (null if no check-in yet).
+  final RecoveryStatus? recoveryStatus;
+
   /// Confidence of the final decision.
   final double confidence;
 
@@ -47,6 +51,7 @@ class DailyPlan {
     required this.programProgress,
     required this.todayWorkout,
     this.nutritionPlan,
+    this.recoveryStatus,
     required this.confidence,
     required this.generatedAt,
   });
@@ -59,6 +64,8 @@ class DailyPlan {
 
   bool get hasNutrition => nutritionPlan != null;
 
+  bool get hasRecovery => recoveryStatus != null;
+
   @override
   String toString() {
     return '''
@@ -67,6 +74,7 @@ DailyPlan(
   adapted: $isAdapted,
   restDay: $isRestDay,
   nutrition: $hasNutrition,
+  recovery: $hasRecovery,
   confidence: $confidence
 )
 ''';

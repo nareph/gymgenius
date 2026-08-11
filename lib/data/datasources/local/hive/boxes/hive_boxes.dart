@@ -5,6 +5,8 @@ import '../models/training_program_hive_model.dart';
 import '../models/workout_log_hive_model.dart';
 import '../models/nutrition_profile_hive_model.dart';
 import '../models/nutrition_plan_hive_model.dart';
+import '../models/recovery_status_hive_model.dart';
+import '../models/daily_checkin_hive_model.dart';
 
 class HiveBoxes {
   static const String users = 'users';
@@ -15,6 +17,8 @@ class HiveBoxes {
   static const String currentUser = 'current_user';
   static const String nutritionProfiles = 'nutrition_profiles';
   static const String nutritionPlans = 'nutrition_plans';
+  static const String recoveryStatuses = 'recovery_statuses';
+  static const String dailyCheckIns = 'daily_checkins';
 
   static Box<UserHiveModel> get usersBox => Hive.box<UserHiveModel>(users);
   static Box<HealthProfileHiveModel> get healthProfilesBox =>
@@ -28,4 +32,8 @@ class HiveBoxes {
       Hive.box<NutritionProfileHiveModel>(nutritionProfiles);
   static Box<NutritionPlanHiveModel> get nutritionPlansBox =>
       Hive.box<NutritionPlanHiveModel>(nutritionPlans);
+  static Box<RecoveryStatusHiveModel> get recoveryStatusesBox =>
+      Hive.box<RecoveryStatusHiveModel>(recoveryStatuses);
+  static Box<DailyCheckInHiveModel> get dailyCheckInsBox =>
+      Hive.box<DailyCheckInHiveModel>(dailyCheckIns);
 }

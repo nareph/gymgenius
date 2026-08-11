@@ -1,8 +1,55 @@
 # Recovery Engine
 
-**Version:** 3.0  
-**Status:** Planned (Core Engine)  
+**Version:** 3.4 (Phase 4 vertical slice)  
+**Status:** Implemented (check-in based readiness)  
 **Layer:** Domain Intelligence Engine
+
+---
+
+# Phase 4 Scope (v3.4)
+
+Phase 4 delivers a **deterministic, offline-first** recovery vertical slice:
+
+1. Daily Check-in (sleep hours, soreness, energy, mood)
+2. RecoveryEngine scorers → `RecoveryStatus`
+3. Hive persistence (`recovery_statuses`, `daily_checkins`)
+4. `RecoveryRule` → volume reduction via Decision Engine
+5. Home Recovery card + Recovery / Check-in screens
+
+## Decision policy (single source of truth)
+
+Thresholds live in `RecoveryThresholds` and are shared by
+`ReadinessCalculator` and `RecoveryRule`:
+
+| Readiness | Volume multiplier | Meaning |
+|-----------|-------------------|---------|
+| ≥ 80 | 1.00 | Full volume |
+| ≥ 60 | 0.85 | –15 % |
+| ≥ 40 | 0.70 | –30 % |
+| < 40 | 0.55 | –45 % |
+
+Phase 4 **never forces a rest day**. `RecommendedIntensity.rest` is
+informational for the UI only. Volume is applied by reducing **sets**
+on today's final exercises (minimum 1 set per exercise).
+
+## Scorer formulas
+
+- **SleepScorer**: maps sleep hours → [0,100] (optimal window 7–9 h)
+- **FatigueEstimator**: 60 % soreness + 40 % energy penalty → [0,100]
+- **ReadinessCalculator**: 50 % sleep + 40 % (100 − fatigue) + 10 % mood
+
+## Explicit Phase 4 limits
+
+Not included yet (documented for later phases):
+
+- Workout history / accumulated training load
+- Muscle-group fatigue map
+- Recovery trends over days
+- Sleep quality / stress as separate scored inputs
+- HRV / wearables / Health Connect
+
+The sections below describe the **long-term target architecture**.
+Phase 4 implements the check-in → readiness → volume-adaptation path only.
 
 ---
 

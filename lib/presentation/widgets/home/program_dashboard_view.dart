@@ -6,8 +6,9 @@ import 'package:gymgenius/engines/decision_engine/models/daily_plan.dart';
 import 'package:gymgenius/presentation/blocs/auth/auth_bloc.dart';
 import 'package:gymgenius/presentation/providers/workout_session_manager.dart';
 import 'package:gymgenius/presentation/screens/active_workout_session_screen.dart';
+import 'package:gymgenius/presentation/screens/weekly_training_schedule_screen.dart';
 import 'package:gymgenius/presentation/widgets/home/nutrition_summary_card.dart';
-import 'package:gymgenius/presentation/widgets/program_card.dart';
+import 'package:gymgenius/presentation/widgets/home/recovery_summary_card.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -199,8 +200,6 @@ class ProgramDashboardView extends StatelessWidget {
       'sunday'
     ];
     final todayDayKey = daysOfWeek[today.weekday - 1];
-    final weeklySchedule = program.weeklySchedule;
-
     // --------------------------------------------------------------
     // The DecisionEngine's final decision for today's workout.
     // If empty, today is a rest day.
@@ -322,6 +321,14 @@ class ProgramDashboardView extends StatelessWidget {
           ),
 
         // ------------------------------------------------------------------
+        // Recovery summary (from DailyPlan)
+        // ------------------------------------------------------------------
+        if (dailyPlan.recoveryStatus != null) ...[
+          const SizedBox(height: 16),
+          RecoverySummaryCard(status: dailyPlan.recoveryStatus!),
+        ],
+
+        // ------------------------------------------------------------------
         // Nutrition summary (from DailyPlan)
         // ------------------------------------------------------------------
         if (dailyPlan.nutritionPlan != null) ...[
@@ -332,29 +339,22 @@ class ProgramDashboardView extends StatelessWidget {
         const SizedBox(height: 24),
 
         if (!program.isExpired) ...[
-          Text(
-            "Weekly Training Schedule:",
-            style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 12),
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: daysOfWeek.length,
-            itemBuilder: (context, index) {
-              final dayKey = daysOfWeek[index];
-              final dayExercises = weeklySchedule[dayKey] ?? [];
-              return Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: ProgramCard(
-                  dayKey: dayKey,
-                  exercises: dayExercises,
+          OutlinedButton.icon(
+            onPressed: () {
+              Navigator.of(context).push(
+                WeeklyTrainingScheduleScreen.route(
                   program: program,
                   healthProfile: healthProfile,
-                  isToday: dayKey == todayDayKey,
                 ),
               );
             },
+            icon: const Icon(Icons.calendar_view_week_rounded),
+            label: const Text('View Weekly Training Schedule'),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size.fromHeight(48),
+              alignment: Alignment.centerLeft,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
           ),
         ],
         const SizedBox(height: 24),

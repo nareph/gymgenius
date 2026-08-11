@@ -15,6 +15,17 @@ The changelog highlights architectural changes, new features, improvements, and 
 
 ### Added
 
+- Phase 4 Recovery Intelligence vertical slice:
+  - deterministic Recovery Engine (sleep / fatigue / readiness scorers)
+  - Daily Check-in flow (auto once per day, skip persists until next day)
+  - shared `RecoveryThresholds` (–15 / –30 / –45 % volume)
+  - DecisionEngine `RecoveryRule` consumes `RecoveryStatus.volumeMultiplier`
+  - set-based volume adaptation on today's workout
+  - Hive persistence (`recovery_statuses`, `daily_checkins`)
+  - Home recovery summary + Recovery / Check-in screens
+  - Weekly Training Schedule moved to a dedicated screen
+  - unit / rule / persistence tests for recovery workflows
+
 - Phase 3 Nutrition Intelligence vertical slice:
   - deterministic Nutrition Engine (calories, macros, meals)
   - Cameroon Food Knowledge Base starter dataset
@@ -29,6 +40,7 @@ The changelog highlights architectural changes, new features, improvements, and 
 - Country-aware nutrition
 - Health Connect integration
 - Wearable support
+- Recovery history / HRV / muscle-level fatigue
 
 # [3.0.0] - 2026-06 (Current Stable Release)
 

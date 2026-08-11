@@ -59,6 +59,7 @@ class WorkoutAdaptationService {
       case WorkoutAdjustment.reduceVolume:
         adaptedWorkout = _volumeService.reduceVolume(
           plannedWorkout,
+          volumeMultiplier: decision.volumeMultiplier ?? 0.7,
         );
 
       case WorkoutAdjustment.increaseVolume:
