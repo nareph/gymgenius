@@ -8,6 +8,8 @@ import '../models/nutrition_plan_hive_model.dart';
 import '../models/recovery_status_hive_model.dart';
 import '../models/daily_checkin_hive_model.dart';
 import '../models/progress_snapshot_hive_model.dart';
+import '../models/conversation_hive_model.dart';
+import '../models/coach_cache_hive_model.dart';
 
 class HiveBoxes {
   static const String users = 'users';
@@ -21,6 +23,8 @@ class HiveBoxes {
   static const String recoveryStatuses = 'recovery_statuses';
   static const String dailyCheckIns = 'daily_checkins';
   static const String progressSnapshots = 'progress_snapshots';
+  static const String conversations = 'coach_conversations';
+  static const String coachCache = 'coach_cache';
 
   static Box<UserHiveModel> get usersBox => Hive.box<UserHiveModel>(users);
   static Box<HealthProfileHiveModel> get healthProfilesBox =>
@@ -40,4 +44,8 @@ class HiveBoxes {
       Hive.box<DailyCheckInHiveModel>(dailyCheckIns);
   static Box<ProgressSnapshotHiveModel> get progressSnapshotsBox =>
       Hive.box<ProgressSnapshotHiveModel>(progressSnapshots);
+  static Box<ConversationHiveModel> get conversationsBox =>
+      Hive.box<ConversationHiveModel>(conversations);
+  static Box<CoachCacheHiveModel> get coachCacheBox =>
+      Hive.box<CoachCacheHiveModel>(coachCache);
 }

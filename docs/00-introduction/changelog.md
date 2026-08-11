@@ -15,6 +15,14 @@ The changelog highlights architectural changes, new features, improvements, and 
 
 ### Added
 
+- Phase 7 AI Coach vertical slice (v4.0.0 target):
+  - `AICoachEngine` + `AIProvider` (Gemini prod, Local fallback, OpenAI/Claude stubs)
+  - structured `CoachResponse` with JSON validation and Decision Engine guardrails
+  - `CoachContextBuilder` from `DailyPlan` (no Hive access in LLM layer)
+  - Hive conversations + daily/weekly coaching cache (TypeIds 16–17)
+  - `CoachHomeCard` + Coach screen (Daily / Chat / Weekly)
+  - unit + integration tests under `test/engines/ai_coach/`
+
 - Phase 6 Decision Engine vertical slice:
   - end-to-end DailyPlan with `finalDecision` + deterministic `HealthDecision`
   - ProgressSnapshot loaded on Home into DecisionEngine

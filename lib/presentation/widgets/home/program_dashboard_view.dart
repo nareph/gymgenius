@@ -7,11 +7,13 @@ import 'package:gymgenius/presentation/blocs/auth/auth_bloc.dart';
 import 'package:gymgenius/presentation/providers/workout_session_manager.dart';
 import 'package:gymgenius/presentation/screens/active_workout_session_screen.dart';
 import 'package:gymgenius/presentation/screens/weekly_training_schedule_screen.dart';
+import 'package:gymgenius/presentation/widgets/home/coach_home_card.dart';
 import 'package:gymgenius/presentation/widgets/home/health_decision_card.dart';
 import 'package:gymgenius/presentation/widgets/home/home_progress_summary_card.dart';
 import 'package:gymgenius/presentation/widgets/home/nutrition_summary_card.dart';
 import 'package:gymgenius/presentation/widgets/home/recovery_summary_card.dart';
 import 'package:gymgenius/presentation/widgets/home/workout_adaptation_banner.dart';
+import 'package:gymgenius/presentation/viewmodels/home_viewmodel.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -322,6 +324,24 @@ class ProgramDashboardView extends StatelessWidget {
               ),
             ),
           ),
+
+        // ------------------------------------------------------------------
+        // AI Coach
+        // ------------------------------------------------------------------
+        Builder(
+          builder: (context) {
+            final homeVm = context.watch<HomeViewModel>();
+            return Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: CoachHomeCard(
+                response: homeVm.dailyCoaching,
+                isLoading: homeVm.isLoadingCoaching,
+                onRetry: homeVm.retryCoaching,
+                dailyPlan: dailyPlan,
+              ),
+            );
+          },
+        ),
 
         // ------------------------------------------------------------------
         // Workout adaptation (from DailyPlan.finalDecision)

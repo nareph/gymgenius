@@ -3,11 +3,14 @@ import 'package:gymgenius/core/logger/logger_service.dart';
 import 'package:gymgenius/domain/entities/daily_checkin.dart';
 import 'package:gymgenius/domain/entities/health_profile.dart';
 import 'package:gymgenius/domain/entities/training_program.dart';
+import 'package:gymgenius/domain/repositories/coach_repository.dart';
 import 'package:gymgenius/domain/repositories/health_repository.dart';
 import 'package:gymgenius/domain/repositories/progress_repository.dart';
 import 'package:gymgenius/domain/repositories/recovery_repository.dart';
 import 'package:gymgenius/domain/repositories/user_repository.dart';
 import 'package:gymgenius/domain/entities/progress_snapshot.dart';
+import 'package:gymgenius/engines/ai_coach/ai_coach_engine.dart';
+import 'package:gymgenius/engines/ai_coach/models/coach_response.dart';
 import 'package:gymgenius/engines/decision_engine/decision_engine.dart';
 import 'package:gymgenius/engines/decision_engine/models/daily_plan.dart';
 import 'package:gymgenius/engines/workout_engine/workout_engine.dart';
@@ -23,6 +26,8 @@ class HomeViewModel extends ChangeNotifier {
   final DecisionEngine _decisionEngine;
   final RecoveryRepository _recoveryRepository;
   final ProgressRepository _progressRepository;
+  final AICoachEngine _aiCoachEngine;
+  final CoachRepository _coachRepository;
   BuildContext? _context;
 
   HomeViewModel({
@@ -32,12 +37,16 @@ class HomeViewModel extends ChangeNotifier {
     required DecisionEngine decisionEngine,
     required RecoveryRepository recoveryRepository,
     required ProgressRepository progressRepository,
+    required AICoachEngine aiCoachEngine,
+    required CoachRepository coachRepository,
   })  : _workoutEngine = workoutEngine,
         _userRepository = userRepository,
         _healthRepository = healthRepository,
         _decisionEngine = decisionEngine,
         _recoveryRepository = recoveryRepository,
-        _progressRepository = progressRepository {
+        _progressRepository = progressRepository,
+        _aiCoachEngine = aiCoachEngine,
+        _coachRepository = coachRepository {
     Log.info('HomeViewModel: Created');
     _loadData();
   }
@@ -74,6 +83,12 @@ class HomeViewModel extends ChangeNotifier {
   // -------------------------------------------------------------------------
   DailyPlan? _dailyPlan;
   DailyPlan? get dailyPlan => _dailyPlan;
+
+  CoachResponse? _dailyCoaching;
+  CoachResponse? get dailyCoaching => _dailyCoaching;
+
+  bool _isLoadingCoaching = false;
+  bool get isLoadingCoaching => _isLoadingCoaching;
 
   // =========================================================================
   // Data loading
@@ -131,6 +146,12 @@ class HomeViewModel extends ChangeNotifier {
 
       _state = HomeState.loaded;
       notifyListeners();
+
+      if (_dailyPlan != null) {
+        await _loadDailyCoaching(user.id, _dailyPlan!);
+      } else {
+        _dailyCoaching = null;
+      }
     } catch (error, stackTrace) {
       Log.error('HomeViewModel: Error loading data',
           error: error, stackTrace: stackTrace);
@@ -138,6 +159,31 @@ class HomeViewModel extends ChangeNotifier {
       _state = HomeState.error;
       notifyListeners();
     }
+  }
+
+  Future<void> _loadDailyCoaching(String userId, DailyPlan plan) async {
+    _isLoadingCoaching = true;
+    notifyListeners();
+    try {
+      _dailyCoaching = await _coachRepository.getOrCreateDailyCoaching(
+        userId: userId,
+        plan: plan,
+        generate: () => _aiCoachEngine.generateDailyCoaching(plan),
+      );
+    } catch (e, s) {
+      Log.error('HomeViewModel: Coaching failed', error: e, stackTrace: s);
+      _dailyCoaching = null;
+    } finally {
+      _isLoadingCoaching = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> retryCoaching() async {
+    final user = await _userRepository.getCurrentUser();
+    final plan = _dailyPlan;
+    if (user == null || plan == null) return;
+    await _loadDailyCoaching(user.id, plan);
   }
 
   // =========================================================================
@@ -304,6 +350,10 @@ class HomeViewModel extends ChangeNotifier {
         progressSnapshot: progressSnapshot,
       );
       _state = HomeState.loaded;
+      notifyListeners();
+      if (_dailyPlan != null) {
+        await _loadDailyCoaching(checkIn.userId, _dailyPlan!);
+      }
     } catch (e) {
       _errorMessage = e.toString();
       _state = HomeState.error;

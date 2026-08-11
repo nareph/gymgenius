@@ -12,6 +12,8 @@ import '../models/nutrition_plan_hive_model.dart';
 import '../models/recovery_status_hive_model.dart';
 import '../models/daily_checkin_hive_model.dart';
 import '../models/progress_snapshot_hive_model.dart';
+import '../models/conversation_hive_model.dart';
+import '../models/coach_cache_hive_model.dart';
 import 'hive_boxes.dart';
 
 /// Hive datasource — handles all direct Hive operations.
@@ -34,6 +36,8 @@ class HiveDatasource {
     Hive.registerAdapter(RecoveryStatusHiveModelAdapter());
     Hive.registerAdapter(DailyCheckInHiveModelAdapter());
     Hive.registerAdapter(ProgressSnapshotHiveModelAdapter());
+    Hive.registerAdapter(ConversationHiveModelAdapter());
+    Hive.registerAdapter(CoachCacheHiveModelAdapter());
 
     // Open boxes
     await Hive.openBox<UserHiveModel>(HiveBoxes.users);
@@ -46,6 +50,8 @@ class HiveDatasource {
     await Hive.openBox<RecoveryStatusHiveModel>(HiveBoxes.recoveryStatuses);
     await Hive.openBox<DailyCheckInHiveModel>(HiveBoxes.dailyCheckIns);
     await Hive.openBox<ProgressSnapshotHiveModel>(HiveBoxes.progressSnapshots);
+    await Hive.openBox<ConversationHiveModel>(HiveBoxes.conversations);
+    await Hive.openBox<CoachCacheHiveModel>(HiveBoxes.coachCache);
   }
 
   // ============================================================
@@ -353,6 +359,38 @@ class HiveDatasource {
   }
 
   // ============================================================
+  // COACH CONVERSATIONS
+  // ============================================================
+
+  static Future<void> saveConversation(ConversationHiveModel model) async {
+    await HiveBoxes.conversationsBox.put(model.id, model);
+  }
+
+  static ConversationHiveModel? getLatestConversation(String userId) {
+    final entries = HiveBoxes.conversationsBox.values
+        .where((m) => m.userId == userId)
+        .toList()
+      ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    return entries.isEmpty ? null : entries.first;
+  }
+
+  static Future<void> deleteConversation(String id) async {
+    await HiveBoxes.conversationsBox.delete(id);
+  }
+
+  // ============================================================
+  // COACH CACHE
+  // ============================================================
+
+  static Future<void> saveCoachCache(CoachCacheHiveModel model) async {
+    await HiveBoxes.coachCacheBox.put(model.id, model);
+  }
+
+  static CoachCacheHiveModel? getCoachCache(String id) {
+    return HiveBoxes.coachCacheBox.get(id);
+  }
+
+  // ============================================================
   // CLEAR ALL
   // ============================================================
 
@@ -366,6 +404,8 @@ class HiveDatasource {
     await HiveBoxes.recoveryStatusesBox.clear();
     await HiveBoxes.dailyCheckInsBox.clear();
     await HiveBoxes.progressSnapshotsBox.clear();
+    await HiveBoxes.conversationsBox.clear();
+    await HiveBoxes.coachCacheBox.clear();
     await HiveBoxes.currentUserBox.clear();
   }
 }

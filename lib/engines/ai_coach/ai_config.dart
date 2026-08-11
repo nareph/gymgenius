@@ -69,6 +69,23 @@ class AIConfig {
   static const Duration receiveTimeout = Duration(seconds: 45);
 
   //==============================================================
+  // AI Coach (Phase 7)
+  //==============================================================
+
+  static const int coachMaxHistoryMessages = 20;
+
+  static const int coachMaxOutputTokens = 1024;
+
+  static const Duration coachTimeout = Duration(seconds: 30);
+
+  static const bool enableCoachCloud = bool.fromEnvironment(
+    'ENABLE_AI_COACH',
+    defaultValue: true,
+  );
+
+  static bool get canUseCoachCloud => enableCoachCloud && hasGemini;
+
+  //==============================================================
   // Generation
   //==============================================================
 

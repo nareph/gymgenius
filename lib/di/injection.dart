@@ -4,6 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:gymgenius/data/repositories/auth_repository_impl.dart';
 import 'package:gymgenius/data/repositories/health_repository_impl.dart';
 import 'package:gymgenius/data/repositories/nutrition_repository_impl.dart';
+import 'package:gymgenius/data/repositories/coach_repository_impl.dart';
 import 'package:gymgenius/data/repositories/progress_repository_impl.dart';
 import 'package:gymgenius/data/repositories/recovery_repository_impl.dart';
 import 'package:gymgenius/data/repositories/tracking_repository_impl.dart';
@@ -13,6 +14,7 @@ import 'package:gymgenius/data/repositories/workout_repository_impl.dart';
 import 'package:gymgenius/domain/repositories/auth_repository.dart';
 import 'package:gymgenius/domain/repositories/health_repository.dart';
 import 'package:gymgenius/domain/repositories/nutrition_repository.dart';
+import 'package:gymgenius/domain/repositories/coach_repository.dart';
 import 'package:gymgenius/domain/repositories/progress_repository.dart';
 import 'package:gymgenius/domain/repositories/recovery_repository.dart';
 import 'package:gymgenius/domain/repositories/tracking_repository.dart';
@@ -45,8 +47,13 @@ import 'package:gymgenius/engines/workout_engine/providers/exercise_replacement_
 import 'package:gymgenius/engines/workout_engine/services/generation_service.dart';
 import 'package:gymgenius/engines/workout_engine/workout_engine.dart';
 import 'package:gymgenius/engines/nutrition_engine/nutrition_engine.dart';
+import 'package:gymgenius/engines/ai_coach/ai_coach_engine.dart';
+import 'package:gymgenius/engines/ai_coach/ai_config.dart';
+import 'package:gymgenius/engines/ai_coach/providers/gemini_coach_provider.dart';
+import 'package:gymgenius/engines/ai_coach/providers/local_coach_provider.dart';
 import 'package:gymgenius/engines/progress_engine/progress_engine.dart';
 import 'package:gymgenius/engines/recovery_engine/recovery_engine.dart';
+import 'package:gymgenius/presentation/viewmodels/coach_viewmodel.dart';
 
 import 'package:gymgenius/presentation/blocs/auth/auth_bloc.dart';
 import 'package:gymgenius/presentation/blocs/exercise_library/exercise_library_bloc.dart';
@@ -117,6 +124,10 @@ void setupDependencies() {
     ),
   );
 
+  getIt.registerLazySingleton<CoachRepository>(
+    () => const CoachRepositoryImpl(),
+  );
+
   // ============================================================
   // Workout Engine
   // ============================================================
@@ -147,22 +158,32 @@ void setupDependencies() {
   );
 
   // ============================================================
-// Decision Engine
-// ============================================================
+  // AI Coach
+  // ============================================================
+  getIt.registerLazySingleton<AICoachEngine>(
+    () => AICoachEngine(
+      primary: AIConfig.canUseCoachCloud
+          ? GeminiCoachProvider()
+          : const LocalCoachProvider(),
+      local: const LocalCoachProvider(),
+    ),
+  );
 
-// Progression
+  // ============================================================
+  // Decision Engine
+  // ============================================================
 
+  // Progression
   getIt.registerLazySingleton<ProgramProgressService>(
     () => const ProgramProgressService(),
   );
 
-// Builder
-
+  // Builder
   getIt.registerLazySingleton<TodayWorkoutBuilder>(
     () => const TodayWorkoutBuilder(),
   );
 
-// Adaptation services
+  // Adaptation services
 
   getIt.registerLazySingleton<VolumeAdjustmentService>(
     () => const VolumeAdjustmentService(),
@@ -317,6 +338,17 @@ void setupDependencies() {
       decisionEngine: getIt<DecisionEngine>(),
       recoveryRepository: getIt<RecoveryRepository>(),
       progressRepository: getIt<ProgressRepository>(),
+      aiCoachEngine: getIt<AICoachEngine>(),
+      coachRepository: getIt<CoachRepository>(),
+    ),
+  );
+
+  getIt.registerFactory<CoachViewModel>(
+    () => CoachViewModel(
+      engine: getIt<AICoachEngine>(),
+      coachRepository: getIt<CoachRepository>(),
+      progressRepository: getIt<ProgressRepository>(),
+      userRepository: getIt<UserRepository>(),
     ),
   );
 

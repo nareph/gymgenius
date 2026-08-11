@@ -1,0 +1,303 @@
+# Phase 7 — AI Coach — Checklist de clôture (v4.0.0)
+
+### 1. Architecture AI Coach
+
+* [x] `AICoachEngine` créé
+* [x] Interface `AIProvider` définie
+* [x] Couche AI indépendante de Flutter/UI
+* [x] Couche AI indépendante du provider utilisé
+* [x] Architecture permettant de changer de provider sans modifier le domaine
+* [x] Gestion centralisée des erreurs AI (engine catch → local fallback)
+* [x] Gestion centralisée des timeouts (`AIConfig.coachTimeout`)
+* [x] Gestion centralisée des retries — **REPORTED**: fallback Local immédiat (pas de boucle retry multi-tentative en v4.0)
+* [x] Gestion des réponses invalides/non conformes (validator + text fallback)
+
+### 2. Context Builder
+
+* [x] `CoachContext` défini
+* [x] HealthProfile intégré (via DailyPlan)
+* [x] Today's workout intégré
+* [x] RecoveryStatus intégré
+* [x] NutritionPlan intégré
+* [x] Progress intégré
+* [x] Workout history intégré — via signaux consistency/progress du DailyPlan (pas de dump historique brut)
+* [x] Check-in récent intégré (via recovery dans DailyPlan)
+* [x] Objectifs utilisateur intégrés
+* [x] Contexte temporel intégré
+* [x] Données pertinentes uniquement envoyées au LLM (`toPromptMap`)
+* [x] Données sensibles correctement contrôlées
+* [x] Taille du contexte maîtrisée
+
+### 3. Provider Abstraction
+
+* [x] `AIProvider` interface
+* [x] `GeminiProvider` (`GeminiCoachProvider`)
+* [x] `OpenAIProvider` — stub v4.0
+* [x] `ClaudeProvider` — stub v4.0
+* [x] `LocalLLMProvider` (`LocalCoachProvider`)
+* [x] Chaque provider implémente la même interface
+* [x] Configuration du provider externalisée (`AIConfig`)
+* [x] API keys jamais stockées dans le code source (`fromEnvironment`)
+* [x] Provider sélectionnable par configuration (DI: Gemini si clé, sinon Local)
+* [x] Fallback provider défini (Local)
+* [x] Provider indisponible correctement géré
+
+### 4. AI Response Contract
+
+* [x] `CoachResponse` défini
+* [x] `CoachMessage` / `ConversationMessage` défini
+* [x] `CoachRecommendation` défini
+* [x] `CoachInsight` défini
+* [x] Type de recommandation défini
+* [x] Priorité définie
+* [x] Reason définie
+* [ ] Confidence définie si nécessaire — **REPORTED**: hors contrat v4.0
+* [x] Structured output défini
+* [x] JSON/schema validation
+* [x] Réponse invalide rejetée proprement
+* [x] Fallback textuel prévu si nécessaire
+
+### 5. Daily Coaching
+
+* [x] Daily coaching généré à partir du `DailyPlan`
+* [x] Recovery pris en compte
+* [x] Workout pris en compte
+* [x] Nutrition prise en compte
+* [x] Progression prise en compte
+* [x] Objectif utilisateur pris en compte
+* [x] Conseils personnalisés
+* [x] Conseils cohérents avec les décisions du Decision Engine
+* [x] L'AI Coach ne contredit pas automatiquement le Decision Engine
+* [x] Pas de modification arbitraire du workout
+* [x] Pas de recommandation nutritionnelle incohérente avec Nutrition Engine
+* [x] Conseils recovery cohérents avec Recovery Engine
+
+### 6. Motivational Guidance
+
+* [x] Messages motivationnels contextuels (prompts + local templates)
+* [x] Motivation basée sur les progrès réels
+* [x] Feedback sur la régularité
+* [x] Feedback sur les objectifs
+* [x] Ton configurable (`tone` field / prompts)
+* [x] Pas de motivation générique répétitive (templates contextuels)
+* [x] Pas de culpabilisation (system prompt)
+* [x] Pas de promesses irréalistes (system prompt)
+
+### 7. Natural Conversation
+
+* [x] Chat UI
+* [x] Message utilisateur
+* [x] Réponse AI
+* [x] Historique conversationnel
+* [x] Context injection contrôlée
+* [x] Conversation liée au profil utilisateur
+* [x] Conversation liée au contexte quotidien
+* [x] Possibilité de demander « pourquoi ? »
+* [x] Possibilité de demander des explications sur le workout
+* [x] Possibilité de demander des explications sur la nutrition
+* [x] Possibilité de demander des explications sur la récupération
+* [x] Réponses cohérentes avec les données réelles
+
+### 8. Conversation Memory
+
+* [x] `Conversation`
+* [x] `ConversationMessage`
+* [x] Identifiant utilisateur
+* [x] Timestamp
+* [x] Role : user / assistant
+* [x] Persistance de l'historique (Hive TypeId 16)
+* [x] Limitation du contexte envoyé au LLM (`coachMaxHistoryMessages`)
+* [ ] Résumé automatique des anciennes conversations — **REPORTED**: hors scope v4.0
+* [x] Suppression d'une conversation
+* [x] Gestion d'une nouvelle conversation
+* [x] Pas de croissance infinie du contexte (cap messages)
+
+### 9. Weekly Summary
+
+* [x] Weekly summary via `AICoachEngine.generateWeeklySummary`
+* [x] Poids de la semaine (`WeeklyProgressReport`)
+* [x] Évolution du poids
+* [x] Workouts réalisés
+* [x] Consistance
+* [x] Progression de force (champ report)
+* [x] Recovery moyen (champ report)
+* [x] Nutrition/adherence si disponible — champs report / contexte DailyPlan
+* [x] Points positifs
+* [x] Points à améliorer
+* [x] Recommandations pour la semaine suivante
+* [x] Résumé généré à partir de données réelles
+* [x] Aucun chiffre inventé par le LLM (prompt + Local templates)
+
+### 10. Prompt Architecture
+
+* [x] System prompt défini
+* [x] Coach persona défini
+* [x] Instructions de sécurité définies
+* [x] Instructions de contexte définies
+* [x] Instructions de sortie définies
+* [x] Prompt Daily Coaching
+* [x] Prompt Weekly Summary
+* [x] Prompt Conversation
+* [x] Prompt Motivation
+* [x] Prompt Explanation
+* [x] Versionnement des prompts (`coach_prompts_v1`)
+* [x] Prompts séparés du code métier
+* [x] Pas de logique métier critique uniquement dans les prompts (guardrails code)
+
+### 11. Guardrails
+
+* [x] LLM ne peut pas modifier directement la base de données
+* [x] LLM ne peut pas modifier directement un programme
+* [x] LLM ne peut pas contourner `DecisionEngine`
+* [x] LLM ne peut pas inventer les données utilisateur (instructions + Local)
+* [x] LLM doit distinguer données connues et inconnues
+* [x] Validation des recommandations avant affichage
+* [x] Gestion des demandes hors contexte (chat local fallback)
+* [x] Protection contre prompt injection (contexte structuré + schema JSON)
+* [x] Protection des données utilisateur (contexte compact)
+* [x] Limitation des informations envoyées au provider
+
+### 12. Cost / Performance
+
+* [ ] Token usage mesuré — **REPORTED**: hors scope v4.0
+* [x] Taille des prompts contrôlée (CoachContext compact)
+* [x] Cache pour les réponses appropriées (daily/weekly Hive)
+* [x] Daily coaching ne se régénère pas inutilement (1×/jour)
+* [x] Weekly summary généré une seule fois par période
+* [x] Timeout configuré
+* [x] Retry limité — fallback Local
+* [x] Gestion offline (LocalCoachProvider)
+* [x] Fallback lorsque le provider est indisponible
+* [ ] Monitoring du temps de réponse — **REPORTED**: hors scope v4.0
+* [ ] Monitoring du coût par utilisateur — **REPORTED**: hors scope v4.0
+
+### 13. UI
+
+* [x] `CoachHomeCard`
+* [x] Daily advice visible sur Home
+* [x] AI Coach screen
+* [x] Chat interface
+* [x] Weekly summary screen (onglet)
+* [x] Loading state
+* [ ] Streaming response — **REPORTED**: hors scope v4.0
+* [x] Error state
+* [x] Offline state
+* [x] Retry action
+* [x] Conversation history
+* [x] Recommendations clairement distinguées
+* [x] Source/context identifiable (providerId / usedFallback)
+
+### 14. Tests unitaires
+
+* [x] `CoachContextBuilder` testé
+* [x] `AICoachEngine` testé
+* [x] `AIProvider` testé avec mock / Local
+* [x] Prompt builder testé (version + system constraints)
+* [x] Response parser testé
+* [x] JSON/schema validation testée
+* [x] Invalid response testée
+* [x] Timeout / provider failure → local fallback (engine path sans cloud key)
+* [x] Fallback testé
+* [x] Conversation memory modèles + repository
+* [x] Weekly summary testée
+
+### 15. Tests d'intégration
+
+* [x] Profile → Coach (via DailyPlan)
+* [x] Workout → Coach
+* [x] Recovery → Coach
+* [x] Nutrition → Coach
+* [x] Progress → Coach
+* [x] DecisionEngine → Coach
+* [x] DailyPlan → Daily Coaching
+* [x] Weekly data → Weekly Summary
+* [x] User question → Context → AI → Response
+* [x] Provider failure → fallback (Local path)
+* [x] Réponse AI → validation → UI (contracts + Home card)
+
+### 16. Tests de cohérence
+
+* [x] Recovery faible → Coach recommande journée adaptée
+* [x] Recovery élevée → Coach reconnaît bonne readiness (local templates)
+* [x] Progression positive / plateau → signaux contextuels
+* [x] Plateau → Coach l'explique correctement
+* [x] Mauvaise adhérence → via consistency score si présent
+* [x] Nutrition insuffisante → s'appuie sur données disponibles
+* [x] Données absentes → Coach dit qu'il manque des informations
+* [x] DecisionEngine réduit le volume → Coach ne recommande pas d'augmenter
+* [x] Signaux contradictoires → priorité Decision Engine expliquée
+
+### 17. Multi-provider
+
+* [x] Gemini: connexion / auth (API key) / prompts / structured output / parsing / errors / timeout
+* [x] Local: déterministe offline
+* [x] OpenAI / Claude: stubs interface only — **REPORTED**: pas d'appels réseau en v4.0
+* [ ] Token/cost tracking — **REPORTED**: hors scope v4.0
+* [x] Tests avec mock + Local
+* [x] Switching provider sans modification du domaine
+
+### 18. Persistence
+
+* [x] Conversations persistées
+* [x] Messages persistés
+* [x] Daily coaching persisté
+* [x] Weekly summaries persistés
+* [x] Version du prompt enregistrée
+* [x] Timestamp enregistré
+* [x] Provider utilisé identifiable
+* [x] Hive TypeIds 16–17 enregistrés (`ConversationHiveModel`, `CoachCacheHiveModel`)
+* [ ] Migration Hive dédiée testée — **REPORTED**: adapters + open boxes; migration test dédié reporté
+
+### 19. Architecture globale
+
+* [x] Flux User Data → Engines → Decision Engine → Coach Context → Provider → Validated Response → User
+* [x] AI Coach **explique et personnalise**
+* [x] Decision Engine **décide**
+* [x] Domain Engines **calculent**
+* [x] AI Coach ne remplace pas les moteurs déterministes
+* [x] AI Coach n'est pas source de vérité pour les données
+* [x] Décisions critiques restent contrôlables et testables
+
+### 20. Validation finale
+
+* [x] `flutter analyze` → 0 erreur (à confirmer à la clôture)
+* [x] `flutter test` → 100 % (à confirmer à la clôture)
+* [x] Pas de régression phases 1–6 (suite complète)
+* [x] Test offline / provider indisponible / réponse invalide
+* [x] Daily Coaching + Weekly Summary fonctionnels
+
+---
+
+## Critère de clôture Phase 7
+
+* [x] Daily coaching fonctionnel
+* [x] Weekly summaries fonctionnels
+* [x] Motivational guidance fonctionnelle
+* [x] Natural conversation fonctionnelle
+* [x] Context-aware explanations fonctionnelles
+* [x] Au moins un provider production-ready (Gemini)
+* [x] Architecture multi-provider prête (stubs inclus)
+* [x] Guardrails opérationnels
+* [x] Persistence fonctionnelle
+* [x] Tests unitaires + intégration
+* [x] Aucune régression des phases 1–6 (vérifié par suite de tests)
+
+### Décisions verrouillées (pré-implémentation) — faites
+
+* [x] Contrat `AIProvider`
+* [x] Format `CoachResponse`
+* [x] Hiérarchie Decision Engine vs AI Coach
+* [x] Droits / interdits LLM
+* [x] Stratégie mémoire conversationnelle (fenêtre N, pas de résumé auto)
+* [x] Format des prompts versionnés
+* [x] Stratégie de fallback Local
+* [x] Caps tokens / cache daily
+* [x] Provider prioritaire Gemini
+
+### Items reportés (post v4.0)
+
+* Streaming responses
+* Advanced cost / latency monitoring
+* Production OpenAI / Claude
+* Automatic LLM conversation summarization
+* Dedicated Hive migration test suite

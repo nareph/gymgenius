@@ -86,6 +86,19 @@ class GeminiAPIClient {
       );
     }
 
+    return generateText(
+      prompt: prompt,
+      temperature: temperature,
+      maxOutputTokens: maxOutputTokens,
+    );
+  }
+
+  /// Generic text generation for AI Coach (requires API key only).
+  Future<String> generateText({
+    required String prompt,
+    double temperature = 0.4,
+    int? maxOutputTokens,
+  }) async {
     if (AIConfig.geminiApiKey.isEmpty) {
       throw GeminiAPIException(
         'Gemini API key not configured.',
@@ -95,7 +108,7 @@ class GeminiAPIClient {
     final start = DateTime.now();
 
     Log.debug(
-      'Generating optimized workout...',
+      'Generating content...',
       tag: _tag,
     );
 
@@ -156,6 +169,7 @@ class GeminiAPIClient {
       );
     }
   }
+
   //==========================================================
   // Extract Gemini Response
   //==========================================================

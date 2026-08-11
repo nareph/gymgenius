@@ -139,6 +139,17 @@ UI Output
 
 ---
 
+## 4.6 AI Coach (Phase 7 / v4.0)
+
+The production coaching layer lives in `lib/engines/ai_coach/` and is documented in
+[`ai-coach.md`](ai-coach.md).
+
+* Gemini (prod) + Local deterministic fallback
+* Structured `CoachResponse` with Decision Engine guardrails
+* Explains / motivates / summarizes — never mutates plans
+
+---
+
 # 5. AI Data Flow
 
 ## Step-by-step pipeline
