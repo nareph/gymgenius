@@ -1,24 +1,74 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gymgenius/domain/entities/exercise.dart';
 import 'package:gymgenius/domain/entities/today_workout.dart';
+import 'package:gymgenius/domain/entities/training_program.dart';
 import 'package:gymgenius/domain/enums/decision_reason.dart';
 import 'package:gymgenius/domain/enums/equipment_type.dart';
 import 'package:gymgenius/domain/enums/exercise_category.dart';
 import 'package:gymgenius/domain/enums/exercise_difficulty.dart';
+import 'package:gymgenius/domain/enums/experience_level.dart';
 import 'package:gymgenius/domain/enums/fitness_goal.dart';
 import 'package:gymgenius/domain/enums/force_type.dart';
+import 'package:gymgenius/domain/enums/generator_type.dart';
 import 'package:gymgenius/domain/enums/laterality.dart';
 import 'package:gymgenius/domain/enums/mechanics.dart';
 import 'package:gymgenius/domain/enums/movement_pattern.dart';
 import 'package:gymgenius/domain/enums/muscle_group.dart';
 import 'package:gymgenius/domain/enums/plane_of_motion.dart';
+import 'package:gymgenius/domain/enums/program_phase.dart';
+import 'package:gymgenius/domain/enums/split_type.dart';
 import 'package:gymgenius/domain/enums/workout_adjustment.dart';
+import 'package:gymgenius/engines/decision_engine/Progression/deload_planner.dart';
+import 'package:gymgenius/engines/decision_engine/Progression/mesocycle_planner.dart';
+import 'package:gymgenius/engines/decision_engine/Progression/week_progression_calculator.dart';
 import 'package:gymgenius/engines/decision_engine/models/decision_context.dart';
+import 'package:gymgenius/engines/decision_engine/models/program_progress.dart';
 import 'package:gymgenius/engines/decision_engine/rules/nutrition/nutrition_plan_builder.dart';
 import 'package:gymgenius/engines/decision_engine/rules/nutrition/nutrition_rule.dart';
 import 'package:gymgenius/engines/nutrition_engine/nutrition_engine.dart';
 
 import '../../nutrition_engine/calorie_macro_test.dart';
+
+TrainingProgram _stubProgram() {
+  final now = DateTime(2026, 8, 11);
+  return TrainingProgram(
+    id: 'prog-stub',
+    userId: 'user-stub',
+    name: 'Stub Program',
+    goal: FitnessGoal.buildMuscle,
+    split: SplitType.pushPullLegs,
+    experience: ExperienceLevel.intermediate,
+    durationWeeks: 12,
+    weeklySchedule: const {},
+    generatorType: GeneratorType.local,
+    generatorVersion: '1.0',
+    createdAt: now,
+    expiresAt: now.add(const Duration(days: 84)),
+  );
+}
+
+ProgramProgress _stubProgress() {
+  return const ProgramProgress(
+    currentWeek: 1,
+    totalWeeks: 12,
+    currentPhase: ProgramPhase.base,
+    mesocycleInfo: MesocycleInfo(mesocycle: 1, microcycle: 1),
+    weekProgression: WeekProgression(
+      phase: ProgramPhase.base,
+      volumeMultiplier: 1.0,
+      intensityMultiplier: 1.0,
+      targetRpe: 7.0,
+      isDeload: false,
+    ),
+    deloadPlan: DeloadPlan(
+      isDeload: false,
+      volumeMultiplier: 1.0,
+      intensityMultiplier: 1.0,
+    ),
+    weeksRemaining: 11,
+    completion: 0.0,
+  );
+}
 
 Exercise _stubExercise() {
   return const Exercise(
@@ -82,8 +132,8 @@ void main() {
         DecisionContext(
           now: date,
           healthProfile: buildTestProfile(),
-          trainingProgram: throw UnimplementedError(),
-          programProgress: throw UnimplementedError(),
+          trainingProgram: _stubProgram(),
+          programProgress: _stubProgress(),
           todayWorkout: _restDayWorkout(date),
         ),
       );
@@ -99,8 +149,8 @@ void main() {
         DecisionContext(
           now: date,
           healthProfile: buildTestProfile(goal: FitnessGoal.loseFat),
-          trainingProgram: throw UnimplementedError(),
-          programProgress: throw UnimplementedError(),
+          trainingProgram: _stubProgram(),
+          programProgress: _stubProgress(),
           todayWorkout: _trainingDayWorkout(date),
         ),
       );
