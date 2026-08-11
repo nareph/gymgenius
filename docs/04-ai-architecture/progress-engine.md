@@ -548,3 +548,67 @@ Historical data should never be interpreted without context.
 # Final Principle
 
 > **The Progress Engine does not decide what the user should do next. It measures what has happened, identifies meaningful trends, and provides objective evidence that enables the Decision Engine to make informed recommendations.**
+
+---
+
+# Phase 5 Implementation (v3.5.0)
+
+## Scope delivered
+
+| Module | Status | Notes |
+|--------|--------|-------|
+| Weight progress | ✅ | From `DailyCheckIn.weightKg` (not BodyMeasurement history) |
+| Strength progress | ✅ | From `WorkoutLog` + Epley estimated 1RM |
+| Workout consistency | ✅ | Planned program days vs completed logs |
+| Body measurements | ⏭ Deferred | Out of Phase 5 scope — no waist/chest/arms history yet |
+| Plateau detection | ✅ | Weight (≥14d, ≤0.2 kg range) + strength (≥3 stagnant sessions) |
+| ProgressRule | ✅ | Observe-only — never mutates workout |
+| Tracking UI | ✅ | Cards + detail screens on Tracking tab |
+| Weekly report | ✅ | Deterministic structured report |
+
+## Thresholds (`ProgressThresholds`)
+
+### Weight
+
+| Rule | Value |
+|------|-------|
+| Min data points | 3 |
+| Max daily change kept | 2.0 kg (outliers filtered) |
+| Stable weekly change | ≤ 0.3 kg/week |
+| Plateau window | 14 days |
+| Plateau max range | 0.2 kg |
+
+### Strength
+
+| Rule | Value |
+|------|-------|
+| Min sessions per exercise | 2 |
+| Plateau sessions | 3 consecutive with <2% e1RM change |
+| Progress threshold | 2% e1RM |
+| Max tracked exercises | 5 (by e1RM) |
+| Estimated 1RM | Epley: `weight × (1 + reps / 30)` |
+
+### Consistency
+
+| Rule | Value |
+|------|-------|
+| Score | `(completedOnPlanned / planned) × 100` |
+| Irregular week threshold | < 50% completion |
+
+## Data flow
+
+```text
+DailyCheckIn.weightKg ──┐
+WorkoutLog ─────────────┼──► ProgressEngine ──► ProgressSnapshot
+Program planned dates ──┘         │
+                                  ├── ProgressRepository (Hive)
+                                  ├── ProgressRule (observe-only)
+                                  └── Tracking tab UI
+```
+
+## Limits
+
+- No automatic program modification from progress signals in Phase 5.
+- Body circumference measurements are not analyzed yet.
+- Nutrition adherence is not part of the progress snapshot yet.
+- Graphs are list/detail based; charting libraries may follow later.

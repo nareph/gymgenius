@@ -1,4 +1,5 @@
 import 'package:gymgenius/domain/entities/health_profile.dart';
+import 'package:gymgenius/domain/entities/progress_snapshot.dart';
 import 'package:gymgenius/domain/entities/recovery_status.dart';
 import 'package:gymgenius/domain/entities/today_workout.dart';
 import 'package:gymgenius/domain/entities/training_program.dart';
@@ -44,6 +45,9 @@ class DecisionContext {
   /// Recovery status computed from today's check-in (null if no check-in yet).
   final RecoveryStatus? recoveryStatus;
 
+  /// Progress snapshot computed from historical data (null if insufficient data).
+  final ProgressSnapshot? progressSnapshot;
+
   const DecisionContext({
     required this.now,
     required this.healthProfile,
@@ -51,6 +55,7 @@ class DecisionContext {
     required this.programProgress,
     required this.todayWorkout,
     this.recoveryStatus,
+    this.progressSnapshot,
   });
 
   DecisionContext copyWith({
@@ -60,6 +65,7 @@ class DecisionContext {
     ProgramProgress? programProgress,
     TodayWorkout? todayWorkout,
     RecoveryStatus? recoveryStatus,
+    ProgressSnapshot? progressSnapshot,
   }) {
     return DecisionContext(
       now: now ?? this.now,
@@ -68,6 +74,7 @@ class DecisionContext {
       programProgress: programProgress ?? this.programProgress,
       todayWorkout: todayWorkout ?? this.todayWorkout,
       recoveryStatus: recoveryStatus ?? this.recoveryStatus,
+      progressSnapshot: progressSnapshot ?? this.progressSnapshot,
     );
   }
 

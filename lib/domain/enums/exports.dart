@@ -31,5 +31,5 @@ export 'hydration_level.dart';
 export 'recommended_intensity.dart';
 export 'meal_type.dart';
 export 'meal_objective.dart';
-export 'nutrition_status.dart';
-export 'food_category.dart';
+export 'progress_period.dart';
+export 'trend_direction.dart';

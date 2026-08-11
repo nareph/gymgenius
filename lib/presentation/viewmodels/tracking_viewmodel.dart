@@ -5,6 +5,10 @@ import 'package:flutter/foundation.dart';
 import 'package:gymgenius/core/logger/logger_service.dart';
 import 'package:gymgenius/domain/entities/training_program.dart';
 import 'package:gymgenius/domain/entities/workout_log.dart';
+import 'package:gymgenius/domain/entities/progress_snapshot.dart';
+import 'package:gymgenius/domain/entities/weekly_progress_report.dart';
+import 'package:gymgenius/domain/enums/progress_period.dart';
+import 'package:gymgenius/domain/repositories/progress_repository.dart';
 import 'package:gymgenius/domain/repositories/tracking_repository.dart';
 import 'package:gymgenius/domain/repositories/user_repository.dart';
 import 'package:gymgenius/domain/repositories/workout_repository.dart';
@@ -16,6 +20,7 @@ class TrackingViewModel extends ChangeNotifier {
   final WorkoutRepository _workoutRepository;
   final TrackingRepository _trackingRepository;
   final UserRepository _userRepository;
+  final ProgressRepository _progressRepository;
   StreamSubscription? _programSubscription;
   StreamSubscription? _logsSubscription;
 
@@ -23,9 +28,11 @@ class TrackingViewModel extends ChangeNotifier {
     required WorkoutRepository workoutRepository,
     required TrackingRepository trackingRepository,
     required UserRepository userRepository,
+    required ProgressRepository progressRepository,
   })  : _workoutRepository = workoutRepository,
         _trackingRepository = trackingRepository,
-        _userRepository = userRepository {
+        _userRepository = userRepository,
+        _progressRepository = progressRepository {
     Log.info("TrackingViewModel: Created");
     _focusedDay = DateTime.now();
     _selectedDay =
@@ -59,6 +66,18 @@ class TrackingViewModel extends ChangeNotifier {
   List<WorkoutLog> _selectedDayLogs = [];
   List<WorkoutLog> get selectedDayLogs => _selectedDayLogs;
 
+  ProgressSnapshot? _progressSnapshot;
+  ProgressSnapshot? get progressSnapshot => _progressSnapshot;
+
+  WeeklyProgressReport? _weeklyReport;
+  WeeklyProgressReport? get weeklyReport => _weeklyReport;
+
+  bool _isLoadingProgress = false;
+  bool get isLoadingProgress => _isLoadingProgress;
+
+  ProgressPeriod _progressPeriod = ProgressPeriod.weekly;
+  ProgressPeriod get progressPeriod => _progressPeriod;
+
   Future<void> _loadInitialData() async {
     Log.info("TrackingViewModel: Loading initial data...");
     _setState(TrackingState.loading);
@@ -66,6 +85,7 @@ class TrackingViewModel extends ChangeNotifier {
     try {
       await _loadProgramData();
       await _loadCompletedWorkouts();
+      await _loadProgressData();
       await _loadLogsForDay(_selectedDay);
       _setupDataListeners();
       _setState(TrackingState.loaded);
@@ -107,6 +127,40 @@ class TrackingViewModel extends ChangeNotifier {
       _plannedEvents = {};
       notifyListeners();
     }
+  }
+
+  Future<void> _loadProgressData() async {
+    _isLoadingProgress = true;
+    notifyListeners();
+
+    try {
+      final user = await _userRepository.getCurrentUser();
+      if (user == null) {
+        _progressSnapshot = null;
+        _weeklyReport = null;
+        return;
+      }
+
+      _progressSnapshot = await _progressRepository.computeSnapshot(
+        user.id,
+        period: _progressPeriod,
+      );
+      _weeklyReport = await _progressRepository.computeWeeklyReport(user.id);
+    } catch (error, stackTrace) {
+      Log.error('TrackingViewModel: Error loading progress',
+          error: error, stackTrace: stackTrace);
+      _progressSnapshot = null;
+      _weeklyReport = null;
+    } finally {
+      _isLoadingProgress = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> setProgressPeriod(ProgressPeriod period) async {
+    if (_progressPeriod == period) return;
+    _progressPeriod = period;
+    await _loadProgressData();
   }
 
   Future<void> _loadCompletedWorkouts() async {

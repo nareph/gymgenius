@@ -4,6 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:gymgenius/data/repositories/auth_repository_impl.dart';
 import 'package:gymgenius/data/repositories/health_repository_impl.dart';
 import 'package:gymgenius/data/repositories/nutrition_repository_impl.dart';
+import 'package:gymgenius/data/repositories/progress_repository_impl.dart';
 import 'package:gymgenius/data/repositories/recovery_repository_impl.dart';
 import 'package:gymgenius/data/repositories/tracking_repository_impl.dart';
 import 'package:gymgenius/data/repositories/user_repository_impl.dart';
@@ -12,6 +13,7 @@ import 'package:gymgenius/data/repositories/workout_repository_impl.dart';
 import 'package:gymgenius/domain/repositories/auth_repository.dart';
 import 'package:gymgenius/domain/repositories/health_repository.dart';
 import 'package:gymgenius/domain/repositories/nutrition_repository.dart';
+import 'package:gymgenius/domain/repositories/progress_repository.dart';
 import 'package:gymgenius/domain/repositories/recovery_repository.dart';
 import 'package:gymgenius/domain/repositories/tracking_repository.dart';
 import 'package:gymgenius/domain/repositories/user_repository.dart';
@@ -24,6 +26,7 @@ import 'package:gymgenius/engines/decision_engine/rules/equipment_rule.dart';
 import 'package:gymgenius/engines/decision_engine/rules/injury_rule.dart';
 import 'package:gymgenius/engines/decision_engine/rules/nutrition/nutrition_plan_builder.dart';
 import 'package:gymgenius/engines/decision_engine/rules/nutrition/nutrition_rule.dart';
+import 'package:gymgenius/engines/decision_engine/rules/progress_rule.dart';
 import 'package:gymgenius/engines/decision_engine/rules/progression_rule.dart';
 import 'package:gymgenius/engines/decision_engine/rules/recovery_rule.dart';
 import 'package:gymgenius/engines/decision_engine/rules/safety_rule.dart';
@@ -42,6 +45,7 @@ import 'package:gymgenius/engines/workout_engine/providers/exercise_replacement_
 import 'package:gymgenius/engines/workout_engine/services/generation_service.dart';
 import 'package:gymgenius/engines/workout_engine/workout_engine.dart';
 import 'package:gymgenius/engines/nutrition_engine/nutrition_engine.dart';
+import 'package:gymgenius/engines/progress_engine/progress_engine.dart';
 import 'package:gymgenius/engines/recovery_engine/recovery_engine.dart';
 
 import 'package:gymgenius/presentation/blocs/auth/auth_bloc.dart';
@@ -98,6 +102,19 @@ void setupDependencies() {
 
   getIt.registerLazySingleton<RecoveryRepository>(
     () => const RecoveryRepositoryImpl(),
+  );
+
+  getIt.registerLazySingleton<ProgressEngine>(
+    () => const ProgressEngine(),
+  );
+
+  getIt.registerLazySingleton<ProgressRepository>(
+    () => ProgressRepositoryImpl(
+      engine: getIt<ProgressEngine>(),
+      recoveryRepository: getIt<RecoveryRepository>(),
+      workoutRepository: getIt<WorkoutRepository>(),
+      healthRepository: getIt<HealthRepository>(),
+    ),
   );
 
   // ============================================================
@@ -193,6 +210,10 @@ void setupDependencies() {
     () => const ProgressionRule(),
   );
 
+  getIt.registerLazySingleton<ProgressRule>(
+    () => const ProgressRule(),
+  );
+
   getIt.registerLazySingleton<RecoveryRule>(
     () => const RecoveryRule(),
   );
@@ -245,6 +266,7 @@ void setupDependencies() {
         getIt<InjuryRule>(),
         getIt<SafetyRule>(),
         getIt<RecoveryRule>(),
+        getIt<ProgressRule>(),
         getIt<DeloadRule>(),
         getIt<ProgressionRule>(),
         getIt<NutritionRule>(),
@@ -302,6 +324,7 @@ void setupDependencies() {
       workoutRepository: getIt<WorkoutRepository>(),
       trackingRepository: getIt<TrackingRepository>(),
       userRepository: getIt<UserRepository>(),
+      progressRepository: getIt<ProgressRepository>(),
     ),
   );
 

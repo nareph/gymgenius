@@ -7,6 +7,7 @@ import '../models/nutrition_profile_hive_model.dart';
 import '../models/nutrition_plan_hive_model.dart';
 import '../models/recovery_status_hive_model.dart';
 import '../models/daily_checkin_hive_model.dart';
+import '../models/progress_snapshot_hive_model.dart';
 
 class HiveBoxes {
   static const String users = 'users';
@@ -19,6 +20,7 @@ class HiveBoxes {
   static const String nutritionPlans = 'nutrition_plans';
   static const String recoveryStatuses = 'recovery_statuses';
   static const String dailyCheckIns = 'daily_checkins';
+  static const String progressSnapshots = 'progress_snapshots';
 
   static Box<UserHiveModel> get usersBox => Hive.box<UserHiveModel>(users);
   static Box<HealthProfileHiveModel> get healthProfilesBox =>
@@ -36,4 +38,6 @@ class HiveBoxes {
       Hive.box<RecoveryStatusHiveModel>(recoveryStatuses);
   static Box<DailyCheckInHiveModel> get dailyCheckInsBox =>
       Hive.box<DailyCheckInHiveModel>(dailyCheckIns);
+  static Box<ProgressSnapshotHiveModel> get progressSnapshotsBox =>
+      Hive.box<ProgressSnapshotHiveModel>(progressSnapshots);
 }

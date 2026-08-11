@@ -1,4 +1,5 @@
 import 'package:gymgenius/domain/entities/nutrition_plan.dart';
+import 'package:gymgenius/domain/entities/progress_snapshot.dart';
 import 'package:gymgenius/domain/entities/recovery_status.dart';
 import 'package:gymgenius/domain/entities/today_workout.dart';
 
@@ -40,6 +41,9 @@ class DailyPlan {
   /// Recovery status computed from today's check-in (null if no check-in yet).
   final RecoveryStatus? recoveryStatus;
 
+  /// Progress snapshot for today (null if not computed yet).
+  final ProgressSnapshot? progressSnapshot;
+
   /// Confidence of the final decision.
   final double confidence;
 
@@ -52,6 +56,7 @@ class DailyPlan {
     required this.todayWorkout,
     this.nutritionPlan,
     this.recoveryStatus,
+    this.progressSnapshot,
     required this.confidence,
     required this.generatedAt,
   });
@@ -66,6 +71,8 @@ class DailyPlan {
 
   bool get hasRecovery => recoveryStatus != null;
 
+  bool get hasProgress => progressSnapshot != null;
+
   @override
   String toString() {
     return '''
@@ -75,6 +82,7 @@ DailyPlan(
   restDay: $isRestDay,
   nutrition: $hasNutrition,
   recovery: $hasRecovery,
+  progress: $hasProgress,
   confidence: $confidence
 )
 ''';

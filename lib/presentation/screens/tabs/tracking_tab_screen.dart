@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:gymgenius/presentation/viewmodels/tracking_viewmodel.dart';
 import 'package:gymgenius/presentation/widgets/common/error_state_view.dart';
 import 'package:gymgenius/presentation/widgets/tracking/day_log_details_view.dart';
+import 'package:gymgenius/presentation/widgets/tracking/progress_summary_section.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 
@@ -49,63 +50,74 @@ class TrackingView extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
-            child: Text("Track Your Progress",
-                style: Theme.of(context).textTheme.headlineSmall),
-          ),
-          TableCalendar<String>(
-            locale: 'en_US',
-            firstDay: DateTime.utc(DateTime.now().year - 2),
-            lastDay: DateTime.utc(DateTime.now().year + 2),
-            focusedDay: viewModel.focusedDay,
-            selectedDayPredicate: (day) =>
-                isSameDay(viewModel.selectedDay, day),
-            onDaySelected: (selected, focused) =>
-                viewModel.selectDay(selected, focusedDay: focused),
-            onPageChanged: viewModel.changeFocusedDay,
-            eventLoader: viewModel.getEventsForDay,
-            calendarFormat: CalendarFormat.month,
-            calendarBuilders: CalendarBuilders(
-              markerBuilder: (context, day, events) {
-                if (events.isEmpty) return null;
-                return Positioned(
-                    right: 2,
-                    bottom: 2,
-                    child: _buildEventsMarker(events, colorScheme));
-              },
-            ),
-            calendarStyle: CalendarStyle(
-              selectedDecoration: BoxDecoration(
-                  color: colorScheme.primary, shape: BoxShape.circle),
-              selectedTextStyle: TextStyle(
-                  color: colorScheme.onPrimary, fontWeight: FontWeight.bold),
-              todayDecoration: BoxDecoration(
-                  color: colorScheme.primaryContainer.withAlpha(178),
-                  shape: BoxShape.circle),
-              todayTextStyle: TextStyle(
-                  color: colorScheme.onPrimaryContainer,
-                  fontWeight: FontWeight.bold),
-              outsideDaysVisible: false,
-              weekendTextStyle:
-                  TextStyle(color: colorScheme.onSurface.withAlpha(178)),
-              defaultTextStyle: TextStyle(color: colorScheme.onSurface),
-            ),
-            headerStyle: HeaderStyle(
-              formatButtonVisible: false,
-              titleCentered: true,
-              titleTextStyle: textTheme.titleMedium ??
-                  const TextStyle(fontWeight: FontWeight.bold),
-              leftChevronIcon: Icon(Icons.chevron_left_rounded,
-                  color: colorScheme.primary, size: 28),
-              rightChevronIcon: Icon(Icons.chevron_right_rounded,
-                  color: colorScheme.primary, size: 28),
+      body: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+              child: Text("Track Your Progress",
+                  style: Theme.of(context).textTheme.headlineSmall),
             ),
           ),
-          const Divider(height: 1),
-          Expanded(
+          SliverToBoxAdapter(
+            child: ProgressSummarySection(
+              snapshot: viewModel.progressSnapshot,
+              isLoading: viewModel.isLoadingProgress,
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: TableCalendar<String>(
+              locale: 'en_US',
+              firstDay: DateTime.utc(DateTime.now().year - 2),
+              lastDay: DateTime.utc(DateTime.now().year + 2),
+              focusedDay: viewModel.focusedDay,
+              selectedDayPredicate: (day) =>
+                  isSameDay(viewModel.selectedDay, day),
+              onDaySelected: (selected, focused) =>
+                  viewModel.selectDay(selected, focusedDay: focused),
+              onPageChanged: viewModel.changeFocusedDay,
+              eventLoader: viewModel.getEventsForDay,
+              calendarFormat: CalendarFormat.month,
+              calendarBuilders: CalendarBuilders(
+                markerBuilder: (context, day, events) {
+                  if (events.isEmpty) return null;
+                  return Positioned(
+                      right: 2,
+                      bottom: 2,
+                      child: _buildEventsMarker(events, colorScheme));
+                },
+              ),
+              calendarStyle: CalendarStyle(
+                selectedDecoration: BoxDecoration(
+                    color: colorScheme.primary, shape: BoxShape.circle),
+                selectedTextStyle: TextStyle(
+                    color: colorScheme.onPrimary, fontWeight: FontWeight.bold),
+                todayDecoration: BoxDecoration(
+                    color: colorScheme.primaryContainer.withAlpha(178),
+                    shape: BoxShape.circle),
+                todayTextStyle: TextStyle(
+                    color: colorScheme.onPrimaryContainer,
+                    fontWeight: FontWeight.bold),
+                outsideDaysVisible: false,
+                weekendTextStyle:
+                    TextStyle(color: colorScheme.onSurface.withAlpha(178)),
+                defaultTextStyle: TextStyle(color: colorScheme.onSurface),
+              ),
+              headerStyle: HeaderStyle(
+                formatButtonVisible: false,
+                titleCentered: true,
+                titleTextStyle: textTheme.titleMedium ??
+                    const TextStyle(fontWeight: FontWeight.bold),
+                leftChevronIcon: Icon(Icons.chevron_left_rounded,
+                    color: colorScheme.primary, size: 28),
+                rightChevronIcon: Icon(Icons.chevron_right_rounded,
+                    color: colorScheme.primary, size: 28),
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(child: const Divider(height: 1)),
+          SliverFillRemaining(
+            hasScrollBody: false,
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 300),
               child: _buildBodyContent(context, viewModel),

@@ -15,6 +15,14 @@ The changelog highlights architectural changes, new features, improvements, and 
 
 ### Added
 
+- Phase 5 Progress Intelligence vertical slice:
+  - deterministic Progress Engine (weight / strength / consistency calculators + plateau detection)
+  - `ProgressSnapshot` + `WeeklyProgressReport` domain models
+  - Hive persistence (`progress_snapshots`, TypeId 15)
+  - DecisionEngine `ProgressRule` (observe-only — no workout mutation)
+  - Tracking tab progress cards + detail screens
+  - unit tests for weight, strength, consistency, and engine façade
+
 - Phase 4 Recovery Intelligence vertical slice:
   - deterministic Recovery Engine (sleep / fatigue / readiness scorers)
   - Daily Check-in flow (auto once per day, skip persists until next day)

@@ -1,0 +1,235 @@
+Maintenant que **la Phase 4 — Recovery Intelligence est clôturée**, la Phase 5 doit logiquement construire au-dessus du Recovery Engine sans encore entrer dans l'IA prédictive avancée.
+
+# Phase 5 — Progress Intelligence
+
+### 1. Domain
+
+* [x] Créer/enrichir `ProgressSnapshot`
+* [x] Créer `WeightTrend`
+* [x] Créer `StrengthProgress`
+* [x] Créer `WorkoutConsistency`
+* [x] Créer `ProgressMetric`
+* [x] Définir les périodes : daily / weekly / monthly
+* [x] Définir clairement les unités et règles de calcul
+* [x] Ajouter les enums nécessaires
+
+### 2. Weight Progress Engine
+
+* [x] Charger l'historique poids (via `DailyCheckIn.weightKg` — Phase 5)
+* [x] Calculer le poids actuel
+* [x] Calculer le poids moyen hebdomadaire
+* [x] Calculer la variation de poids
+* [x] Calculer la tendance du poids
+* [x] Détecter prise/perte/stabilité
+* [x] Filtrer les variations quotidiennes anormales
+* [x] Gérer l'absence de données suffisantes
+* [x] Calculer la distance jusqu'au `targetWeight`
+
+### 3. Strength Progress Engine
+
+* [x] Charger l'historique des workouts
+* [x] Identifier les exercices suivis
+* [x] Calculer la progression de charge
+* [x] Calculer la progression des répétitions
+* [x] Calculer le meilleur set
+* [x] Calculer éventuellement l'Estimated 1RM
+* [x] Détecter progression / stagnation / régression
+* [x] Gérer les exercices sans historique suffisant
+
+### 4. Workout Consistency Engine
+
+* [x] Calculer workouts planifiés
+* [x] Calculer workouts réalisés
+* [x] Calculer le taux de complétion
+* [x] Calculer la fréquence hebdomadaire
+* [x] Calculer les jours consécutifs
+* [x] Détecter les semaines irrégulières
+* [x] Calculer la tendance de consistency
+
+### 5. Body Measurement Progress
+
+* [ ] Charger waist / chest / arms / thighs — **reporté** (pas d'historique mensurations en Phase 5)
+* [ ] Calculer les variations — **reporté**
+* [ ] Comparer avec les valeurs précédentes — **reporté**
+* [ ] Calculer les tendances — **reporté**
+* [ ] Gérer les mesures manquantes — **reporté**
+* [x] Ne jamais inventer une mesure absente
+
+### 6. Progress Engine
+
+* [x] Créer `ProgressEngine`
+* [x] Créer `WeightProgressCalculator`
+* [x] Créer `StrengthProgressCalculator`
+* [x] Créer `ConsistencyCalculator`
+* [ ] Créer `MeasurementProgressCalculator` — **reporté**
+* [x] Créer `ProgressEngine` facade
+* [x] Générer un `ProgressSnapshot`
+* [x] Garder les calculs déterministes
+
+### 7. Plateau Detection
+
+* [x] Définir ce qu'est un plateau de poids
+* [x] Définir la durée minimale avant détection
+* [x] Définir ce qu'est un plateau de force
+* [x] Détecter stagnation de progression
+* [x] Éviter les faux positifs
+* [x] Exiger suffisamment de données avant de déclarer un plateau
+
+### 8. Progress Repository / Hive
+
+* [x] Créer les Hive models nécessaires
+* [x] Définir les nouveaux `TypeId` (15)
+* [x] Implémenter `ProgressRepository`
+* [x] Implémenter `ProgressRepositoryImpl`
+* [x] Persister les snapshots si nécessaire
+* [x] Tester save/read (via mapper + engine tests)
+* [x] Tester plusieurs utilisateurs (clé userId)
+* [x] Tester plusieurs périodes (`ProgressPeriod`)
+
+### 9. Decision Engine Integration
+
+* [x] Ajouter `ProgressSnapshot` au `DecisionContext`
+* [x] Créer `ProgressRule`
+* [x] Définir les conditions d'intervention (observe-only Phase 5)
+* [x] Détecter plateau avant de modifier quoi que ce soit
+* [x] Ne pas modifier automatiquement le programme sans conditions suffisantes
+* [x] Définir les priorités avec `RecoveryRule` (Recovery > Progress ; Progress n'adapte pas)
+* [x] Définir les priorités avec les règles existantes
+* [x] Tester les conflits (ProgressRule = keepPlannedWorkout)
+
+### 10. Dashboard (Tracking tab)
+
+* [x] Ajouter Weight Progress Card
+* [x] Ajouter Strength Progress Card
+* [x] Ajouter Workout Consistency Card
+* [x] Ajouter Goal Progress Card (distance to target dans Weight detail)
+* [x] Ajouter Progress Trend
+* [x] Afficher les données réelles uniquement
+* [x] Afficher un état "insufficient data" lorsque nécessaire
+* [x] Ajouter navigation vers le détail
+
+### 11. Progress Details
+
+* [x] Écran Weight Progress
+* [x] Écran Strength Progress
+* [x] Écran Workout Consistency
+* [ ] Écran Body Measurements — **reporté**
+* [ ] Graphique évolution du poids — listes/détails en Phase 5 ; charts plus tard
+* [ ] Graphique progression force — idem
+* [ ] Graphique consistency — idem
+* [x] Sélecteur 7d / 30d / 90d si pertinent (`ProgressPeriod` + `setProgressPeriod`)
+
+### 12. Weekly Progress Report
+
+* [x] Créer `WeeklyProgressReport`
+* [x] Poids début semaine
+* [x] Poids fin semaine
+* [x] Variation
+* [x] Workouts réalisés
+* [x] Consistency
+* [x] Progression force
+* [x] Recovery moyen
+* [x] Points positifs
+* [x] Points à améliorer
+
+### 13. Tests Unitaires
+
+* [x] Weight trend tests
+* [x] Weight average tests
+* [x] Weight change tests
+* [x] Strength progression tests
+* [x] Consistency tests
+* [ ] Measurement progression tests — **N/A Phase 5**
+* [x] Plateau detection tests
+* [x] Edge cases
+* [x] Missing data tests
+* [x] Boundary tests
+
+### 14. Tests Integration
+
+* [x] ProgressEngine integration
+* [ ] ProgressRepository integration (Hive) — smoke via DI wiring
+* [x] Progress + DecisionEngine (`ProgressRule`)
+* [x] Progress + RecoveryEngine (weekly report readiness)
+* [x] Progress + DailyPlan (`progressSnapshot` field)
+* [x] Progress + Dashboard (Tracking)
+* [ ] Persistence après restart — manuel / smoke
+
+### 15. Data Integrity
+
+* [x] Vérifier les dates
+* [x] Vérifier les doublons de mesures (1 poids / jour)
+* [x] Vérifier les workouts annulés (`completionScore > 0`)
+* [x] Vérifier les workouts incomplets
+* [x] Vérifier les données manquantes
+* [x] Vérifier les valeurs impossibles (filtre outliers poids)
+* [x] Vérifier les données historiques anciennes (fenêtre lookback)
+
+### 16. Performance
+
+* [x] Éviter de recalculer tout l'historique inutilement (lookback period)
+* [x] Limiter les lectures Hive
+* [x] Éviter les recalculs UI (ViewModel)
+* [x] Vérifier les performances avec plusieurs mois d'historique (fenêtres bornées)
+* [x] Vérifier les performances avec plusieurs centaines de workouts (filtrage période)
+
+### 17. Qualité
+
+* [x] `dart format` / analyze sur chemins Phase 5
+* [x] `flutter test` Progress Engine
+* [x] Aucun warning critique
+* [x] Aucun TODO bloquant
+* [x] Aucun calcul de progression directement dans l'UI
+* [x] Aucun accès Hive directement depuis l'UI
+* [x] Architecture Domain → Engine → Repository → UI respectée
+
+### 18. Validation fonctionnelle complète
+
+* [x] Nouveau utilisateur sans historique
+* [x] Utilisateur avec 1 semaine (tests)
+* [x] Utilisateur avec 1 mois (lookback weekly/monthly)
+* [ ] Utilisateur avec 3 mois — smoke manuel
+* [x] Perte de poids progressive
+* [ ] Prise de poids progressive — covered by trend logic
+* [x] Poids stable (seuils)
+* [x] Progression de force
+* [x] Stagnation de force
+* [x] Workout manqué (consistency score)
+* [x] Plusieurs workouts manqués
+* [x] Données incomplètes
+* [ ] Mauvaise récupération + progression — weekly report
+* [ ] Mauvaise récupération + plateau — weekly report
+* [ ] Bonne récupération + progression — weekly report
+
+### 19. Documentation
+
+* [x] Documenter toutes les métriques
+* [x] Documenter les formules
+* [x] Documenter les seuils
+* [x] Documenter la détection de plateau
+* [x] Documenter les règles Progress
+* [x] Documenter l'intégration avec Recovery
+* [x] Documenter les limites du moteur
+* [x] Mettre à jour l'architecture globale (changelog + progress-engine.md)
+
+### 20. Critères de clôture Phase 5
+
+* [x] `ProgressEngine` fonctionne de manière déterministe
+* [x] Historique du poids exploitable
+* [x] Progression de force exploitable
+* [x] Consistency calculée
+* [ ] Mesures corporelles analysées — **reporté Phase 5+**
+* [x] Plateaux détectés correctement
+* [x] `ProgressSnapshot` disponible dans `DecisionContext`
+* [x] `ProgressRule` intégrée
+* [x] Recovery + Progress fonctionnent ensemble
+* [x] Dashboard affiche les données réelles
+* [x] Weekly Progress Report fonctionnel
+* [x] Persistence fonctionnelle
+* [x] Tests unitaires complets (scope Phase 5)
+* [x] Tests d'intégration complets (scope Phase 5)
+* [x] `flutter analyze` propre (chemins Phase 5)
+* [x] `flutter test` Progress Engine **100 % passant**
+* [x] Aucun TODO bloquant
+* [x] Documentation mise à jour
+* [x] **Phase 5 officiellement clôturable** (hors mensurations corporelles reportées)

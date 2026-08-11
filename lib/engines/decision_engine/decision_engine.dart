@@ -1,5 +1,6 @@
 import 'package:gymgenius/domain/entities/daily_checkin.dart';
 import 'package:gymgenius/domain/entities/health_profile.dart';
+import 'package:gymgenius/domain/entities/progress_snapshot.dart';
 import 'package:gymgenius/domain/entities/recovery_status.dart';
 import 'package:gymgenius/domain/entities/today_workout.dart';
 import 'package:gymgenius/domain/entities/training_program.dart';
@@ -64,6 +65,7 @@ class DecisionEngine {
     HealthProfile healthProfile, {
     DateTime? now,
     DailyCheckIn? checkIn,
+    ProgressSnapshot? progressSnapshot,
   }) {
     final currentDate = now ?? DateTime.now();
     final progress = _programProgressService.calculate(trainingProgram);
@@ -80,6 +82,7 @@ class DecisionEngine {
       programProgress: progress,
       todayWorkout: plannedWorkout,
       recoveryStatus: recoveryStatus,
+      progressSnapshot: progressSnapshot,
     );
 
     return _buildDailyPlanFromContext(
@@ -89,6 +92,7 @@ class DecisionEngine {
       healthProfile: healthProfile,
       currentDate: currentDate,
       recoveryStatus: recoveryStatus,
+      progressSnapshot: progressSnapshot,
     );
   }
 
@@ -97,6 +101,7 @@ class DecisionEngine {
     HealthProfile healthProfile, {
     DateTime? now,
     DailyCheckIn? checkIn,
+    ProgressSnapshot? progressSnapshot,
   }) async {
     final currentDate = now ?? DateTime.now();
     final progress = _programProgressService.calculate(trainingProgram);
@@ -117,6 +122,7 @@ class DecisionEngine {
       programProgress: progress,
       todayWorkout: plannedWorkout,
       recoveryStatus: recoveryStatus,
+      progressSnapshot: progressSnapshot,
     );
 
     final decisions = _evaluateRules(context);
@@ -138,6 +144,7 @@ class DecisionEngine {
       todayWorkout: finalWorkout,
       nutritionPlan: nutritionPlan,
       recoveryStatus: recoveryStatus,
+      progressSnapshot: progressSnapshot,
       confidence: finalDecision.confidence,
       generatedAt: currentDate,
     );
@@ -150,6 +157,7 @@ class DecisionEngine {
     required HealthProfile healthProfile,
     required DateTime currentDate,
     RecoveryStatus? recoveryStatus,
+    ProgressSnapshot? progressSnapshot,
   }) {
     final decisions = _evaluateRules(context);
     final finalDecision = _conflictResolver.resolve(decisions);
@@ -170,6 +178,7 @@ class DecisionEngine {
       todayWorkout: finalWorkout,
       nutritionPlan: nutritionPlan,
       recoveryStatus: recoveryStatus,
+      progressSnapshot: progressSnapshot,
       confidence: finalDecision.confidence,
       generatedAt: currentDate,
     );

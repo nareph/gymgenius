@@ -11,6 +11,7 @@ import '../models/nutrition_profile_hive_model.dart';
 import '../models/nutrition_plan_hive_model.dart';
 import '../models/recovery_status_hive_model.dart';
 import '../models/daily_checkin_hive_model.dart';
+import '../models/progress_snapshot_hive_model.dart';
 import 'hive_boxes.dart';
 
 /// Hive datasource — handles all direct Hive operations.
@@ -32,6 +33,7 @@ class HiveDatasource {
     Hive.registerAdapter(NutritionPlanHiveModelAdapter());
     Hive.registerAdapter(RecoveryStatusHiveModelAdapter());
     Hive.registerAdapter(DailyCheckInHiveModelAdapter());
+    Hive.registerAdapter(ProgressSnapshotHiveModelAdapter());
 
     // Open boxes
     await Hive.openBox<UserHiveModel>(HiveBoxes.users);
@@ -43,6 +45,7 @@ class HiveDatasource {
     await Hive.openBox<NutritionPlanHiveModel>(HiveBoxes.nutritionPlans);
     await Hive.openBox<RecoveryStatusHiveModel>(HiveBoxes.recoveryStatuses);
     await Hive.openBox<DailyCheckInHiveModel>(HiveBoxes.dailyCheckIns);
+    await Hive.openBox<ProgressSnapshotHiveModel>(HiveBoxes.progressSnapshots);
   }
 
   // ============================================================
@@ -298,6 +301,58 @@ class HiveDatasource {
   }
 
   // ============================================================
+  // PROGRESS SNAPSHOT
+  // ============================================================
+
+  static String _progressKey(String userId, DateTime computedAt) {
+    final day = DateTime(
+      computedAt.year,
+      computedAt.month,
+      computedAt.day,
+      computedAt.hour,
+      computedAt.minute,
+    );
+    return '${userId}_progress_${day.toIso8601String()}';
+  }
+
+  static Future<void> saveProgressSnapshot(
+      ProgressSnapshotHiveModel model) async {
+    final key = _progressKey(model.userId, model.computedAt);
+    await HiveBoxes.progressSnapshotsBox.put(key, model);
+  }
+
+  static ProgressSnapshotHiveModel? getProgressSnapshot(
+    String userId,
+    DateTime computedAt,
+  ) {
+    return HiveBoxes.progressSnapshotsBox.get(
+      _progressKey(userId, computedAt),
+    );
+  }
+
+  static ProgressSnapshotHiveModel? getLatestProgressSnapshot(String userId) {
+    final entries = HiveBoxes.progressSnapshotsBox.values
+        .where((m) => m.userId == userId)
+        .toList()
+      ..sort((a, b) => b.computedAt.compareTo(a.computedAt));
+    return entries.isEmpty ? null : entries.first;
+  }
+
+  static List<ProgressSnapshotHiveModel> getProgressSnapshots(
+    String userId, {
+    DateTime? from,
+    DateTime? to,
+  }) {
+    return HiveBoxes.progressSnapshotsBox.values.where((m) {
+      if (m.userId != userId) return false;
+      if (from != null && m.computedAt.isBefore(from)) return false;
+      if (to != null && m.computedAt.isAfter(to)) return false;
+      return true;
+    }).toList()
+      ..sort((a, b) => b.computedAt.compareTo(a.computedAt));
+  }
+
+  // ============================================================
   // CLEAR ALL
   // ============================================================
 
@@ -310,6 +365,7 @@ class HiveDatasource {
     await HiveBoxes.nutritionPlansBox.clear();
     await HiveBoxes.recoveryStatusesBox.clear();
     await HiveBoxes.dailyCheckInsBox.clear();
+    await HiveBoxes.progressSnapshotsBox.clear();
     await HiveBoxes.currentUserBox.clear();
   }
 }
