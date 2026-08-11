@@ -56,7 +56,7 @@ const List<ExercisePoolEntry> pullSmithExercises = [
     difficulty: ExerciseDifficulty.beginner,
     equipmentType: EquipmentType.smithMachine,
     targetMuscles: [MuscleGroup.traps, MuscleGroup.back],
-    secondaryMuscles: const [],
+    secondaryMuscles: [],
     usesWeight: true,
     weightSuggestion: 'Heavy',
     movementPattern: MovementPattern.pull,

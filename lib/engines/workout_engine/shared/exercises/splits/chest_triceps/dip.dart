@@ -21,7 +21,7 @@ const List<ExercisePoolEntry> chestTricepsDipExercises = [
       MuscleGroup.triceps,
       MuscleGroup.shoulders
     ],
-    secondaryMuscles: const [],
+    secondaryMuscles: [],
     usesWeight: false,
     movementPattern: MovementPattern.push,
     mechanics: Mechanics.closedChain,
@@ -44,7 +44,7 @@ const List<ExercisePoolEntry> chestTricepsDipExercises = [
       MuscleGroup.triceps,
       MuscleGroup.shoulders
     ],
-    secondaryMuscles: const [],
+    secondaryMuscles: [],
     usesWeight: true,
     weightSuggestion: 'Heavy',
     movementPattern: MovementPattern.push,

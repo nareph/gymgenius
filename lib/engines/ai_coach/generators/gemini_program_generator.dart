@@ -140,13 +140,7 @@ class GeminiProgramGenerator {
           'Optimization response appears truncated — discarding it.');
     }
 
-    final optimizedJson = _geminiClient.parseJsonResponse(responseText);
-
-    if (optimizedJson is! Map<String, dynamic>) {
-      throw Exception('Optimization response is not a JSON object.');
-    }
-
-    return optimizedJson;
+    return _geminiClient.parseJsonResponse(responseText);
   }
 
   void _validateProgramCompleteness(

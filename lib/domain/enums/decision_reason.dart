@@ -145,6 +145,45 @@ extension DecisionReasonExtension on DecisionReason {
     }
   }
 
+  String get displayName {
+    switch (this) {
+      case DecisionReason.scheduledWorkout:
+        return 'Scheduled workout';
+      case DecisionReason.goodRecovery:
+        return 'Good recovery';
+      case DecisionReason.lowRecovery:
+        return 'Low recovery';
+      case DecisionReason.highFatigue:
+        return 'High fatigue';
+      case DecisionReason.fatigueTooHigh:
+        return 'Fatigue too high';
+      case DecisionReason.muscleSoreness:
+        return 'Muscle soreness';
+      case DecisionReason.recoveryRequired:
+        return 'Recovery required';
+      case DecisionReason.deloadWeek:
+        return 'Deload week';
+      case DecisionReason.realizationPhase:
+        return 'Realization phase';
+      case DecisionReason.progressionWeek:
+        return 'Progression week';
+      case DecisionReason.plateauDetected:
+        return 'Plateau detected';
+      case DecisionReason.exerciseSubstitution:
+        return 'Exercise substitution';
+      case DecisionReason.equipmentChanged:
+        return 'Equipment changed';
+      case DecisionReason.goalChanged:
+        return 'Goal changed';
+      case DecisionReason.medicalRestriction:
+        return 'Medical restriction';
+      case DecisionReason.programExpired:
+        return 'Program expired';
+      case DecisionReason.manualRegeneration:
+        return 'Manual regeneration';
+    }
+  }
+
   static DecisionReason fromValue(String value) {
     return DecisionReason.values.firstWhere(
       (reason) => reason.value == value,

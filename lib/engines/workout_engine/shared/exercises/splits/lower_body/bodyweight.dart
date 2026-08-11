@@ -21,7 +21,7 @@ const List<ExercisePoolEntry> lowerBodyBodyweightExercises = [
       MuscleGroup.glutes,
       MuscleGroup.hamstrings
     ],
-    secondaryMuscles: const [],
+    secondaryMuscles: [],
     usesWeight: false,
     movementPattern: MovementPattern.squat,
     mechanics: Mechanics.closedChain,
@@ -67,7 +67,7 @@ const List<ExercisePoolEntry> lowerBodyBodyweightExercises = [
       MuscleGroup.glutes,
       MuscleGroup.hamstrings
     ],
-    secondaryMuscles: const [],
+    secondaryMuscles: [],
     usesWeight: false,
     movementPattern: MovementPattern.lunge,
     mechanics: Mechanics.closedChain,
@@ -109,7 +109,7 @@ const List<ExercisePoolEntry> lowerBodyBodyweightExercises = [
     difficulty: ExerciseDifficulty.beginner,
     equipmentType: EquipmentType.bodyweight,
     targetMuscles: [MuscleGroup.glutes],
-    secondaryMuscles: const [],
+    secondaryMuscles: [],
     usesWeight: false,
     movementPattern: MovementPattern.hinge,
     mechanics: Mechanics.closedChain,

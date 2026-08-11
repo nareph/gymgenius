@@ -143,7 +143,8 @@ void main() {
       expect(decision.reasons, contains(DecisionReason.scheduledWorkout));
     });
 
-    test('evaluate keeps planned workout for fat loss goal on training day', () {
+    test('evaluate keeps planned workout for fat loss goal on training day',
+        () {
       final date = DateTime(2026, 8, 11);
       final decision = rule.evaluate(
         DecisionContext(

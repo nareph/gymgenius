@@ -37,7 +37,7 @@ const List<ExercisePoolEntry> chestTricepsBarbellExercises = [
     difficulty: ExerciseDifficulty.intermediate,
     equipmentType: EquipmentType.barbellAndPlates,
     targetMuscles: [MuscleGroup.triceps],
-    secondaryMuscles: const [],
+    secondaryMuscles: [],
     usesWeight: true,
     weightSuggestion: 'Light',
     movementPattern: MovementPattern.push,
@@ -81,7 +81,7 @@ const List<ExercisePoolEntry> chestTricepsBarbellExercises = [
       MuscleGroup.triceps,
       MuscleGroup.shoulders
     ],
-    secondaryMuscles: const [],
+    secondaryMuscles: [],
     usesWeight: true,
     weightSuggestion: 'Heavy',
     movementPattern: MovementPattern.push,

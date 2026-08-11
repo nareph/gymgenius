@@ -4,8 +4,10 @@ import 'package:gymgenius/domain/entities/daily_checkin.dart';
 import 'package:gymgenius/domain/entities/health_profile.dart';
 import 'package:gymgenius/domain/entities/training_program.dart';
 import 'package:gymgenius/domain/repositories/health_repository.dart';
+import 'package:gymgenius/domain/repositories/progress_repository.dart';
 import 'package:gymgenius/domain/repositories/recovery_repository.dart';
 import 'package:gymgenius/domain/repositories/user_repository.dart';
+import 'package:gymgenius/domain/entities/progress_snapshot.dart';
 import 'package:gymgenius/engines/decision_engine/decision_engine.dart';
 import 'package:gymgenius/engines/decision_engine/models/daily_plan.dart';
 import 'package:gymgenius/engines/workout_engine/workout_engine.dart';
@@ -20,6 +22,7 @@ class HomeViewModel extends ChangeNotifier {
   final HealthRepository _healthRepository;
   final DecisionEngine _decisionEngine;
   final RecoveryRepository _recoveryRepository;
+  final ProgressRepository _progressRepository;
   BuildContext? _context;
 
   HomeViewModel({
@@ -28,11 +31,13 @@ class HomeViewModel extends ChangeNotifier {
     required HealthRepository healthRepository,
     required DecisionEngine decisionEngine,
     required RecoveryRepository recoveryRepository,
+    required ProgressRepository progressRepository,
   })  : _workoutEngine = workoutEngine,
         _userRepository = userRepository,
         _healthRepository = healthRepository,
         _decisionEngine = decisionEngine,
-        _recoveryRepository = recoveryRepository {
+        _recoveryRepository = recoveryRepository,
+        _progressRepository = progressRepository {
     Log.info('HomeViewModel: Created');
     _loadData();
   }
@@ -99,14 +104,26 @@ class HomeViewModel extends ChangeNotifier {
         DateTime.now(),
       );
 
+      ProgressSnapshot? progressSnapshot;
+      try {
+        progressSnapshot = await _progressRepository.computeSnapshot(user.id);
+      } catch (e, s) {
+        Log.error('HomeViewModel: Progress snapshot failed',
+            error: e, stackTrace: s);
+        progressSnapshot = null;
+      }
+
       // Build DailyPlan using DecisionEngine ----
-      _dailyPlan = program == null
-          ? null
-          : await _decisionEngine.buildDailyPlanAndPersist(
-              program,
-              healthProfile!,
-              checkIn: checkIn,
-            );
+      if (program == null || healthProfile == null) {
+        _dailyPlan = null;
+      } else {
+        _dailyPlan = await _decisionEngine.buildDailyPlanAndPersist(
+          program,
+          healthProfile,
+          checkIn: checkIn,
+          progressSnapshot: progressSnapshot,
+        );
+      }
 
       Log.info('HomeViewModel: Profile complete: $_isProfileComplete');
       Log.info('HomeViewModel: Program found: ${_currentProgram != null}');
@@ -272,10 +289,19 @@ class HomeViewModel extends ChangeNotifier {
     _state = HomeState.loading;
     notifyListeners();
     try {
+      ProgressSnapshot? progressSnapshot;
+      try {
+        progressSnapshot =
+            await _progressRepository.computeSnapshot(checkIn.userId);
+      } catch (_) {
+        progressSnapshot = null;
+      }
+
       _dailyPlan = await _decisionEngine.buildDailyPlanAndPersist(
         _currentProgram!,
         _healthProfile!,
         checkIn: checkIn,
+        progressSnapshot: progressSnapshot,
       );
       _state = HomeState.loaded;
     } catch (e) {

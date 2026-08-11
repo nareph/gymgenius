@@ -77,7 +77,7 @@ const List<ExercisePoolEntry> backSelectorizedExercises = [
     difficulty: ExerciseDifficulty.beginner,
     equipmentType: EquipmentType.gymMachinesSelectorized,
     targetMuscles: [MuscleGroup.back, MuscleGroup.shoulders],
-    secondaryMuscles: const [],
+    secondaryMuscles: [],
     usesWeight: true,
     weightSuggestion: 'Light',
     movementPattern: MovementPattern.pull,

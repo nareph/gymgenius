@@ -7,7 +7,6 @@ import 'package:gymgenius/data/datasources/local/hive/models/meal_hive_model.dar
 import 'package:gymgenius/data/datasources/local/hive/models/nutrition_plan_hive_model.dart';
 import 'package:gymgenius/data/datasources/local/hive/models/nutrition_profile_hive_model.dart';
 import 'package:gymgenius/data/repositories/nutrition_repository_impl.dart';
-import 'package:gymgenius/domain/entities/health_profile.dart';
 import 'package:gymgenius/engines/nutrition_engine/nutrition_engine.dart';
 
 import 'calorie_macro_test.dart';

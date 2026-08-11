@@ -66,6 +66,31 @@ extension WorkoutAdjustmentExtension on WorkoutAdjustment {
     }
   }
 
+  String get displayName {
+    switch (this) {
+      case WorkoutAdjustment.none:
+        return 'No change';
+      case WorkoutAdjustment.reduceVolume:
+        return 'Reduced volume';
+      case WorkoutAdjustment.increaseVolume:
+        return 'Increased volume';
+      case WorkoutAdjustment.reduceIntensity:
+        return 'Reduced intensity';
+      case WorkoutAdjustment.increaseIntensity:
+        return 'Increased intensity';
+      case WorkoutAdjustment.replaceExercise:
+        return 'Exercise replaced';
+      case WorkoutAdjustment.recoverySession:
+        return 'Recovery session';
+      case WorkoutAdjustment.skipWorkout:
+        return 'Skip workout';
+      case WorkoutAdjustment.restDay:
+        return 'Rest day';
+      case WorkoutAdjustment.deload:
+        return 'Deload';
+    }
+  }
+
   static WorkoutAdjustment fromValue(String value) {
     return WorkoutAdjustment.values.firstWhere(
       (e) => e.value == value,

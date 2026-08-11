@@ -448,8 +448,62 @@ Every recommendation, including today's training session, nutrition guidance, an
 * consistent
 * personalized
 
+---
 
+# Phase 6 Implementation (v3.6.0)
 
+## Scope delivered
 
+| Area | Status | Notes |
+|------|--------|-------|
+| Full domain inputs | Done | Workout, Recovery, Nutrition, Progress, HealthProfile |
+| `DailyPlan.finalDecision` | Done | Always present after ConflictResolver |
+| `DailyPlan.healthDecision` | Done | Via `HealthDecisionBuilder` (deterministic) |
+| Progress wiring | Done | Home loads snapshot → DecisionEngine |
+| Home UI | Done | Adaptation banner, health card, progress summary |
+| Domain priorities | Done | `DecisionPriorities` + DI order |
+| DailyPlan Hive persistence | Deferred | Computed fresh on Home load |
+| AI / NL coaching | Deferred | Phase 7 |
 
+## Priority policy
 
+**Domain evaluation order** (`DecisionPriorities.domainEvaluationOrder`):
+
+1. InjuryRule / SafetyRule  
+2. RecoveryRule  
+3. DeloadRule / ProgressionRule  
+4. EquipmentRule  
+5. ProgressRule (observe-only — never mutates workout)  
+6. NutritionRule (plan only — never mutates workout)
+
+**Adjustment conflict ranks** (ConflictResolver): restDay > skipWorkout > recoverySession > deload > replaceExercise > reduceVolume > reduceIntensity > increaseVolume > increaseIntensity > none
+
+## Pipeline
+
+```text
+Profile + Program + CheckIn + ProgressSnapshot
+        │
+        ▼
+DecisionContext
+        │
+        ▼
+Evaluate rules (independent)
+        │
+        ▼
+ConflictResolver
+        │
+        ▼
+WorkoutAdaptationService
+        │
+        ▼
+NutritionPlan + HealthDecision
+        │
+        ▼
+DailyPlan → Home UI
+```
+
+## Limits
+
+- Progress plateaus inform HealthDecision only; they do not auto-change the program.
+- Confidence is clamped to `[0, 1]` and not prominently marketed in UI.
+- HealthDecision is structured text, not generative AI.

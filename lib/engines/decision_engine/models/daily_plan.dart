@@ -2,6 +2,8 @@ import 'package:gymgenius/domain/entities/nutrition_plan.dart';
 import 'package:gymgenius/domain/entities/progress_snapshot.dart';
 import 'package:gymgenius/domain/entities/recovery_status.dart';
 import 'package:gymgenius/domain/entities/today_workout.dart';
+import 'package:gymgenius/domain/entities/workout_decision.dart';
+import 'package:gymgenius/engines/decision_engine/models/health_decision.dart';
 
 import 'decision_context.dart';
 import 'program_progress.dart';
@@ -11,15 +13,6 @@ import 'program_progress.dart';
 /// This is the ONLY object that the UI should consume.
 ///
 /// It centralizes everything required for today's experience.
-///
-/// Future versions will progressively include:
-///
-/// • RecoveryPlan
-/// • HydrationPlan
-/// • DailyAdvice
-/// • Notifications
-/// • Smart reminders
-/// • AI explanations
 ///
 /// The UI should never call multiple engines directly.
 /// Everything comes from DailyPlan.
@@ -35,6 +28,9 @@ class DailyPlan {
   /// Final workout after all adaptations.
   final TodayWorkout todayWorkout;
 
+  /// Resolved workout decision after conflict resolution.
+  final WorkoutDecision finalDecision;
+
   /// Deterministic nutrition recommendation for today.
   final NutritionPlan? nutritionPlan;
 
@@ -44,7 +40,10 @@ class DailyPlan {
   /// Progress snapshot for today (null if not computed yet).
   final ProgressSnapshot? progressSnapshot;
 
-  /// Confidence of the final decision.
+  /// Deterministic health recommendation for today.
+  final HealthDecision? healthDecision;
+
+  /// Confidence of the final decision (0–1).
   final double confidence;
 
   /// Generation timestamp.
@@ -54,9 +53,11 @@ class DailyPlan {
     required this.context,
     required this.programProgress,
     required this.todayWorkout,
+    required this.finalDecision,
     this.nutritionPlan,
     this.recoveryStatus,
     this.progressSnapshot,
+    this.healthDecision,
     required this.confidence,
     required this.generatedAt,
   });
@@ -73,6 +74,8 @@ class DailyPlan {
 
   bool get hasProgress => progressSnapshot != null;
 
+  bool get hasHealthDecision => healthDecision != null;
+
   @override
   String toString() {
     return '''
@@ -83,6 +86,7 @@ DailyPlan(
   nutrition: $hasNutrition,
   recovery: $hasRecovery,
   progress: $hasProgress,
+  health: $hasHealthDecision,
   confidence: $confidence
 )
 ''';

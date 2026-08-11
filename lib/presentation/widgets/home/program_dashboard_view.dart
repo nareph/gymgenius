@@ -7,8 +7,11 @@ import 'package:gymgenius/presentation/blocs/auth/auth_bloc.dart';
 import 'package:gymgenius/presentation/providers/workout_session_manager.dart';
 import 'package:gymgenius/presentation/screens/active_workout_session_screen.dart';
 import 'package:gymgenius/presentation/screens/weekly_training_schedule_screen.dart';
+import 'package:gymgenius/presentation/widgets/home/health_decision_card.dart';
+import 'package:gymgenius/presentation/widgets/home/home_progress_summary_card.dart';
 import 'package:gymgenius/presentation/widgets/home/nutrition_summary_card.dart';
 import 'package:gymgenius/presentation/widgets/home/recovery_summary_card.dart';
+import 'package:gymgenius/presentation/widgets/home/workout_adaptation_banner.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -321,6 +324,22 @@ class ProgramDashboardView extends StatelessWidget {
           ),
 
         // ------------------------------------------------------------------
+        // Workout adaptation (from DailyPlan.finalDecision)
+        // ------------------------------------------------------------------
+        if (dailyPlan.finalDecision.requiresAdaptation) ...[
+          const SizedBox(height: 16),
+          WorkoutAdaptationBanner(decision: dailyPlan.finalDecision),
+        ],
+
+        // ------------------------------------------------------------------
+        // Health recommendation
+        // ------------------------------------------------------------------
+        if (dailyPlan.healthDecision != null) ...[
+          const SizedBox(height: 16),
+          HealthDecisionCard(decision: dailyPlan.healthDecision!),
+        ],
+
+        // ------------------------------------------------------------------
         // Recovery summary (from DailyPlan)
         // ------------------------------------------------------------------
         if (dailyPlan.recoveryStatus != null) ...[
@@ -334,6 +353,14 @@ class ProgramDashboardView extends StatelessWidget {
         if (dailyPlan.nutritionPlan != null) ...[
           const SizedBox(height: 16),
           NutritionSummaryCard(plan: dailyPlan.nutritionPlan!),
+        ],
+
+        // ------------------------------------------------------------------
+        // Progress summary (from DailyPlan)
+        // ------------------------------------------------------------------
+        if (dailyPlan.progressSnapshot != null) ...[
+          const SizedBox(height: 16),
+          HomeProgressSummaryCard(snapshot: dailyPlan.progressSnapshot!),
         ],
 
         const SizedBox(height: 24),

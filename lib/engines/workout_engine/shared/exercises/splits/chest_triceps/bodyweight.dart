@@ -21,7 +21,7 @@ const List<ExercisePoolEntry> chestTricepsBodyweightExercises = [
       MuscleGroup.triceps,
       MuscleGroup.shoulders
     ],
-    secondaryMuscles: const [],
+    secondaryMuscles: [],
     usesWeight: false,
     movementPattern: MovementPattern.push,
     mechanics: Mechanics.closedChain,
@@ -120,7 +120,7 @@ const List<ExercisePoolEntry> chestTricepsBodyweightExercises = [
       MuscleGroup.triceps,
       MuscleGroup.shoulders
     ],
-    secondaryMuscles: const [],
+    secondaryMuscles: [],
     usesWeight: false,
     movementPattern: MovementPattern.push,
     mechanics: Mechanics.closedChain,

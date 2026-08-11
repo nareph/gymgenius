@@ -1,0 +1,201 @@
+Oui. Pour la **Phase 6 — Decision Engine**, en gardant exactement le principe des phases précédentes, voici le checklist de clôture.
+
+## Phase 6 — Decision Engine — Checklist de clôture
+
+### 1. Domain / Models
+
+* [x] `DecisionContext` finalisé
+* [x] `DailyPlan` finalisé (`finalDecision`, `healthDecision`, progress/recovery/nutrition)
+* [x] `WorkoutDecision` finalisé
+* [x] `HealthDecision` finalisé (+ displayAction / reasons)
+* [x] Modèle de priorité des décisions défini (`DecisionPriorities`)
+* [x] Modèle de `DecisionReason` complet (+ displayName)
+* [x] Modèle de confiance (`confidence`) cohérent et borné (clamp 0–1)
+* [x] Toutes les données nécessaires aux décisions sont accessibles depuis le contexte
+
+### 2. Inputs du Decision Engine
+
+* [x] Workout / programme d'entraînement intégré
+* [x] RecoveryStatus intégré
+* [x] NutritionPlan intégré
+* [x] Progress / ProgramProgress intégré
+* [x] HealthProfile intégré
+* [x] Données manquantes correctement gérées
+* [x] Aucun input critique ne provoque de crash
+
+### 3. Decision Rules
+
+* [x] `RecoveryRule` finalisée
+* [x] `NutritionRule` finalisée
+* [x] `ProgressionRule` finalisée
+* [x] Workout adaptation rule finalisée (via adaptation services)
+* [x] Health/Safety rule finalisée si prévue (`SafetyRule` / `InjuryRule`)
+* [x] Chaque rule possède une responsabilité unique
+* [x] Chaque rule retourne une décision explicite
+* [x] Les rules ne modifient pas directement les données persistées
+* [x] Les rules sont déterministes et testables
+* [x] `ProgressRule` observe-only
+
+### 4. Conflict Resolution
+
+* [x] `ConflictResolver` finalisé
+* [x] Priorité entre les rules définie
+* [x] Safety > Recovery > Progression > Nutrition > autres priorités clairement définie
+* [x] Deux décisions contradictoires sont correctement résolues
+* [x] Aucun conflit ne produit une décision incohérente
+* [x] La décision finale conserve les raisons importantes
+* [x] La confiance finale est calculée correctement
+
+### 5. Workout Adaptation
+
+* [x] Adaptation du volume fonctionnelle
+* [x] Adaptation de l'intensité fonctionnelle
+* [x] Adaptation du nombre de séries fonctionnelle
+* [x] Adaptation des répétitions fonctionnelle si nécessaire
+* [x] Adaptation des exercices contrôlée
+* [x] Les règles de Recovery sont effectivement appliquées au workout
+* [x] Les adaptations ne dépassent jamais les limites prévues
+* [x] Le workout original n'est jamais muté accidentellement
+* [x] Un workout adapté reste valide/exécutable
+
+### 6. Decision Pipeline
+
+* [x] Load Profile
+* [x] Load Workout
+* [x] Load Recovery
+* [x] Load Nutrition
+* [x] Load Progress
+* [x] Build `DecisionContext`
+* [x] Evaluate toutes les rules
+* [x] Resolve conflicts
+* [x] Produce final decision
+* [x] Adapt workout
+* [x] Apply nutrition adjustments
+* [x] Generate health/recovery advice (`HealthDecisionBuilder`)
+* [x] Build final `DailyPlan`
+
+### 7. Outputs
+
+* [x] Today's workout généré
+* [x] Workout adapté selon le contexte
+* [x] Recovery advice généré
+* [x] Nutrition adjustments générés
+* [x] Health recommendations générées
+* [x] Reasons affichables à l'utilisateur
+* [x] Confidence disponible (bornée, non trompeuse en UI)
+* [x] `DailyPlan` contient toutes les décisions finales
+* [x] Output identique pour les mêmes inputs déterministes
+
+### 8. Persistence
+
+* [x] Decision/DailyPlan persistence définie si nécessaire — **reporté** (recalcul Home ; pas de Hive DailyPlan)
+* [x] Lecture du contexte depuis les repositories fonctionnelle
+* [x] Sauvegarde du résultat fonctionnelle (recovery/nutrition existants)
+* [x] Aucun calcul métier placé dans la couche Hive
+* [x] Repository failures correctement gérés (progress try/catch)
+* [x] Pas de duplication inutile des données
+
+### 9. UI / Home
+
+* [x] Home affiche le workout final recommandé
+* [x] Home affiche les adaptations importantes
+* [x] Recovery recommendation visible
+* [x] Nutrition adjustment visible
+* [x] Health recommendation visible
+* [x] Reasons accessibles
+* [x] Confidence non affichée de manière trompeuse
+* [x] Loading state
+* [x] Empty state
+* [x] Error state
+* [x] Refresh correctement recalculé
+
+### 10. Tests unitaires
+
+* [x] Tests de chaque `DecisionRule` (existants + Progress observe-only)
+* [x] Tests de `ConflictResolver`
+* [x] Tests de `WorkoutAdaptationService` (via recovery integration)
+* [x] Tests de `DecisionContext` (via pipeline)
+* [x] Tests des seuils
+* [x] Tests des priorités
+* [x] Tests des décisions contradictoires
+* [x] Tests des données manquantes
+* [x] Tests de confidence
+* [x] Tests des limites d'adaptation
+* [x] Tests `HealthDecisionBuilder`
+
+### 11. Tests d'intégration
+
+* [x] Workout + Recovery → décision correcte
+* [x] Workout + Nutrition → décision correcte
+* [x] Workout + Progress → décision correcte
+* [x] Recovery + Progress → décision correcte
+* [x] Recovery + Nutrition → décision correcte
+* [x] Profile + Workout + Recovery → DailyPlan correct
+* [x] Tous les domaines → décision finale correcte
+* [x] Mauvaise récupération → workout adapté
+* [x] Bonne récupération → workout normal
+* [x] Progression + récupération contradictoires → priorité correcte
+* [x] Nutrition + recovery contradictoires → priorité correcte (nutrition n'adapte pas)
+
+### 12. Edge Cases
+
+* [x] Aucun RecoveryStatus
+* [x] Aucun NutritionPlan — nutrition toujours construite si profile
+* [x] Aucun historique de progression
+* [x] Aucun workout aujourd'hui (rest day handled)
+* [x] Programme expiré — géré côté Home
+* [x] Profile incomplet — pas de DailyPlan si null
+* [x] Scores aux limites `0` / `100` (seuils Recovery)
+* [x] Plusieurs rules demandent des adaptations simultanément
+* [x] Toutes les rules demandent des adaptations simultanément
+* [x] Repository indisponible (progress failure → null)
+* [x] Données incohérentes — guarded
+
+### 13. Architecture / Clean Code
+
+* [x] `DecisionEngine` reste un orchestrateur
+* [x] Aucune logique métier importante directement dans `DecisionEngine`
+* [x] Rules indépendantes
+* [x] Services indépendants
+* [x] Pas de dépendance UI → Engine
+* [x] Pas de dépendance Engine → Flutter
+* [x] Dependency Injection propre
+* [x] Pas de duplication entre Recovery/Nutrition/Progress rules
+* [x] Nommage cohérent
+* [x] Aucun code temporaire de Phase 5/6 restant
+
+### 14. Validation finale
+
+* [x] `flutter analyze` → **0 erreur**
+* [x] `flutter test` → **100 % passant**
+* [x] Tests existants des phases précédentes toujours passants
+* [x] Aucun regression sur Recovery Engine
+* [x] Aucun regression sur Nutrition Engine
+* [x] Aucun regression sur Progress Engine
+* [x] Aucun regression sur Workout Engine
+* [ ] Test manuel du parcours complet
+* [ ] Test sur données réalistes
+* [ ] Test avec données extrêmes
+* [ ] Test avec plusieurs règles simultanément (couvert en unit/intégration)
+
+### 15. Critère de clôture Phase 6
+
+La Phase 6 peut être considérée comme **CLOSED** uniquement lorsque :
+
+* [x] **Workout**
+* [x] **Recovery**
+* [x] **Nutrition**
+* [x] **Progress**
+* [x] **Health Profile**
+
+sont réellement consommés par le `DecisionEngine`.
+
+Et que le pipeline :
+
+**Inputs → Context → Rules → Conflict Resolution → Final Decision → Workout/Nutrition/Health Adaptation → DailyPlan → UI**
+
+fonctionne de bout en bout, avec **tests unitaires + intégration + aucune régression**.
+
+**Priorités / algorithmes :** explicitement définis dans `DecisionPriorities` + section Phase 6 de `decision-engine.md`.
+
+* [x] **Phase 6 officiellement clôturable**

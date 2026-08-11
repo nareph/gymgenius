@@ -3,7 +3,6 @@
 // ============================================================
 
 import 'package:hive/hive.dart';
-import 'package:gymgenius/domain/value_objects/tempo.dart';
 
 part 'exercise_hive_model.g.dart';
 

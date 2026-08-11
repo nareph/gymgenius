@@ -45,7 +45,6 @@ class AuthWrapper extends StatelessWidget {
             return const HomeScreen();
 
           case AuthStatus.unknown:
-          default:
             Log.debug("AuthWrapper: Auth state unknown -> Loading");
             return const Scaffold(
               body: Center(

@@ -26,10 +26,10 @@ class MainDashboardScreen extends StatefulWidget {
   }
 
   @override
-  State<MainDashboardScreen> createState() => _MainDashboardScreenState();
+  State<MainDashboardScreen> createState() => MainDashboardScreenState();
 }
 
-class _MainDashboardScreenState extends State<MainDashboardScreen> {
+class MainDashboardScreenState extends State<MainDashboardScreen> {
   int _selectedIndex = kHomeTabIndex;
   late final PageController _pageController;
 
@@ -43,6 +43,10 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
   void dispose() {
     _pageController.dispose();
     super.dispose();
+  }
+
+  void selectTab(int index) {
+    _onItemTapped(index);
   }
 
   void _onItemTapped(int index) {

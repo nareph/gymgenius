@@ -266,11 +266,11 @@ void setupDependencies() {
         getIt<InjuryRule>(),
         getIt<SafetyRule>(),
         getIt<RecoveryRule>(),
-        getIt<ProgressRule>(),
         getIt<DeloadRule>(),
         getIt<ProgressionRule>(),
-        getIt<NutritionRule>(),
         getIt<EquipmentRule>(),
+        getIt<ProgressRule>(),
+        getIt<NutritionRule>(),
       ],
     ),
   );
@@ -316,6 +316,7 @@ void setupDependencies() {
       healthRepository: getIt<HealthRepository>(),
       decisionEngine: getIt<DecisionEngine>(),
       recoveryRepository: getIt<RecoveryRepository>(),
+      progressRepository: getIt<ProgressRepository>(),
     ),
   );
 

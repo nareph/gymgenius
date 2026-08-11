@@ -21,7 +21,7 @@ const List<ExercisePoolEntry> lowerBodyLegPressExercises = [
       MuscleGroup.glutes,
       MuscleGroup.hamstrings
     ],
-    secondaryMuscles: const [],
+    secondaryMuscles: [],
     usesWeight: true,
     weightSuggestion: 'Heavy',
     movementPattern: MovementPattern.squat,
@@ -79,7 +79,7 @@ const List<ExercisePoolEntry> lowerBodyLegPressExercises = [
     difficulty: ExerciseDifficulty.intermediate,
     equipmentType: EquipmentType.legPressMachine,
     targetMuscles: [MuscleGroup.quadriceps, MuscleGroup.glutes],
-    secondaryMuscles: const [],
+    secondaryMuscles: [],
     usesWeight: true,
     weightSuggestion: 'Moderate',
     movementPattern: MovementPattern.squat,

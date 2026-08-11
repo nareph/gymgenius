@@ -4,7 +4,7 @@ import 'package:gymgenius/domain/entities/training_program.dart';
 import 'package:gymgenius/core/logger/logger_service.dart';
 
 /// Validates a fully-built TrainingProgram made of domain objects
-/// (Exercise, not Map<String, dynamic>).
+/// (`Exercise`, not `Map<String, dynamic>`).
 ///
 /// This replaces the old Map-based validator, which only made sense when
 /// programs came straight from Gemini as raw JSON to parse. Now that

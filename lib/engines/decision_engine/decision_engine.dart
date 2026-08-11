@@ -6,6 +6,7 @@ import 'package:gymgenius/domain/entities/today_workout.dart';
 import 'package:gymgenius/domain/entities/training_program.dart';
 import 'package:gymgenius/domain/entities/workout_decision.dart';
 import 'package:gymgenius/engines/decision_engine/Progression/program_progress_service.dart';
+import 'package:gymgenius/engines/decision_engine/builders/health_decision_builder.dart';
 import 'package:gymgenius/engines/decision_engine/services/conflict_resolver.dart';
 import 'package:gymgenius/engines/decision_engine/rules/nutrition/nutrition_rule.dart';
 import 'package:gymgenius/engines/recovery_engine/recovery_engine.dart';
@@ -27,9 +28,10 @@ import 'services/workout_adaptation_service.dart';
 /// • Resolve conflicts
 /// • Adapt today's workout
 /// • Attach NutritionPlan
+/// • Build HealthDecision
 /// • Produce the final DailyPlan
 ///
-/// The DecisionEngine itself contains no business logic.
+/// The DecisionEngine itself contains no domain business logic.
 class DecisionEngine {
   final ProgramProgressService _programProgressService;
   final TodayWorkoutBuilder _todayWorkoutBuilder;
@@ -37,6 +39,7 @@ class DecisionEngine {
   final ConflictResolver _conflictResolver;
   final NutritionRule _nutritionRule;
   final RecoveryEngine _recoveryEngine;
+  final HealthDecisionBuilder _healthDecisionBuilder;
 
   final List<DecisionRule> _rules;
 
@@ -48,13 +51,15 @@ class DecisionEngine {
     required List<DecisionRule> rules,
     required NutritionRule nutritionRule,
     RecoveryEngine recoveryEngine = const RecoveryEngine(),
+    HealthDecisionBuilder healthDecisionBuilder = const HealthDecisionBuilder(),
   })  : _programProgressService = programProgressService,
         _todayWorkoutBuilder = todayWorkoutBuilder,
         _workoutAdaptationService = workoutAdaptationService,
         _conflictResolver = conflictResolver,
         _rules = rules,
         _nutritionRule = nutritionRule,
-        _recoveryEngine = recoveryEngine;
+        _recoveryEngine = recoveryEngine,
+        _healthDecisionBuilder = healthDecisionBuilder;
 
   // ============================================================
   // Daily Plan
@@ -137,15 +142,23 @@ class DecisionEngine {
       context: adaptedContext,
       finalWorkout: finalWorkout,
     );
+    final healthDecision = _healthDecisionBuilder.build(
+      generatedAt: currentDate,
+      finalDecision: finalDecision,
+      recoveryStatus: recoveryStatus,
+      progressSnapshot: progressSnapshot,
+    );
 
     return DailyPlan(
       context: adaptedContext,
       programProgress: progress,
       todayWorkout: finalWorkout,
+      finalDecision: finalDecision,
       nutritionPlan: nutritionPlan,
       recoveryStatus: recoveryStatus,
       progressSnapshot: progressSnapshot,
-      confidence: finalDecision.confidence,
+      healthDecision: healthDecision,
+      confidence: finalDecision.confidence.clamp(0.0, 1.0),
       generatedAt: currentDate,
     );
   }
@@ -171,15 +184,23 @@ class DecisionEngine {
       context: adaptedContext,
       finalWorkout: finalWorkout,
     );
+    final healthDecision = _healthDecisionBuilder.build(
+      generatedAt: currentDate,
+      finalDecision: finalDecision,
+      recoveryStatus: recoveryStatus,
+      progressSnapshot: progressSnapshot,
+    );
 
     return DailyPlan(
       context: adaptedContext,
       programProgress: progress,
       todayWorkout: finalWorkout,
+      finalDecision: finalDecision,
       nutritionPlan: nutritionPlan,
       recoveryStatus: recoveryStatus,
       progressSnapshot: progressSnapshot,
-      confidence: finalDecision.confidence,
+      healthDecision: healthDecision,
+      confidence: finalDecision.confidence.clamp(0.0, 1.0),
       generatedAt: currentDate,
     );
   }
@@ -216,15 +237,15 @@ class DecisionEngine {
     ).todayWorkout;
   }
 
-  // Temporary until AI Coach / Health Engine
+  /// Fallback health recommendation when no DailyPlan is available.
   HealthDecision getDefaultDecision({
     DateTime? now,
   }) {
-    return HealthDecision(
-      primaryAction: 'complete_scheduled_workout',
-      reason: 'No recovery or nutrition data available yet.',
-      confidence: 0.5,
+    return _healthDecisionBuilder.build(
       generatedAt: now ?? DateTime.now(),
+      finalDecision: WorkoutDecision.keepPlannedWorkout(confidence: 0.5),
+      recoveryStatus: null,
+      progressSnapshot: null,
     );
   }
 }

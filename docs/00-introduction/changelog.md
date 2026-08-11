@@ -15,6 +15,13 @@ The changelog highlights architectural changes, new features, improvements, and 
 
 ### Added
 
+- Phase 6 Decision Engine vertical slice:
+  - end-to-end DailyPlan with `finalDecision` + deterministic `HealthDecision`
+  - ProgressSnapshot loaded on Home into DecisionEngine
+  - explicit `DecisionPriorities` (domain order + adjustment ranks)
+  - Home adaptation banner, health recommendation, progress summary
+  - multi-domain integration tests (Recovery / Progress / Nutrition)
+
 - Phase 5 Progress Intelligence vertical slice:
   - deterministic Progress Engine (weight / strength / consistency calculators + plateau detection)
   - `ProgressSnapshot` + `WeeklyProgressReport` domain models

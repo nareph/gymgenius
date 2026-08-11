@@ -51,7 +51,7 @@ void main() {
       );
 
       expect(decision.primaryAction, 'complete_scheduled_workout');
-      expect(decision.reason, 'No recovery or nutrition data available yet.');
+      expect(decision.reason, contains('No check-in'));
       expect(decision.confidence, 0.5);
       expect(decision.generatedAt, DateTime(2026, 7, 16));
     });

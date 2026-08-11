@@ -1,28 +1,14 @@
 import 'package:gymgenius/domain/entities/workout_decision.dart';
 import 'package:gymgenius/domain/enums/workout_adjustment.dart';
+import 'package:gymgenius/engines/decision_engine/decision_priorities.dart';
 
 /// Resolves multiple WorkoutDecision objects into a single final decision.
 ///
 /// Every DecisionRule is independent.
 /// Therefore several rules may trigger simultaneously.
 ///
-/// Example:
-///
-/// InjuryRule
-///     ↓
-/// Rest Day
-///
-/// RecoveryRule
-///     ↓
-/// Reduce Volume
-///
-/// ProgressionRule
-///     ↓
-/// Increase Intensity
-///
-/// The ConflictResolver determines which decision wins.
-///
-/// Priority (highest → lowest)
+/// Priority is defined by [DecisionPriorities.adjustmentRanks]
+/// (highest → lowest):
 ///
 /// 1. Rest Day
 /// 2. Skip Workout
@@ -35,8 +21,8 @@ import 'package:gymgenius/domain/enums/workout_adjustment.dart';
 /// 9. Increase Intensity
 /// 10. None
 ///
-/// Future versions may become much more sophisticated
-/// (weighted scores, AI ranking, multi-action merging, etc.).
+/// Domain evaluation order (Injury/Safety > Recovery > …) is documented
+/// in [DecisionPriorities.domainEvaluationOrder] and mirrored in DI.
 class ConflictResolver {
   const ConflictResolver();
 
@@ -48,7 +34,9 @@ class ConflictResolver {
     }
 
     if (decisions.length == 1) {
-      return decisions.first;
+      return decisions.first.copyWith(
+        confidence: decisions.first.confidence.clamp(0.0, 1.0),
+      );
     }
 
     final ordered = [...decisions]..sort(
@@ -61,42 +49,14 @@ class ConflictResolver {
 
     return winner.copyWith(
       reasons: ordered.expand((d) => d.reasons).toSet().toList(),
-      confidence:
-          ordered.map((d) => d.confidence).reduce((a, b) => a > b ? a : b),
+      confidence: ordered
+          .map((d) => d.confidence)
+          .reduce((a, b) => a > b ? a : b)
+          .clamp(0.0, 1.0),
     );
   }
 
   int _priority(WorkoutAdjustment adjustment) {
-    switch (adjustment) {
-      case WorkoutAdjustment.restDay:
-        return 100;
-
-      case WorkoutAdjustment.skipWorkout:
-        return 90;
-
-      case WorkoutAdjustment.recoverySession:
-        return 80;
-
-      case WorkoutAdjustment.deload:
-        return 70;
-
-      case WorkoutAdjustment.replaceExercise:
-        return 60;
-
-      case WorkoutAdjustment.reduceVolume:
-        return 50;
-
-      case WorkoutAdjustment.reduceIntensity:
-        return 40;
-
-      case WorkoutAdjustment.increaseVolume:
-        return 30;
-
-      case WorkoutAdjustment.increaseIntensity:
-        return 20;
-
-      case WorkoutAdjustment.none:
-        return 0;
-    }
+    return DecisionPriorities.adjustmentRanks[adjustment.name] ?? 0;
   }
 }
