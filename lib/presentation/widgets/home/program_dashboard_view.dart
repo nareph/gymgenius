@@ -6,6 +6,7 @@ import 'package:gymgenius/engines/decision_engine/models/daily_plan.dart';
 import 'package:gymgenius/presentation/blocs/auth/auth_bloc.dart';
 import 'package:gymgenius/presentation/providers/workout_session_manager.dart';
 import 'package:gymgenius/presentation/screens/active_workout_session_screen.dart';
+import 'package:gymgenius/presentation/widgets/home/nutrition_summary_card.dart';
 import 'package:gymgenius/presentation/widgets/program_card.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -204,7 +205,7 @@ class ProgramDashboardView extends StatelessWidget {
     // The DecisionEngine's final decision for today's workout.
     // If empty, today is a rest day.
     // --------------------------------------------------------------
-    final todaysExercises = dailyPlan.todayWorkout?.finalExercises ?? [];
+    final todaysExercises = dailyPlan.todayWorkout.finalExercises;
 
     final user = context.read<AuthBloc>().state.user;
 
@@ -319,6 +320,14 @@ class ProgramDashboardView extends StatelessWidget {
               ),
             ),
           ),
+
+        // ------------------------------------------------------------------
+        // Nutrition summary (from DailyPlan)
+        // ------------------------------------------------------------------
+        if (dailyPlan.nutritionPlan != null) ...[
+          const SizedBox(height: 16),
+          NutritionSummaryCard(plan: dailyPlan.nutritionPlan!),
+        ],
 
         const SizedBox(height: 24),
 

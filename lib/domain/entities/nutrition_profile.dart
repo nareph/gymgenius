@@ -10,6 +10,7 @@ class NutritionProfile {
   final String country;
   final List<String> preferredFoods;
   final List<String> restrictedFoods;
+  final double? adherenceScore;
 
   const NutritionProfile({
     required this.userId,
@@ -18,6 +19,7 @@ class NutritionProfile {
     required this.country,
     required this.preferredFoods,
     required this.restrictedFoods,
+    this.adherenceScore,
   });
 
   @override

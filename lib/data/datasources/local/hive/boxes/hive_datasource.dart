@@ -6,6 +6,9 @@ import '../models/user_hive_model.dart';
 import '../models/health_profile_hive_model.dart';
 import '../models/training_program_hive_model.dart';
 import '../models/workout_log_hive_model.dart';
+import '../models/meal_hive_model.dart';
+import '../models/nutrition_profile_hive_model.dart';
+import '../models/nutrition_plan_hive_model.dart';
 import 'hive_boxes.dart';
 
 /// Hive datasource — handles all direct Hive operations.
@@ -22,6 +25,9 @@ class HiveDatasource {
     Hive.registerAdapter(HealthProfileHiveModelAdapter());
     Hive.registerAdapter(TrainingProgramHiveModelAdapter());
     Hive.registerAdapter(WorkoutLogHiveModelAdapter());
+    Hive.registerAdapter(NutritionProfileHiveModelAdapter());
+    Hive.registerAdapter(MealHiveModelAdapter());
+    Hive.registerAdapter(NutritionPlanHiveModelAdapter());
 
     // Open boxes
     await Hive.openBox<UserHiveModel>(HiveBoxes.users);
@@ -29,6 +35,8 @@ class HiveDatasource {
     await Hive.openBox<TrainingProgramHiveModel>(HiveBoxes.trainingPrograms);
     await Hive.openBox<WorkoutLogHiveModel>(HiveBoxes.workoutLogs);
     await Hive.openBox(HiveBoxes.currentUser);
+    await Hive.openBox<NutritionProfileHiveModel>(HiveBoxes.nutritionProfiles);
+    await Hive.openBox<NutritionPlanHiveModel>(HiveBoxes.nutritionPlans);
   }
 
   // ============================================================
@@ -174,6 +182,46 @@ class HiveDatasource {
   }
 
   // ============================================================
+  // NUTRITION PROFILE
+  // ============================================================
+
+  static Future<void> saveNutritionProfile(
+    NutritionProfileHiveModel profile,
+  ) async {
+    await HiveBoxes.nutritionProfilesBox.put(profile.userId, profile);
+  }
+
+  static NutritionProfileHiveModel? getNutritionProfile(String userId) {
+    return HiveBoxes.nutritionProfilesBox.get(userId);
+  }
+
+  static Future<void> deleteNutritionProfile(String userId) async {
+    await HiveBoxes.nutritionProfilesBox.delete(userId);
+  }
+
+  // ============================================================
+  // NUTRITION PLAN
+  // ============================================================
+
+  static Future<void> saveNutritionPlan(NutritionPlanHiveModel plan) async {
+    await HiveBoxes.nutritionPlansBox.put(plan.id, plan);
+  }
+
+  static NutritionPlanHiveModel? getNutritionPlan(String id) {
+    return HiveBoxes.nutritionPlansBox.get(id);
+  }
+
+  static Future<void> deleteNutritionPlansForUser(String userId) async {
+    final keys = HiveBoxes.nutritionPlansBox.values
+        .where((p) => p.userId == userId)
+        .map((p) => p.id)
+        .toList();
+    for (final key in keys) {
+      await HiveBoxes.nutritionPlansBox.delete(key);
+    }
+  }
+
+  // ============================================================
   // CLEAR ALL
   // ============================================================
 
@@ -182,6 +230,8 @@ class HiveDatasource {
     await HiveBoxes.healthProfilesBox.clear();
     await HiveBoxes.trainingProgramsBox.clear();
     await HiveBoxes.workoutLogsBox.clear();
+    await HiveBoxes.nutritionProfilesBox.clear();
+    await HiveBoxes.nutritionPlansBox.clear();
     await HiveBoxes.currentUserBox.clear();
   }
 }

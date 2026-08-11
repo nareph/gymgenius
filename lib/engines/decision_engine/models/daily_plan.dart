@@ -1,4 +1,5 @@
 import 'package:gymgenius/domain/entities/today_workout.dart';
+import 'package:gymgenius/domain/entities/nutrition_plan.dart';
 
 import 'decision_context.dart';
 import 'program_progress.dart';
@@ -12,7 +13,6 @@ import 'program_progress.dart';
 /// Future versions will progressively include:
 ///
 /// • RecoveryPlan
-/// • NutritionPlan
 /// • HydrationPlan
 /// • DailyAdvice
 /// • Notifications
@@ -33,6 +33,9 @@ class DailyPlan {
   /// Final workout after all adaptations.
   final TodayWorkout todayWorkout;
 
+  /// Deterministic nutrition recommendation for today.
+  final NutritionPlan? nutritionPlan;
+
   /// Confidence of the final decision.
   final double confidence;
 
@@ -43,6 +46,7 @@ class DailyPlan {
     required this.context,
     required this.programProgress,
     required this.todayWorkout,
+    this.nutritionPlan,
     required this.confidence,
     required this.generatedAt,
   });
@@ -53,6 +57,8 @@ class DailyPlan {
 
   bool get isAdapted => todayWorkout.isAdapted;
 
+  bool get hasNutrition => nutritionPlan != null;
+
   @override
   String toString() {
     return '''
@@ -60,6 +66,7 @@ DailyPlan(
   date: ${context.now},
   adapted: $isAdapted,
   restDay: $isRestDay,
+  nutrition: $hasNutrition,
   confidence: $confidence
 )
 ''';

@@ -3,12 +3,14 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'package:gymgenius/data/repositories/auth_repository_impl.dart';
 import 'package:gymgenius/data/repositories/health_repository_impl.dart';
+import 'package:gymgenius/data/repositories/nutrition_repository_impl.dart';
 import 'package:gymgenius/data/repositories/tracking_repository_impl.dart';
 import 'package:gymgenius/data/repositories/user_repository_impl.dart';
 import 'package:gymgenius/data/repositories/workout_repository_impl.dart';
 
 import 'package:gymgenius/domain/repositories/auth_repository.dart';
 import 'package:gymgenius/domain/repositories/health_repository.dart';
+import 'package:gymgenius/domain/repositories/nutrition_repository.dart';
 import 'package:gymgenius/domain/repositories/tracking_repository.dart';
 import 'package:gymgenius/domain/repositories/user_repository.dart';
 import 'package:gymgenius/domain/repositories/workout_repository.dart';
@@ -36,6 +38,7 @@ import 'package:gymgenius/engines/workout_engine/optimizers/program_optimizer.da
 import 'package:gymgenius/engines/workout_engine/providers/exercise_replacement_provider.dart';
 import 'package:gymgenius/engines/workout_engine/services/generation_service.dart';
 import 'package:gymgenius/engines/workout_engine/workout_engine.dart';
+import 'package:gymgenius/engines/nutrition_engine/nutrition_engine.dart';
 
 import 'package:gymgenius/presentation/blocs/auth/auth_bloc.dart';
 import 'package:gymgenius/presentation/blocs/exercise_library/exercise_library_bloc.dart';
@@ -85,6 +88,10 @@ void setupDependencies() {
     ),
   );
 
+  getIt.registerLazySingleton<NutritionRepository>(
+    () => const NutritionRepositoryImpl(),
+  );
+
   // ============================================================
   // Workout Engine
   // ============================================================
@@ -95,6 +102,15 @@ void setupDependencies() {
 
   getIt.registerLazySingleton<GenerationService>(() => GenerationService());
   getIt.registerLazySingleton<WorkoutEngine>(() => WorkoutEngine());
+
+  // ============================================================
+  // Nutrition Engine
+  // ============================================================
+  getIt.registerLazySingleton<NutritionEngine>(
+    () => NutritionEngine(
+      nutritionRepository: getIt<NutritionRepository>(),
+    ),
+  );
 
   // ============================================================
 // Decision Engine
@@ -198,6 +214,7 @@ void setupDependencies() {
       todayWorkoutBuilder: getIt(),
       workoutAdaptationService: getIt(),
       conflictResolver: getIt(),
+      nutritionEngine: getIt<NutritionEngine>(),
       rules: [
         getIt<InjuryRule>(),
         getIt<SafetyRule>(),

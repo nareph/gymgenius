@@ -4,6 +4,7 @@ import 'package:gymgenius/domain/entities/training_program.dart';
 import 'package:gymgenius/domain/entities/workout_decision.dart';
 import 'package:gymgenius/engines/decision_engine/Progression/program_progress_service.dart';
 import 'package:gymgenius/engines/decision_engine/services/conflict_resolver.dart';
+import 'package:gymgenius/engines/nutrition_engine/nutrition_engine.dart';
 
 import 'builders/today_workout_builder.dart';
 import 'models/daily_plan.dart';
@@ -21,22 +22,16 @@ import 'services/workout_adaptation_service.dart';
 /// • Execute every DecisionRule
 /// • Resolve conflicts
 /// • Adapt today's workout
+/// • Attach NutritionPlan
 /// • Produce the final DailyPlan
 ///
 /// The DecisionEngine itself contains no business logic.
-///
-/// Every decision is delegated to:
-///
-/// Rules
-///      ↓
-/// ConflictResolver
-///      ↓
-/// WorkoutAdaptationService
 class DecisionEngine {
   final ProgramProgressService _programProgressService;
   final TodayWorkoutBuilder _todayWorkoutBuilder;
   final WorkoutAdaptationService _workoutAdaptationService;
   final ConflictResolver _conflictResolver;
+  final NutritionEngine _nutritionEngine;
 
   final List<DecisionRule> _rules;
 
@@ -46,11 +41,13 @@ class DecisionEngine {
     required WorkoutAdaptationService workoutAdaptationService,
     required ConflictResolver conflictResolver,
     required List<DecisionRule> rules,
+    required NutritionEngine nutritionEngine,
   })  : _programProgressService = programProgressService,
         _todayWorkoutBuilder = todayWorkoutBuilder,
         _workoutAdaptationService = workoutAdaptationService,
         _conflictResolver = conflictResolver,
-        _rules = rules;
+        _rules = rules,
+        _nutritionEngine = nutritionEngine;
 
   // ============================================================
   // Daily Plan
@@ -121,6 +118,16 @@ class DecisionEngine {
     );
 
     // ----------------------------------------------------------
+    // Nutrition (deterministic)
+    // ----------------------------------------------------------
+
+    final nutritionPlan = _nutritionEngine.computeDailyPlanSync(
+      profile: healthProfile,
+      isTrainingDay: finalWorkout.hasExercises && !finalWorkout.isRecoverySession,
+      date: currentDate,
+    );
+
+    // ----------------------------------------------------------
     // Final Daily Plan
     // ----------------------------------------------------------
 
@@ -130,6 +137,7 @@ class DecisionEngine {
       ),
       programProgress: progress,
       todayWorkout: finalWorkout,
+      nutritionPlan: nutritionPlan,
       confidence: finalDecision.confidence,
       generatedAt: currentDate,
     );

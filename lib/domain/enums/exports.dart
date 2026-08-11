@@ -29,3 +29,7 @@ export 'stress_level.dart';
 export 'soreness_level.dart';
 export 'hydration_level.dart';
 export 'recommended_intensity.dart';
+export 'meal_type.dart';
+export 'meal_objective.dart';
+export 'nutrition_status.dart';
+export 'food_category.dart';
