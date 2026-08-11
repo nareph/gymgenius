@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:gymgenius/presentation/viewmodels/tracking_viewmodel.dart';
 import 'package:gymgenius/presentation/widgets/common/error_state_view.dart';
 import 'package:gymgenius/presentation/widgets/tracking/day_log_details_view.dart';
+import 'package:gymgenius/presentation/widgets/tracking/health_overview_section.dart';
 import 'package:gymgenius/presentation/widgets/tracking/progress_summary_section.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -63,6 +64,12 @@ class TrackingView extends StatelessWidget {
             child: ProgressSummarySection(
               snapshot: viewModel.progressSnapshot,
               isLoading: viewModel.isLoadingProgress,
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: HealthOverviewSection(
+              snapshot: viewModel.healthSnapshot,
+              isLoading: viewModel.isLoadingHealth,
             ),
           ),
           SliverToBoxAdapter(

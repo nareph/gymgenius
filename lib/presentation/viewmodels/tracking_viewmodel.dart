@@ -5,9 +5,11 @@ import 'package:flutter/foundation.dart';
 import 'package:gymgenius/core/logger/logger_service.dart';
 import 'package:gymgenius/domain/entities/training_program.dart';
 import 'package:gymgenius/domain/entities/workout_log.dart';
+import 'package:gymgenius/domain/entities/health_platform_snapshot.dart';
 import 'package:gymgenius/domain/entities/progress_snapshot.dart';
 import 'package:gymgenius/domain/entities/weekly_progress_report.dart';
 import 'package:gymgenius/domain/enums/progress_period.dart';
+import 'package:gymgenius/domain/repositories/health_platform_repository.dart';
 import 'package:gymgenius/domain/repositories/progress_repository.dart';
 import 'package:gymgenius/domain/repositories/tracking_repository.dart';
 import 'package:gymgenius/domain/repositories/user_repository.dart';
@@ -21,6 +23,7 @@ class TrackingViewModel extends ChangeNotifier {
   final TrackingRepository _trackingRepository;
   final UserRepository _userRepository;
   final ProgressRepository _progressRepository;
+  final HealthPlatformRepository _healthPlatformRepository;
   StreamSubscription? _programSubscription;
   StreamSubscription? _logsSubscription;
 
@@ -29,10 +32,12 @@ class TrackingViewModel extends ChangeNotifier {
     required TrackingRepository trackingRepository,
     required UserRepository userRepository,
     required ProgressRepository progressRepository,
+    required HealthPlatformRepository healthPlatformRepository,
   })  : _workoutRepository = workoutRepository,
         _trackingRepository = trackingRepository,
         _userRepository = userRepository,
-        _progressRepository = progressRepository {
+        _progressRepository = progressRepository,
+        _healthPlatformRepository = healthPlatformRepository {
     Log.info("TrackingViewModel: Created");
     _focusedDay = DateTime.now();
     _selectedDay =
@@ -69,6 +74,12 @@ class TrackingViewModel extends ChangeNotifier {
   ProgressSnapshot? _progressSnapshot;
   ProgressSnapshot? get progressSnapshot => _progressSnapshot;
 
+  HealthPlatformSnapshot? _healthSnapshot;
+  HealthPlatformSnapshot? get healthSnapshot => _healthSnapshot;
+
+  bool _isLoadingHealth = false;
+  bool get isLoadingHealth => _isLoadingHealth;
+
   WeeklyProgressReport? _weeklyReport;
   WeeklyProgressReport? get weeklyReport => _weeklyReport;
 
@@ -86,6 +97,7 @@ class TrackingViewModel extends ChangeNotifier {
       await _loadProgramData();
       await _loadCompletedWorkouts();
       await _loadProgressData();
+      await _loadHealthPlatformData();
       await _loadLogsForDay(_selectedDay);
       _setupDataListeners();
       _setState(TrackingState.loaded);
@@ -161,6 +173,26 @@ class TrackingViewModel extends ChangeNotifier {
     if (_progressPeriod == period) return;
     _progressPeriod = period;
     await _loadProgressData();
+  }
+
+  Future<void> _loadHealthPlatformData() async {
+    _isLoadingHealth = true;
+    notifyListeners();
+    try {
+      final user = await _userRepository.getCurrentUser();
+      if (user == null) {
+        _healthSnapshot = null;
+        return;
+      }
+      _healthSnapshot = await _healthPlatformRepository.computeSnapshot(user.id);
+    } catch (error, stackTrace) {
+      Log.error('TrackingViewModel: Error loading health platform',
+          error: error, stackTrace: stackTrace);
+      _healthSnapshot = null;
+    } finally {
+      _isLoadingHealth = false;
+      notifyListeners();
+    }
   }
 
   Future<void> _loadCompletedWorkouts() async {

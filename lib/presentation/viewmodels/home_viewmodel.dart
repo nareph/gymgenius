@@ -4,10 +4,12 @@ import 'package:gymgenius/domain/entities/daily_checkin.dart';
 import 'package:gymgenius/domain/entities/health_profile.dart';
 import 'package:gymgenius/domain/entities/training_program.dart';
 import 'package:gymgenius/domain/repositories/coach_repository.dart';
+import 'package:gymgenius/domain/repositories/health_platform_repository.dart';
 import 'package:gymgenius/domain/repositories/health_repository.dart';
 import 'package:gymgenius/domain/repositories/progress_repository.dart';
 import 'package:gymgenius/domain/repositories/recovery_repository.dart';
 import 'package:gymgenius/domain/repositories/user_repository.dart';
+import 'package:gymgenius/domain/entities/health_platform_snapshot.dart';
 import 'package:gymgenius/domain/entities/progress_snapshot.dart';
 import 'package:gymgenius/engines/ai_coach/ai_coach_engine.dart';
 import 'package:gymgenius/engines/ai_coach/models/coach_response.dart';
@@ -28,6 +30,7 @@ class HomeViewModel extends ChangeNotifier {
   final ProgressRepository _progressRepository;
   final AICoachEngine _aiCoachEngine;
   final CoachRepository _coachRepository;
+  final HealthPlatformRepository _healthPlatformRepository;
   BuildContext? _context;
 
   HomeViewModel({
@@ -39,6 +42,7 @@ class HomeViewModel extends ChangeNotifier {
     required ProgressRepository progressRepository,
     required AICoachEngine aiCoachEngine,
     required CoachRepository coachRepository,
+    required HealthPlatformRepository healthPlatformRepository,
   })  : _workoutEngine = workoutEngine,
         _userRepository = userRepository,
         _healthRepository = healthRepository,
@@ -46,7 +50,8 @@ class HomeViewModel extends ChangeNotifier {
         _recoveryRepository = recoveryRepository,
         _progressRepository = progressRepository,
         _aiCoachEngine = aiCoachEngine,
-        _coachRepository = coachRepository {
+        _coachRepository = coachRepository,
+        _healthPlatformRepository = healthPlatformRepository {
     Log.info('HomeViewModel: Created');
     _loadData();
   }
@@ -128,6 +133,20 @@ class HomeViewModel extends ChangeNotifier {
         progressSnapshot = null;
       }
 
+      HealthPlatformSnapshot? healthPlatformSnapshot;
+      try {
+        healthPlatformSnapshot =
+            await _healthPlatformRepository.computeSnapshot(
+          user.id,
+          weightKg: healthProfile?.currentWeightKg,
+          isTrainingDay: program != null,
+        );
+      } catch (e, s) {
+        Log.error('HomeViewModel: Health platform snapshot failed',
+            error: e, stackTrace: s);
+        healthPlatformSnapshot = null;
+      }
+
       // Build DailyPlan using DecisionEngine ----
       if (program == null || healthProfile == null) {
         _dailyPlan = null;
@@ -137,6 +156,7 @@ class HomeViewModel extends ChangeNotifier {
           healthProfile,
           checkIn: checkIn,
           progressSnapshot: progressSnapshot,
+          healthPlatformSnapshot: healthPlatformSnapshot,
         );
       }
 
@@ -343,11 +363,24 @@ class HomeViewModel extends ChangeNotifier {
         progressSnapshot = null;
       }
 
+      HealthPlatformSnapshot? healthPlatformSnapshot;
+      try {
+        healthPlatformSnapshot =
+            await _healthPlatformRepository.computeSnapshot(
+          checkIn.userId,
+          weightKg: _healthProfile?.currentWeightKg,
+          isTrainingDay: true,
+        );
+      } catch (_) {
+        healthPlatformSnapshot = null;
+      }
+
       _dailyPlan = await _decisionEngine.buildDailyPlanAndPersist(
         _currentProgram!,
         _healthProfile!,
         checkIn: checkIn,
         progressSnapshot: progressSnapshot,
+        healthPlatformSnapshot: healthPlatformSnapshot,
       );
       _state = HomeState.loaded;
       notifyListeners();

@@ -1,6 +1,7 @@
 import 'package:gymgenius/domain/enums/decision_reason.dart';
 import 'package:gymgenius/domain/enums/experience_level.dart';
 import 'package:gymgenius/domain/enums/fitness_goal.dart';
+import 'package:gymgenius/domain/enums/health_caution_level.dart';
 import 'package:gymgenius/domain/enums/nutrition_status.dart';
 import 'package:gymgenius/domain/enums/workout_adjustment.dart';
 import 'package:gymgenius/engines/ai_coach/models/coach_context.dart';
@@ -17,6 +18,7 @@ class CoachContextBuilder {
     final nutrition = plan.nutritionPlan;
     final progress = plan.progressSnapshot;
     final health = plan.healthDecision;
+    final hp = plan.healthPlatformSnapshot;
 
     return CoachContext(
       userId: profile.userId,
@@ -42,6 +44,17 @@ class CoachContextBuilder {
       healthPrimaryAction: health?.primaryAction,
       healthReason: health?.reason,
       decisionConfidence: plan.confidence,
+      hydrationPercent: hp?.hydrationPercent,
+      habitsCompletionPercent: hp?.habitsCompletionPercent,
+      habitsStreakSummary: hp == null
+          ? null
+          : (hp.longestCurrentStreak > 0
+              ? 'longest_streak_${hp.longestCurrentStreak}'
+              : 'no_streak'),
+      wellnessTrend: hp?.wellnessTrendLabel,
+      hasBpCaution: hp?.hasBpCaution ?? false,
+      hasGlucoseCaution: hp?.hasGlucoseCaution ?? false,
+      healthPlatformCaution: hp?.overallCaution.value,
     );
   }
 }

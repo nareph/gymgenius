@@ -15,6 +15,14 @@ The changelog highlights architectural changes, new features, improvements, and 
 
 ### Added
 
+- Phase 8 Health Platform vertical slice (v5.0.0 target):
+  - six deterministic modules (BP, glucose, hydration, mental wellness, habits, lifestyle)
+  - `HealthPlatformEngine` façade + Hive TypeIds 18–23
+  - observe-only `HealthPlatformRule` on DailyPlan
+  - AI Coach safe labels only (no raw medical values)
+  - Tracking Health overview + Health Dashboard UI
+  - unit + integration tests under `test/engines/health_platform/`
+
 - Phase 7 AI Coach vertical slice (v4.0.0 target):
   - `AICoachEngine` + `AIProvider` (Gemini prod, Local fallback, OpenAI/Claude stubs)
   - structured `CoachResponse` with JSON validation and Decision Engine guardrails

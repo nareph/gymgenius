@@ -6,7 +6,7 @@
 ///
 /// Domain policy (highest → lowest influence on workout mutation):
 /// Injury / Safety > Recovery > Deload / Progression > Equipment >
-/// Progress (observe-only) > Nutrition (plan only, never mutates workout).
+/// Progress / HealthPlatform (observe-only) > Nutrition (plan only).
 class DecisionPriorities {
   const DecisionPriorities._();
 
@@ -19,6 +19,7 @@ class DecisionPriorities {
     'ProgressionRule',
     'EquipmentRule',
     'ProgressRule', // observe-only
+    'HealthPlatformRule', // observe-only
     'NutritionRule', // nutrition plan only
   ];
 

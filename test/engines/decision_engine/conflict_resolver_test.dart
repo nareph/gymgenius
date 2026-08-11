@@ -9,7 +9,7 @@ void main() {
   const resolver = ConflictResolver();
 
   group('DecisionPriorities', () {
-    test('domain evaluation order matches Phase 6 policy', () {
+    test('domain evaluation order matches Phase 6–8 policy', () {
       expect(
         DecisionPriorities.domainEvaluationOrder,
         [
@@ -20,6 +20,7 @@ void main() {
           'ProgressionRule',
           'EquipmentRule',
           'ProgressRule',
+          'HealthPlatformRule',
           'NutritionRule',
         ],
       );

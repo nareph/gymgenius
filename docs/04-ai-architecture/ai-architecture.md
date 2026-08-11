@@ -150,6 +150,16 @@ The production coaching layer lives in `lib/engines/ai_coach/` and is documented
 
 ---
 
+## 4.7 Health Platform (Phase 8 / v5.0)
+
+Manual health & lifestyle tracking — see [`health-platform.md`](health-platform.md).
+
+* Six modules + `HealthPlatformEngine` façade
+* Observe-only Decision Engine rule
+* Coach receives aggregated safe labels only
+
+---
+
 # 5. AI Data Flow
 
 ## Step-by-step pipeline

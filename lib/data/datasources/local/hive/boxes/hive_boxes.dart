@@ -10,6 +10,12 @@ import '../models/daily_checkin_hive_model.dart';
 import '../models/progress_snapshot_hive_model.dart';
 import '../models/conversation_hive_model.dart';
 import '../models/coach_cache_hive_model.dart';
+import '../models/blood_pressure_hive_model.dart';
+import '../models/blood_glucose_hive_model.dart';
+import '../models/hydration_log_hive_model.dart';
+import '../models/mental_wellness_hive_model.dart';
+import '../models/habit_hive_model.dart';
+import '../models/habit_log_hive_model.dart';
 
 class HiveBoxes {
   static const String users = 'users';
@@ -25,6 +31,12 @@ class HiveBoxes {
   static const String progressSnapshots = 'progress_snapshots';
   static const String conversations = 'coach_conversations';
   static const String coachCache = 'coach_cache';
+  static const String bloodPressure = 'blood_pressure_readings';
+  static const String bloodGlucose = 'blood_glucose_readings';
+  static const String hydrationLogs = 'hydration_logs';
+  static const String mentalWellness = 'mental_wellness_checkins';
+  static const String habits = 'habits';
+  static const String habitLogs = 'habit_logs';
 
   static Box<UserHiveModel> get usersBox => Hive.box<UserHiveModel>(users);
   static Box<HealthProfileHiveModel> get healthProfilesBox =>
@@ -48,4 +60,15 @@ class HiveBoxes {
       Hive.box<ConversationHiveModel>(conversations);
   static Box<CoachCacheHiveModel> get coachCacheBox =>
       Hive.box<CoachCacheHiveModel>(coachCache);
+  static Box<BloodPressureHiveModel> get bloodPressureBox =>
+      Hive.box<BloodPressureHiveModel>(bloodPressure);
+  static Box<BloodGlucoseHiveModel> get bloodGlucoseBox =>
+      Hive.box<BloodGlucoseHiveModel>(bloodGlucose);
+  static Box<HydrationLogHiveModel> get hydrationLogsBox =>
+      Hive.box<HydrationLogHiveModel>(hydrationLogs);
+  static Box<MentalWellnessHiveModel> get mentalWellnessBox =>
+      Hive.box<MentalWellnessHiveModel>(mentalWellness);
+  static Box<HabitHiveModel> get habitsBox => Hive.box<HabitHiveModel>(habits);
+  static Box<HabitLogHiveModel> get habitLogsBox =>
+      Hive.box<HabitLogHiveModel>(habitLogs);
 }

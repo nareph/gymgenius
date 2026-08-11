@@ -14,6 +14,12 @@ import '../models/daily_checkin_hive_model.dart';
 import '../models/progress_snapshot_hive_model.dart';
 import '../models/conversation_hive_model.dart';
 import '../models/coach_cache_hive_model.dart';
+import '../models/blood_pressure_hive_model.dart';
+import '../models/blood_glucose_hive_model.dart';
+import '../models/hydration_log_hive_model.dart';
+import '../models/mental_wellness_hive_model.dart';
+import '../models/habit_hive_model.dart';
+import '../models/habit_log_hive_model.dart';
 import 'hive_boxes.dart';
 
 /// Hive datasource — handles all direct Hive operations.
@@ -38,6 +44,12 @@ class HiveDatasource {
     Hive.registerAdapter(ProgressSnapshotHiveModelAdapter());
     Hive.registerAdapter(ConversationHiveModelAdapter());
     Hive.registerAdapter(CoachCacheHiveModelAdapter());
+    Hive.registerAdapter(BloodPressureHiveModelAdapter());
+    Hive.registerAdapter(BloodGlucoseHiveModelAdapter());
+    Hive.registerAdapter(HydrationLogHiveModelAdapter());
+    Hive.registerAdapter(MentalWellnessHiveModelAdapter());
+    Hive.registerAdapter(HabitHiveModelAdapter());
+    Hive.registerAdapter(HabitLogHiveModelAdapter());
 
     // Open boxes
     await Hive.openBox<UserHiveModel>(HiveBoxes.users);
@@ -52,6 +64,12 @@ class HiveDatasource {
     await Hive.openBox<ProgressSnapshotHiveModel>(HiveBoxes.progressSnapshots);
     await Hive.openBox<ConversationHiveModel>(HiveBoxes.conversations);
     await Hive.openBox<CoachCacheHiveModel>(HiveBoxes.coachCache);
+    await Hive.openBox<BloodPressureHiveModel>(HiveBoxes.bloodPressure);
+    await Hive.openBox<BloodGlucoseHiveModel>(HiveBoxes.bloodGlucose);
+    await Hive.openBox<HydrationLogHiveModel>(HiveBoxes.hydrationLogs);
+    await Hive.openBox<MentalWellnessHiveModel>(HiveBoxes.mentalWellness);
+    await Hive.openBox<HabitHiveModel>(HiveBoxes.habits);
+    await Hive.openBox<HabitLogHiveModel>(HiveBoxes.habitLogs);
   }
 
   // ============================================================
@@ -391,6 +409,131 @@ class HiveDatasource {
   }
 
   // ============================================================
+  // HEALTH PLATFORM
+  // ============================================================
+
+  static Future<void> saveBloodPressure(BloodPressureHiveModel model) async {
+    await HiveBoxes.bloodPressureBox.put(model.id, model);
+  }
+
+  static BloodPressureHiveModel? getLatestBloodPressure(String userId) {
+    final list = HiveBoxes.bloodPressureBox.values
+        .where((e) => e.userId == userId)
+        .toList()
+      ..sort((a, b) => b.measuredAt.compareTo(a.measuredAt));
+    return list.isEmpty ? null : list.first;
+  }
+
+  static List<BloodPressureHiveModel> getBloodPressureHistory(String userId) {
+    return HiveBoxes.bloodPressureBox.values
+        .where((e) => e.userId == userId)
+        .toList()
+      ..sort((a, b) => b.measuredAt.compareTo(a.measuredAt));
+  }
+
+  static Future<void> deleteBloodPressure(String id) async {
+    await HiveBoxes.bloodPressureBox.delete(id);
+  }
+
+  static Future<void> saveBloodGlucose(BloodGlucoseHiveModel model) async {
+    await HiveBoxes.bloodGlucoseBox.put(model.id, model);
+  }
+
+  static BloodGlucoseHiveModel? getLatestBloodGlucose(String userId) {
+    final list = HiveBoxes.bloodGlucoseBox.values
+        .where((e) => e.userId == userId)
+        .toList()
+      ..sort((a, b) => b.measuredAt.compareTo(a.measuredAt));
+    return list.isEmpty ? null : list.first;
+  }
+
+  static List<BloodGlucoseHiveModel> getBloodGlucoseHistory(String userId) {
+    return HiveBoxes.bloodGlucoseBox.values
+        .where((e) => e.userId == userId)
+        .toList()
+      ..sort((a, b) => b.measuredAt.compareTo(a.measuredAt));
+  }
+
+  static Future<void> deleteBloodGlucose(String id) async {
+    await HiveBoxes.bloodGlucoseBox.delete(id);
+  }
+
+  static Future<void> saveHydrationLog(HydrationLogHiveModel model) async {
+    await HiveBoxes.hydrationLogsBox.put(model.id, model);
+  }
+
+  static List<HydrationLogHiveModel> getHydrationLogs(String userId) {
+    return HiveBoxes.hydrationLogsBox.values
+        .where((e) => e.userId == userId)
+        .toList()
+      ..sort((a, b) => b.loggedAt.compareTo(a.loggedAt));
+  }
+
+  static Future<void> deleteHydrationLog(String id) async {
+    await HiveBoxes.hydrationLogsBox.delete(id);
+  }
+
+  static Future<void> saveMentalWellness(MentalWellnessHiveModel model) async {
+    await HiveBoxes.mentalWellnessBox.put(model.id, model);
+  }
+
+  static MentalWellnessHiveModel? getMentalWellnessForDay(
+    String userId,
+    DateTime day,
+  ) {
+    final key = DateTime(day.year, day.month, day.day);
+    for (final e in HiveBoxes.mentalWellnessBox.values) {
+      if (e.userId != userId) continue;
+      final d = DateTime(e.date.year, e.date.month, e.date.day);
+      if (d == key) return e;
+    }
+    return null;
+  }
+
+  static List<MentalWellnessHiveModel> getMentalWellnessHistory(
+    String userId,
+  ) {
+    return HiveBoxes.mentalWellnessBox.values
+        .where((e) => e.userId == userId)
+        .toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
+  }
+
+  static Future<void> deleteMentalWellness(String id) async {
+    await HiveBoxes.mentalWellnessBox.delete(id);
+  }
+
+  static Future<void> saveHabit(HabitHiveModel model) async {
+    await HiveBoxes.habitsBox.put(model.id, model);
+  }
+
+  static List<HabitHiveModel> getHabits(String userId) {
+    return HiveBoxes.habitsBox.values
+        .where((e) => e.userId == userId)
+        .toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
+  }
+
+  static Future<void> deleteHabit(String id) async {
+    await HiveBoxes.habitsBox.delete(id);
+  }
+
+  static Future<void> saveHabitLog(HabitLogHiveModel model) async {
+    await HiveBoxes.habitLogsBox.put(model.id, model);
+  }
+
+  static List<HabitLogHiveModel> getHabitLogs(String userId) {
+    return HiveBoxes.habitLogsBox.values
+        .where((e) => e.userId == userId)
+        .toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
+  }
+
+  static Future<void> deleteHabitLog(String id) async {
+    await HiveBoxes.habitLogsBox.delete(id);
+  }
+
+  // ============================================================
   // CLEAR ALL
   // ============================================================
 
@@ -406,6 +549,12 @@ class HiveDatasource {
     await HiveBoxes.progressSnapshotsBox.clear();
     await HiveBoxes.conversationsBox.clear();
     await HiveBoxes.coachCacheBox.clear();
+    await HiveBoxes.bloodPressureBox.clear();
+    await HiveBoxes.bloodGlucoseBox.clear();
+    await HiveBoxes.hydrationLogsBox.clear();
+    await HiveBoxes.mentalWellnessBox.clear();
+    await HiveBoxes.habitsBox.clear();
+    await HiveBoxes.habitLogsBox.clear();
     await HiveBoxes.currentUserBox.clear();
   }
 }

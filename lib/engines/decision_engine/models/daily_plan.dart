@@ -1,3 +1,4 @@
+import 'package:gymgenius/domain/entities/health_platform_snapshot.dart';
 import 'package:gymgenius/domain/entities/nutrition_plan.dart';
 import 'package:gymgenius/domain/entities/progress_snapshot.dart';
 import 'package:gymgenius/domain/entities/recovery_status.dart';
@@ -40,6 +41,9 @@ class DailyPlan {
   /// Progress snapshot for today (null if not computed yet).
   final ProgressSnapshot? progressSnapshot;
 
+  /// Health Platform day snapshot (null if not computed yet).
+  final HealthPlatformSnapshot? healthPlatformSnapshot;
+
   /// Deterministic health recommendation for today.
   final HealthDecision? healthDecision;
 
@@ -57,6 +61,7 @@ class DailyPlan {
     this.nutritionPlan,
     this.recoveryStatus,
     this.progressSnapshot,
+    this.healthPlatformSnapshot,
     this.healthDecision,
     required this.confidence,
     required this.generatedAt,
@@ -73,6 +78,8 @@ class DailyPlan {
   bool get hasRecovery => recoveryStatus != null;
 
   bool get hasProgress => progressSnapshot != null;
+
+  bool get hasHealthPlatform => healthPlatformSnapshot != null;
 
   bool get hasHealthDecision => healthDecision != null;
 

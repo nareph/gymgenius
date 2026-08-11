@@ -9,6 +9,7 @@ import 'package:gymgenius/presentation/screens/active_workout_session_screen.dar
 import 'package:gymgenius/presentation/screens/weekly_training_schedule_screen.dart';
 import 'package:gymgenius/presentation/widgets/home/coach_home_card.dart';
 import 'package:gymgenius/presentation/widgets/home/health_decision_card.dart';
+import 'package:gymgenius/presentation/widgets/home/home_health_platform_card.dart';
 import 'package:gymgenius/presentation/widgets/home/home_progress_summary_card.dart';
 import 'package:gymgenius/presentation/widgets/home/nutrition_summary_card.dart';
 import 'package:gymgenius/presentation/widgets/home/recovery_summary_card.dart';
@@ -341,6 +342,16 @@ class ProgramDashboardView extends StatelessWidget {
               ),
             );
           },
+        ),
+
+        // ------------------------------------------------------------------
+        // Health Platform CTA
+        // ------------------------------------------------------------------
+        Padding(
+          padding: const EdgeInsets.only(top: 16),
+          child: HomeHealthPlatformCard(
+            snapshot: dailyPlan.healthPlatformSnapshot,
+          ),
         ),
 
         // ------------------------------------------------------------------

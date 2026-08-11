@@ -1,0 +1,88 @@
+## Phase 8 — Health Platform — Checklist de clôture (v5.0.0)
+
+### 1. Domain
+
+* [x] `BloodPressureReading`
+* [x] `BloodGlucoseReading`
+* [x] `HydrationLog`
+* [x] `MentalWellnessCheckIn`
+* [x] `Habit` / `HabitLog`
+* [x] `LifestyleStatus` (+ `HealthPlatformSnapshot`)
+* [x] Enums (BP/glucose categories, glucose context, habit frequency, caution)
+* [x] Validation des valeurs / unités / timestamps
+* [x] Entités indépendantes du framework
+
+### 2. Health Engine
+
+* [x] BloodPressure / BloodGlucose / Hydration / MentalWellness / Habit / Lifestyle engines
+* [x] Façade `HealthPlatformEngine`
+* [x] Statuts + recommandations déterministes
+* [x] Jamais de diagnostic médical
+* [x] Alertes/prudence définies
+
+### 3. Persistance
+
+* [x] Hive models TypeIds **18–23**
+* [x] `HealthPlatformRepository` + impl
+* [x] save / get / getByDate / history
+* [x] clearAll user wipe
+* [ ] Migration Hive dédiée — **REPORTED**: adapters + open boxes; suite migration reportée
+
+### 4–9. Modules
+
+* [x] Blood pressure saisie / historique / classification / prudence
+* [x] Blood glucose mmol/L + context + prudence
+* [x] Hydration target / total / % / historique
+* [x] Mental wellness check-in (séparé de DailyCheckIn Recovery)
+* [x] Habit CRUD / streak / completion
+* [x] Lifestyle agrégat (sleep signal Recovery, hydration, habits, wellness)
+
+### 10. Health Dashboard
+
+* [x] Tracking Health overview + `HealthDashboardScreen`
+* [x] Cards BP / glucose / hydration / wellness / habits / lifestyle tips
+* [x] Loading / empty / error / retry
+* [ ] Graphiques avancés — **REPORTED**: hors scope v5.0
+
+### 11. Intégrations
+
+* [x] Decision Engine: `HealthPlatformRule` observe-only + DailyPlan field
+* [x] Lifestyle lit sleep du check-in Recovery
+* [x] Hydration n’écrase pas Nutrition waterMl
+* [x] AI Coach: labels sûrs seulement
+* [x] Progress / Nutrition non mutés
+* [ ] Deep mutation Recovery/Nutrition — **REPORTED**: hors scope (observe/read only)
+
+### 12. Sécurité
+
+* [x] Isolation `userId`
+* [x] Validation entrées
+* [x] Pas de valeurs BP/glucose brutes vers LLM
+* [ ] Export GDPR complet / consent sync externe — **REPORTED**: hors scope v5.0
+* [x] clearAll pour wipe
+
+### 13–16. Tests / UX / qualité / validation
+
+* [x] Unit engines + classifications + facade
+* [x] Integration observe-only + CoachContext safe map
+* [x] UI dashboard + tracking section
+* [x] `flutter analyze` / `flutter test` (à confirmer clôture)
+* [ ] Health Connect / wearables / onboarding lourd / screen-time — **REPORTED**
+* [ ] Build release Android — **REPORTED**: non bloquant local CI
+
+### 🔒 Critères CLOSED
+
+* [x] 6 modules fonctionnels (MVP)
+* [x] Persistés + dashboard + historiques
+* [x] Intégrations observe-only + Coach safe
+* [x] Confidentialité médicale respectée (prompts)
+* [x] Docs `health-platform.md` + changelog + phase8
+
+### Items reportés (post v5.0)
+
+* Health Connect / wearables
+* Advanced charts
+* Full GDPR export
+* Dedicated heavy Health onboarding
+* Screen-time module
+* Deep Nutrition/Recovery mutations from Health

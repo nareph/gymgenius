@@ -34,6 +34,15 @@ class CoachContext {
 
   final double decisionConfidence;
 
+  // Health Platform — safe labels only (no raw BP/glucose).
+  final int? hydrationPercent;
+  final int? habitsCompletionPercent;
+  final String? habitsStreakSummary;
+  final String? wellnessTrend;
+  final bool hasBpCaution;
+  final bool hasGlucoseCaution;
+  final String? healthPlatformCaution;
+
   const CoachContext({
     required this.userId,
     required this.now,
@@ -57,6 +66,13 @@ class CoachContext {
     this.healthPrimaryAction,
     this.healthReason,
     required this.decisionConfidence,
+    this.hydrationPercent,
+    this.habitsCompletionPercent,
+    this.habitsStreakSummary,
+    this.wellnessTrend,
+    this.hasBpCaution = false,
+    this.hasGlucoseCaution = false,
+    this.healthPlatformCaution,
   });
 
   bool get volumeWasReduced =>
@@ -89,6 +105,13 @@ class CoachContext {
       'healthPrimaryAction': healthPrimaryAction,
       'healthReason': healthReason,
       'decisionConfidence': decisionConfidence,
+      'hydrationPercent': hydrationPercent,
+      'habitsCompletionPercent': habitsCompletionPercent,
+      'habitsStreakSummary': habitsStreakSummary,
+      'wellnessTrend': wellnessTrend,
+      'hasBpCaution': hasBpCaution,
+      'hasGlucoseCaution': hasGlucoseCaution,
+      'healthPlatformCaution': healthPlatformCaution,
     };
   }
 }

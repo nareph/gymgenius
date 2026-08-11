@@ -5,6 +5,7 @@ import 'package:gymgenius/data/repositories/auth_repository_impl.dart';
 import 'package:gymgenius/data/repositories/health_repository_impl.dart';
 import 'package:gymgenius/data/repositories/nutrition_repository_impl.dart';
 import 'package:gymgenius/data/repositories/coach_repository_impl.dart';
+import 'package:gymgenius/data/repositories/health_platform_repository_impl.dart';
 import 'package:gymgenius/data/repositories/progress_repository_impl.dart';
 import 'package:gymgenius/data/repositories/recovery_repository_impl.dart';
 import 'package:gymgenius/data/repositories/tracking_repository_impl.dart';
@@ -15,6 +16,7 @@ import 'package:gymgenius/domain/repositories/auth_repository.dart';
 import 'package:gymgenius/domain/repositories/health_repository.dart';
 import 'package:gymgenius/domain/repositories/nutrition_repository.dart';
 import 'package:gymgenius/domain/repositories/coach_repository.dart';
+import 'package:gymgenius/domain/repositories/health_platform_repository.dart';
 import 'package:gymgenius/domain/repositories/progress_repository.dart';
 import 'package:gymgenius/domain/repositories/recovery_repository.dart';
 import 'package:gymgenius/domain/repositories/tracking_repository.dart';
@@ -28,10 +30,13 @@ import 'package:gymgenius/engines/decision_engine/rules/equipment_rule.dart';
 import 'package:gymgenius/engines/decision_engine/rules/injury_rule.dart';
 import 'package:gymgenius/engines/decision_engine/rules/nutrition/nutrition_plan_builder.dart';
 import 'package:gymgenius/engines/decision_engine/rules/nutrition/nutrition_rule.dart';
+import 'package:gymgenius/engines/decision_engine/rules/health_platform_rule.dart';
 import 'package:gymgenius/engines/decision_engine/rules/progress_rule.dart';
 import 'package:gymgenius/engines/decision_engine/rules/progression_rule.dart';
 import 'package:gymgenius/engines/decision_engine/rules/recovery_rule.dart';
 import 'package:gymgenius/engines/decision_engine/rules/safety_rule.dart';
+import 'package:gymgenius/engines/health_platform/health_platform_engine.dart';
+import 'package:gymgenius/presentation/viewmodels/health_platform_viewmodel.dart';
 import 'package:gymgenius/engines/decision_engine/services/conflict_resolver.dart';
 import 'package:gymgenius/engines/decision_engine/services/deload_service.dart';
 import 'package:gymgenius/engines/decision_engine/services/exercise_substitution_service.dart';
@@ -126,6 +131,17 @@ void setupDependencies() {
 
   getIt.registerLazySingleton<CoachRepository>(
     () => const CoachRepositoryImpl(),
+  );
+
+  getIt.registerLazySingleton<HealthPlatformEngine>(
+    () => const HealthPlatformEngine(),
+  );
+
+  getIt.registerLazySingleton<HealthPlatformRepository>(
+    () => HealthPlatformRepositoryImpl(
+      engine: getIt<HealthPlatformEngine>(),
+      recoveryRepository: getIt<RecoveryRepository>(),
+    ),
   );
 
   // ============================================================
@@ -235,6 +251,10 @@ void setupDependencies() {
     () => const ProgressRule(),
   );
 
+  getIt.registerLazySingleton<HealthPlatformRule>(
+    () => const HealthPlatformRule(),
+  );
+
   getIt.registerLazySingleton<RecoveryRule>(
     () => const RecoveryRule(),
   );
@@ -291,6 +311,7 @@ void setupDependencies() {
         getIt<ProgressionRule>(),
         getIt<EquipmentRule>(),
         getIt<ProgressRule>(),
+        getIt<HealthPlatformRule>(),
         getIt<NutritionRule>(),
       ],
     ),
@@ -340,6 +361,7 @@ void setupDependencies() {
       progressRepository: getIt<ProgressRepository>(),
       aiCoachEngine: getIt<AICoachEngine>(),
       coachRepository: getIt<CoachRepository>(),
+      healthPlatformRepository: getIt<HealthPlatformRepository>(),
     ),
   );
 
@@ -352,12 +374,21 @@ void setupDependencies() {
     ),
   );
 
+  getIt.registerFactory<HealthPlatformViewModel>(
+    () => HealthPlatformViewModel(
+      repository: getIt<HealthPlatformRepository>(),
+      userRepository: getIt<UserRepository>(),
+      healthRepository: getIt<HealthRepository>(),
+    ),
+  );
+
   getIt.registerFactory<TrackingViewModel>(
     () => TrackingViewModel(
       workoutRepository: getIt<WorkoutRepository>(),
       trackingRepository: getIt<TrackingRepository>(),
       userRepository: getIt<UserRepository>(),
       progressRepository: getIt<ProgressRepository>(),
+      healthPlatformRepository: getIt<HealthPlatformRepository>(),
     ),
   );
 
