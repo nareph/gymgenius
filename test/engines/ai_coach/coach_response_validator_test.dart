@@ -5,17 +5,25 @@ import 'package:gymgenius/domain/enums/workout_adjustment.dart';
 import 'package:gymgenius/engines/ai_coach/models/coach_context.dart';
 import 'package:gymgenius/engines/ai_coach/validators/coach_response_validator.dart';
 
-CoachContext _ctx({required bool volumeReduced}) {
+CoachContext _ctx({
+  required bool volumeReduced,
+  bool restDay = false,
+  String? adjustment,
+}) {
+  final resolvedAdjustment = adjustment ??
+      (volumeReduced
+          ? WorkoutAdjustment.reduceVolume.value
+          : restDay
+              ? WorkoutAdjustment.restDay.value
+              : WorkoutAdjustment.none.value);
   return CoachContext(
     userId: 'u1',
     now: DateTime(2026, 8, 11),
-    isRestDay: false,
-    isAdapted: volumeReduced,
-    workoutAdjustment: volumeReduced
-        ? WorkoutAdjustment.reduceVolume.value
-        : WorkoutAdjustment.none.value,
+    isRestDay: restDay,
+    isAdapted: volumeReduced || restDay,
+    workoutAdjustment: resolvedAdjustment,
     decisionReasons: const ['low_recovery'],
-    plannedExerciseCount: 2,
+    plannedExerciseCount: restDay ? 0 : 2,
     volumeMultiplier: volumeReduced ? 0.7 : 1.0,
     decisionConfidence: 0.9,
   );
@@ -113,5 +121,76 @@ void main() {
     expect(fb.message, 'Plain advice');
     expect(fb.usedFallback, isTrue);
     expect(fb.recommendations.first.actionTag, 'follow_reduced_volume');
+  });
+
+  test('strips push_harder on rest days', () {
+    final raw = jsonEncode({
+      'message': 'Rest today.',
+      'recommendations': [
+        {
+          'category': 'workout',
+          'text': 'Push harder anyway',
+          'reason': 'Bad advice',
+          'alignsWithDecision': false,
+          'actionTag': 'push_harder',
+        },
+        {
+          'category': 'recovery',
+          'text': 'Sleep and hydrate',
+          'reason': 'DE',
+          'alignsWithDecision': true,
+          'actionTag': 'rest',
+        },
+      ],
+    });
+
+    final parsed = validator.tryParse(
+      raw: raw,
+      context: _ctx(volumeReduced: false, restDay: true),
+      providerId: 'test',
+      promptVersion: 'v1',
+    );
+
+    expect(parsed, isNotNull);
+    expect(parsed!.recommendations, hasLength(1));
+    expect(parsed.recommendations.first.actionTag, 'rest');
+  });
+
+  test('strips increase_volume on recovery sessions', () {
+    final raw = jsonEncode({
+      'message': 'Keep it light.',
+      'recommendations': [
+        {
+          'category': 'workout',
+          'text': 'Increase volume',
+          'reason': 'Bad',
+          'alignsWithDecision': true,
+          'actionTag': 'increase_volume',
+        },
+      ],
+    });
+
+    final parsed = validator.tryParse(
+      raw: raw,
+      context: _ctx(
+        volumeReduced: false,
+        adjustment: WorkoutAdjustment.recoverySession.value,
+      ),
+      providerId: 'test',
+      promptVersion: 'v1',
+    );
+
+    expect(parsed, isNotNull);
+    expect(parsed!.recommendations, isEmpty);
+  });
+
+  test('textFallback uses rest tag on rest days', () {
+    final fb = validator.textFallback(
+      message: 'Rest',
+      context: _ctx(volumeReduced: false, restDay: true),
+      providerId: 'test',
+      promptVersion: 'v1',
+    );
+    expect(fb.recommendations.first.actionTag, 'rest');
   });
 }

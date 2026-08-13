@@ -23,6 +23,7 @@ import 'package:gymgenius/domain/enums/workout_adjustment.dart';
 import 'package:gymgenius/engines/decision_engine/Progression/program_progress_service.dart';
 import 'package:gymgenius/engines/decision_engine/builders/today_workout_builder.dart';
 import 'package:gymgenius/engines/decision_engine/decision_engine.dart';
+import 'package:gymgenius/engines/decision_engine/policies/program_refresh_policy.dart';
 import 'package:gymgenius/engines/decision_engine/rules/deload_rule.dart';
 import 'package:gymgenius/engines/decision_engine/rules/equipment_rule.dart';
 import 'package:gymgenius/engines/decision_engine/rules/injury_rule.dart';
@@ -250,6 +251,20 @@ void main() {
       expect(plan.progressSnapshot!.anyPlateauDetected, isTrue);
       expect(plan.finalDecision.requiresAdaptation, isFalse);
       expect(plan.healthDecision!.primaryAction, 'monitor_plateau');
+      expect(plan.shouldRefreshProgram, isFalse);
+    });
+
+    test('expired program asks for refresh without adapting today', () {
+      final program = _programWithTodayWorkout(now).copyWith(
+        expiresAt: now.subtract(const Duration(days: 1)),
+      );
+      final profile = buildTestProfile();
+
+      final plan = engine.buildDailyPlan(program, profile, now: now);
+
+      expect(plan.shouldRefreshProgram, isTrue);
+      expect(plan.programRefresh!.reason, ProgramRefreshReason.expired);
+      expect(plan.finalDecision.requiresAdaptation, isFalse);
     });
 
     test('missing check-in and progress still produces DailyPlan', () {

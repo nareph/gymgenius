@@ -28,11 +28,10 @@ class WorkoutFrequencyPlanner {
 
     if (preferredSelected) {
       final selected = preferredDays.length;
-
-      if (selected >= minDays && selected <= maxDays) {
-        workoutDays = selected;
-        useSpecifiedDays = true;
-      }
+      workoutDays = selected.clamp(minDays, maxDays);
+      useSpecifiedDays = selected >= minDays && selected <= maxDays;
+    } else {
+      workoutDays = minDays;
     }
 
     if (workoutDays < 1) {

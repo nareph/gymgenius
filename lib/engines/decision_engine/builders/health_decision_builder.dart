@@ -5,6 +5,7 @@ import 'package:gymgenius/domain/enums/decision_reason.dart';
 import 'package:gymgenius/domain/enums/workout_adjustment.dart';
 import 'package:gymgenius/engines/decision_engine/models/health_decision.dart';
 import 'package:gymgenius/engines/recovery_engine/recovery_thresholds.dart';
+import 'package:gymgenius/engines/decision_engine/policies/program_refresh_policy.dart';
 
 /// Builds a deterministic [HealthDecision] from today's decision outputs.
 ///
@@ -17,6 +18,7 @@ class HealthDecisionBuilder {
     required WorkoutDecision finalDecision,
     RecoveryStatus? recoveryStatus,
     ProgressSnapshot? progressSnapshot,
+    ProgramRefreshDecision? programRefresh,
   }) {
     if (finalDecision.adjustment == WorkoutAdjustment.restDay ||
         finalDecision.adjustment == WorkoutAdjustment.skipWorkout) {
@@ -40,6 +42,20 @@ class HealthDecisionBuilder {
       );
     }
 
+    if (programRefresh?.shouldRegenerate ?? false) {
+      return HealthDecision(
+        primaryAction: 'refresh_program',
+        reason: programRefresh!.message,
+        confidence: 0.85,
+        generatedAt: generatedAt,
+        reasons: [
+          ...finalDecision.reasons,
+          if (programRefresh.reason == ProgramRefreshReason.plateau)
+            DecisionReason.plateauDetected,
+        ],
+      );
+    }
+
     final readiness = recoveryStatus?.readinessScore;
     if (readiness != null && readiness < RecoveryThresholds.mildReductionMin) {
       return HealthDecision(
@@ -59,7 +75,7 @@ class HealthDecisionBuilder {
       return HealthDecision(
         primaryAction: 'monitor_plateau',
         reason:
-            'A plateau was detected. Keep training consistently; ProgressRule does not auto-change the program yet.',
+            'A plateau was detected. Keep training consistently; a program refresh is considered after two weeks of data.',
         confidence: 0.7,
         generatedAt: generatedAt,
         reasons: [

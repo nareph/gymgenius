@@ -2,6 +2,10 @@
 
 part of 'meal_hive_model.dart';
 
+// **************************************************************************
+// TypeAdapterGenerator
+// **************************************************************************
+
 class MealHiveModelAdapter extends TypeAdapter<MealHiveModel> {
   @override
   final int typeId = 12;

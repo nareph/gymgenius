@@ -63,6 +63,11 @@ class HealthProfileHiveModel extends HiveObject {
   @HiveField(17)
   List<String>? answeredQuestionIds;
 
+  /// Muscle groups to avoid. Nullable so profiles saved before this field
+  /// still deserialize (Hive leaves it null; mapper treats null as empty).
+  @HiveField(18)
+  List<String>? avoidedMuscles;
+
   HealthProfileHiveModel({
     required this.userId,
     required this.age,
@@ -82,5 +87,6 @@ class HealthProfileHiveModel extends HiveObject {
     required this.createdAt,
     required this.updatedAt,
     this.answeredQuestionIds,
+    this.avoidedMuscles,
   });
 }

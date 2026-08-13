@@ -69,4 +69,23 @@ void main() {
     );
     expect(response.message.toLowerCase(), contains('low_recovery'));
   });
+
+  test('chat plateau copy no longer says the program never refreshes', () {
+    final response = local.buildChat(
+      context: CoachContext(
+        userId: 'u1',
+        now: DateTime(2026, 8, 11),
+        isRestDay: false,
+        isAdapted: false,
+        workoutAdjustment: WorkoutAdjustment.none.value,
+        decisionReasons: const [],
+        plannedExerciseCount: 2,
+        weightPlateau: true,
+        decisionConfidence: 0.8,
+      ),
+      question: 'Am I in a plateau?',
+    );
+    expect(response.message.toLowerCase(), contains('plateau'));
+    expect(response.message.toLowerCase(), isNot(contains('does not auto-change')));
+  });
 }

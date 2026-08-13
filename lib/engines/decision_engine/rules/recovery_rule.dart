@@ -2,6 +2,7 @@ import 'package:gymgenius/domain/entities/workout_decision.dart';
 import 'package:gymgenius/domain/enums/decision_reason.dart';
 import 'package:gymgenius/domain/enums/workout_adjustment.dart';
 import 'package:gymgenius/engines/recovery_engine/recovery_thresholds.dart';
+import 'package:gymgenius/engines/workout_engine/shared/profile_coherence.dart';
 
 import '../models/decision_context.dart';
 import 'decision_rule.dart';
@@ -12,6 +13,8 @@ import 'decision_rule.dart';
 /// • Consume [DecisionContext.recoveryStatus] produced by RecoveryEngine.
 /// • Propose volume reduction using the **same** multiplier as the engine
 ///   ([RecoveryStatus.volumeMultiplier] backed by [RecoveryThresholds]).
+/// • Soften that cut for very/extra-active profiles so generation volume
+///   and daily recovery do not stack a full penalty.
 /// • Never overrides safety or injury rules (lower priority via ConflictResolver).
 /// • Never forces a rest day in Phase 4 — only volume reduction.
 class RecoveryRule implements DecisionRule {
@@ -31,7 +34,12 @@ class RecoveryRule implements DecisionRule {
         ? recovery.volumeMultiplier
         : RecoveryThresholds.volumeMultiplier(readiness);
 
-    if (volumeMult >= RecoveryThresholds.fullVolume) {
+    final damped = ProfileCoherence.dampenRecoveryVolumeMultiplier(
+      volumeMultiplier: volumeMult,
+      activityLevel: context.healthProfile.training.activityLevel,
+    );
+
+    if (damped >= RecoveryThresholds.fullVolume) {
       return WorkoutDecision.keepPlannedWorkout(
         confidence: _confidence(readiness),
       );
@@ -45,7 +53,7 @@ class RecoveryRule implements DecisionRule {
         DecisionReason.lowRecovery,
         DecisionReason.scheduledWorkout,
       ],
-      volumeMultiplier: volumeMult,
+      volumeMultiplier: damped,
     );
   }
 

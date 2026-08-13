@@ -60,12 +60,15 @@ import 'package:gymgenius/engines/progress_engine/progress_engine.dart';
 import 'package:gymgenius/engines/recovery_engine/recovery_engine.dart';
 import 'package:gymgenius/presentation/viewmodels/coach_viewmodel.dart';
 
+import 'package:gymgenius/core/services/workout_timer_notification_service.dart';
+import 'package:gymgenius/data/repositories/workout_session_settings_repository.dart';
 import 'package:gymgenius/presentation/blocs/auth/auth_bloc.dart';
 import 'package:gymgenius/presentation/blocs/exercise_library/exercise_library_bloc.dart';
 import 'package:gymgenius/presentation/blocs/login/login_bloc.dart';
 import 'package:gymgenius/presentation/blocs/signup/signup_bloc.dart';
 
 import 'package:gymgenius/presentation/providers/workout_session_manager.dart';
+import 'package:gymgenius/presentation/providers/workout_session_settings_controller.dart';
 
 import 'package:gymgenius/presentation/viewmodels/home_viewmodel.dart';
 import 'package:gymgenius/presentation/viewmodels/profile_viewmodel.dart';
@@ -318,14 +321,29 @@ void setupDependencies() {
   );
 
   // ============================================================
-  // Providers (ChangeNotifier)
+  // Workout session services
   // ============================================================
+  getIt.registerLazySingleton<WorkoutTimerNotificationService>(
+    () => WorkoutTimerNotificationService(),
+  );
+  getIt.registerLazySingleton<WorkoutSessionSettingsRepository>(
+    () => WorkoutSessionSettingsRepository(),
+  );
   getIt.registerLazySingleton<WorkoutSessionManager>(
-    () => WorkoutSessionManager(),
+    () => WorkoutSessionManager(
+      notificationService: getIt<WorkoutTimerNotificationService>(),
+    ),
+  );
+  getIt.registerLazySingleton<WorkoutSessionSettingsController>(
+    () => WorkoutSessionSettingsController(
+      repository: getIt<WorkoutSessionSettingsRepository>(),
+      sessionManager: getIt<WorkoutSessionManager>(),
+    ),
   );
 
   // ============================================================
-  // BLoCs
+  // Providers (ChangeNotifier)
+  // ============================================================
   // ============================================================
   getIt.registerFactory<AuthBloc>(
     () => AuthBloc(

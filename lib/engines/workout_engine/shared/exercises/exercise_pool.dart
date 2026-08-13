@@ -71,6 +71,7 @@ class ExercisePool {
     required List<MuscleGroup> targetMuscles,
     required List<EquipmentType> allowedEquipment,
     Set<String> excludeNames = const {},
+    List<MuscleGroup> excludeMuscles = const [],
   }) {
     ExercisePoolEntry? bestCandidate;
     var bestScore = -1;
@@ -79,6 +80,10 @@ class ExercisePool {
       for (final entry in entries) {
         if (!allowedEquipment.contains(entry.equipmentType)) continue;
         if (excludeNames.contains(entry.name)) continue;
+        if (excludeMuscles.isNotEmpty &&
+            entry.targetMuscles.any(excludeMuscles.contains)) {
+          continue;
+        }
 
         final score = entry.targetMuscles.where(targetMuscles.contains).length;
         if (score == 0) continue;

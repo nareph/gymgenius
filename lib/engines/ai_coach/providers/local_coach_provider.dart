@@ -5,6 +5,7 @@ import 'package:gymgenius/engines/ai_coach/models/coach_response.dart';
 import 'package:gymgenius/engines/ai_coach/prompts/coach_prompts.dart';
 import 'package:gymgenius/engines/ai_coach/providers/ai_provider.dart';
 import 'package:gymgenius/engines/ai_coach/providers/coach_request_options.dart';
+import 'package:gymgenius/engines/ai_coach/validators/coach_response_validator.dart';
 
 /// Deterministic offline coach — templates from [CoachContext], no network.
 class LocalCoachProvider implements AIProvider {
@@ -103,9 +104,7 @@ class LocalCoachProvider implements AIProvider {
                   : 'Complete the planned session as written.',
           reason: context.healthReason ?? 'Decision Engine plan',
           alignsWithDecision: true,
-          actionTag: context.volumeWasReduced
-              ? 'follow_reduced_volume'
-              : 'follow_plan',
+          actionTag: CoachResponseValidator.fallbackActionTag(context),
         ),
       ],
       providerId: id,
@@ -192,9 +191,12 @@ class LocalCoachProvider implements AIProvider {
               '${context.volumeWasReduced ? ' — volume was reduced accordingly' : ''}.'
           : 'No recovery check-in is available for today.';
     } else if (q.contains('progress') || q.contains('plateau')) {
-      if (context.weightPlateau || context.strengthPlateau) {
+      if (context.healthPrimaryAction == 'refresh_program') {
         message =
-            'A plateau was detected. Stay consistent; the Progress Rule does not auto-change your program.';
+            'A plateau or low adherence was detected. Your program is due for a refresh — follow the new plan.';
+      } else if (context.weightPlateau || context.strengthPlateau) {
+        message =
+            'A plateau was detected. Stay consistent; a program refresh is considered after two weeks of data.';
       } else if (context.consistencyScore != null) {
         message = 'Consistency is at ${context.consistencyScore}%.';
       } else {

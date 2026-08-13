@@ -6,6 +6,7 @@ import 'package:gymgenius/domain/enums/progress_period.dart';
 import 'package:gymgenius/domain/enums/recommended_intensity.dart';
 import 'package:gymgenius/domain/enums/workout_adjustment.dart';
 import 'package:gymgenius/engines/decision_engine/builders/health_decision_builder.dart';
+import 'package:gymgenius/engines/decision_engine/policies/program_refresh_policy.dart';
 
 void main() {
   const builder = HealthDecisionBuilder();
@@ -72,6 +73,22 @@ void main() {
       );
 
       expect(decision.primaryAction, 'monitor_plateau');
+      expect(decision.reason, contains('two weeks'));
+    });
+
+    test('recommends program refresh when policy says so', () {
+      final decision = builder.build(
+        generatedAt: now,
+        finalDecision: WorkoutDecision.keepPlannedWorkout(),
+        programRefresh: const ProgramRefreshDecision(
+          shouldRegenerate: true,
+          reason: ProgramRefreshReason.expired,
+          message: 'This program has expired. A new block will be generated.',
+        ),
+      );
+
+      expect(decision.primaryAction, 'refresh_program');
+      expect(decision.displayAction, 'Refresh training program');
     });
 
     test('fallback without check-in', () {

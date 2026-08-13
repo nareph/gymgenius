@@ -124,6 +124,25 @@ void main() {
       expect(training.targetCalories, greaterThan(rest.targetCalories));
       expect(rest.trainingDayBonus, 0);
     });
+
+    test('trainingLoad scales the training bonus', () {
+      final profile = buildTestProfile();
+      final full = estimator.estimate(
+        profile: profile,
+        isTrainingDay: true,
+        trainingLoad: 1.0,
+      );
+      final reduced = estimator.estimate(
+        profile: profile,
+        isTrainingDay: true,
+        trainingLoad: 0.5,
+      );
+      final rest = estimator.estimate(profile: profile, isTrainingDay: false);
+
+      expect(reduced.trainingDayBonus, (full.trainingDayBonus * 0.5).round());
+      expect(reduced.targetCalories, lessThan(full.targetCalories));
+      expect(reduced.targetCalories, greaterThan(rest.targetCalories));
+    });
   });
 
   group('MacroCalculator', () {

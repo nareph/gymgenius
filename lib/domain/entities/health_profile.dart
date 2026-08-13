@@ -83,6 +83,7 @@ class HealthProfile {
   List<WorkoutDay> get workoutDays => training.preferredDays;
   List<EquipmentType> get equipment => training.equipment;
   List<MuscleGroup> get focusAreas => training.focusAreas;
+  List<MuscleGroup> get avoidedMuscles => training.avoidedMuscles;
 
   String get country => lifestyle.country;
 

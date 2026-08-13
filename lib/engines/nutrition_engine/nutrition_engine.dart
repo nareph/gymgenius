@@ -44,6 +44,7 @@ class NutritionEngine {
     required bool isTrainingDay,
     DateTime? date,
     bool persist = true,
+    double trainingLoad = 1.0,
   }) async {
     final planDate = date ?? DateTime.now();
     final day = DateTime(planDate.year, planDate.month, planDate.day);
@@ -52,6 +53,7 @@ class NutritionEngine {
       profile: profile,
       isTrainingDay: isTrainingDay,
       date: day,
+      trainingLoad: trainingLoad,
     );
 
     if (persist && _nutritionRepository != null) {
@@ -104,6 +106,7 @@ class NutritionEngine {
     required HealthProfile profile,
     required bool isTrainingDay,
     DateTime? date,
+    double trainingLoad = 1.0,
   }) {
     final planDate = date ?? DateTime.now();
     final day = DateTime(planDate.year, planDate.month, planDate.day);
@@ -111,6 +114,7 @@ class NutritionEngine {
     final calorieEstimate = _calorieEstimator.estimate(
       profile: profile,
       isTrainingDay: isTrainingDay,
+      trainingLoad: trainingLoad,
     );
 
     final macros = _macroCalculator.calculate(

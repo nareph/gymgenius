@@ -5,6 +5,7 @@ import 'package:gymgenius/domain/entities/exercise.dart';
 import 'package:gymgenius/domain/entities/logged_exercise.dart';
 import 'package:gymgenius/presentation/providers/workout_session_manager.dart';
 import 'package:gymgenius/presentation/viewmodels/exercise_logging_viewmodel.dart';
+import 'package:gymgenius/presentation/widgets/workout/workout_rest_timer_controls.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -119,6 +120,9 @@ Widget _buildRestAfterCompletionView(
   bool isLastExercise,
 ) {
   final viewModel = context.read<ExerciseLoggingViewModel>();
+  final theme = Theme.of(context);
+  final urgent = manager.restTimeRemainingSeconds > 0 &&
+      manager.restTimeRemainingSeconds <= 3;
 
   return Scaffold(
     appBar: AppBar(title: Text(exerciseName), automaticallyImplyLeading: false),
@@ -144,58 +148,41 @@ Widget _buildRestAfterCompletionView(
             const SizedBox(height: 24),
             Card(
               margin: const EdgeInsets.symmetric(vertical: 16.0),
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              color: urgent
+                  ? theme.colorScheme.errorContainer.withAlpha(120)
+                  : theme.colorScheme.surfaceContainerHighest,
               child: Padding(
                 padding: const EdgeInsets.all(20.0),
                 child: Column(
                   children: [
                     Text(
                       isLastExercise
-                          ? "REST BEFORE FINISHING"
-                          : "REST BEFORE NEXT EXERCISE",
-                      style: const TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.bold),
+                          ? (urgent
+                              ? "REST — FINISH STRONG"
+                              : "REST BEFORE FINISHING")
+                          : (urgent
+                              ? "REST — NEXT EXERCISE SOON"
+                              : "REST BEFORE NEXT EXERCISE"),
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: urgent ? Colors.orange.shade900 : null),
                     ),
                     const SizedBox(height: 12),
-                    Text(
-                      viewModel
-                          .formatDuration(manager.restTimeRemainingSeconds),
-                      style: Theme.of(context).textTheme.displayMedium,
-                    ),
-                    const SizedBox(height: 16),
-                    LinearProgressIndicator(
-                      value: manager.currentRestTotalSeconds > 0
-                          ? manager.restTimeRemainingSeconds /
-                              manager.currentRestTotalSeconds
-                          : 0,
-                    ),
-                    const SizedBox(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        TextButton(
-                          onPressed: manager.skipRest,
-                          child: const Text(
-                            "Skip Rest",
-                            style: TextStyle(fontSize: 16),
-                          ),
-                        ),
-                        ElevatedButton.icon(
-                          icon: Icon(
-                            isLastExercise
-                                ? Icons.celebration_rounded
-                                : Icons.arrow_forward_ios_rounded,
-                            size: 18,
-                          ),
-                          label: Text(isLastExercise
-                              ? "Finish Workout"
-                              : "Continue Workout"),
-                          onPressed: () {
-                            manager.skipRest();
-                            Navigator.pop(context);
-                          },
-                        ),
-                      ],
+                    WorkoutRestTimerControls(
+                      manager: manager,
+                      formatDuration: viewModel.formatDuration,
+                      showSkip: true,
+                      onContinue: () {
+                        manager.skipRest();
+                        Navigator.pop(context);
+                      },
+                      continueLabel: isLastExercise
+                          ? 'Finish Workout'
+                          : 'Continue Workout',
+                      continueIcon: isLastExercise
+                          ? Icons.celebration_rounded
+                          : Icons.arrow_forward_ios_rounded,
                     ),
                   ],
                 ),
@@ -317,37 +304,36 @@ class _RestTimerView extends StatelessWidget {
 
   const _RestTimerView({required this.manager});
 
+  bool _isUrgent(int seconds) => seconds > 0 && seconds <= 3;
+
   @override
   Widget build(BuildContext context) {
     final viewModel = context.read<ExerciseLoggingViewModel>();
+    final theme = Theme.of(context);
+    final urgent = _isUrgent(manager.restTimeRemainingSeconds);
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 16.0),
-      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      color: urgent
+          ? theme.colorScheme.errorContainer.withAlpha(120)
+          : theme.colorScheme.surfaceContainerHighest,
       child: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
           children: [
-            const Text(
-              "REST",
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            Text(
+              urgent ? 'REST — GET READY' : 'REST',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: urgent ? Colors.orange.shade900 : null,
+              ),
             ),
             const SizedBox(height: 12),
-            Text(
-              viewModel.formatDuration(manager.restTimeRemainingSeconds),
-              style: Theme.of(context).textTheme.displayMedium,
-            ),
-            const SizedBox(height: 16),
-            LinearProgressIndicator(
-              value: manager.currentRestTotalSeconds > 0
-                  ? manager.restTimeRemainingSeconds /
-                      manager.currentRestTotalSeconds
-                  : 0,
-            ),
-            const SizedBox(height: 20),
-            TextButton(
-              onPressed: manager.skipRest,
-              child: const Text("Skip Rest", style: TextStyle(fontSize: 16)),
+            WorkoutRestTimerControls(
+              manager: manager,
+              formatDuration: viewModel.formatDuration,
+              showSkip: true,
             ),
           ],
         ),
@@ -357,9 +343,17 @@ class _RestTimerView extends StatelessWidget {
 }
 
 class _TimedExerciseForm extends StatelessWidget {
+  bool _isUrgent(int seconds) => seconds > 0 && seconds <= 3;
+
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<ExerciseLoggingViewModel>();
+    final theme = Theme.of(context);
+    final urgent = viewModel.isExerciseTimerRunning &&
+        _isUrgent(viewModel.currentExerciseRunDownSeconds);
+    final timerColor = viewModel.isExerciseTimerRunning
+        ? (urgent ? Colors.red : theme.colorScheme.primary)
+        : theme.colorScheme.onSurface;
 
     return Column(
       children: [
@@ -438,12 +432,8 @@ class _TimedExerciseForm extends StatelessWidget {
                 Text(
                   viewModel
                       .formatDuration(viewModel.currentExerciseRunDownSeconds),
-                  style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                        color: viewModel.isExerciseTimerRunning
-                            ? (viewModel.currentExerciseRunDownSeconds <= 10
-                                ? Colors.red
-                                : Theme.of(context).colorScheme.primary)
-                            : Theme.of(context).colorScheme.onSurface,
+                  style: theme.textTheme.displayLarge?.copyWith(
+                        color: timerColor,
                         fontWeight: FontWeight.bold,
                         fontSize: 64,
                       ),
@@ -457,10 +447,8 @@ class _TimedExerciseForm extends StatelessWidget {
                                 ? viewModel.targetDurationSeconds.toDouble()
                                 : 1.0)
                         : 0,
-                    color: viewModel.currentExerciseRunDownSeconds <= 10
-                        ? Colors.red
-                        : Theme.of(context).colorScheme.primary,
-                    minHeight: 8,
+                    color: timerColor,
+                    minHeight: urgent ? 10 : 8,
                   ),
                 if (viewModel.isExerciseTimerRunning ||
                     viewModel.actualDurationCompleted > 0)
@@ -568,7 +556,6 @@ class _RepBasedExerciseForm extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final viewModel = context.read<ExerciseLoggingViewModel>();
-    final manager = context.watch<WorkoutSessionManager>();
 
     return Column(
       children: [
@@ -609,14 +596,6 @@ class _RepBasedExerciseForm extends StatelessWidget {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text(error), backgroundColor: Colors.red),
               );
-            } else {
-              final currentLoggedData = manager.currentLoggedExerciseData;
-              if (currentLoggedData != null &&
-                  currentLoggedData.sets.length >= viewModel.exercise.sets) {
-                manager.startRestTimer(viewModel.exercise.restSeconds);
-              } else {
-                manager.startRestTimer(viewModel.exercise.restSeconds);
-              }
             }
           },
         ),

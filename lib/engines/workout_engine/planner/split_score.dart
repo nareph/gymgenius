@@ -1,5 +1,8 @@
+import 'package:gymgenius/domain/enums/fitness_goal.dart';
 import 'package:gymgenius/domain/enums/muscle_group.dart';
 import 'package:gymgenius/engines/workout_engine/models/muscle_split.dart';
+
+import '../shared/profile_coherence.dart';
 
 /// Represents the evaluation of a candidate split.
 ///
@@ -50,6 +53,8 @@ class SplitScore implements Comparable<SplitScore> {
     required MuscleSplit split,
     required List<MuscleGroup> focusMuscles,
     List<MuscleSplit> selectedSplits = const [],
+    FitnessGoal? goal,
+    int workoutDays = 3,
   }) {
     final coverage = split.muscles.where(focusMuscles.contains).length;
 
@@ -60,8 +65,18 @@ class SplitScore implements Comparable<SplitScore> {
       },
     );
 
-    final score =
-        (coverage * 10.0) - (overlap * 2.0) - (split.recoveryCost * 0.5);
+    final goalBonus = goal == null
+        ? 0.0
+        : ProfileCoherence.goalSplitBonus(
+            goal: goal,
+            split: split,
+            workoutDays: workoutDays,
+          );
+
+    final score = (coverage * 10.0) -
+        (overlap * 2.0) -
+        (split.recoveryCost * 0.5) +
+        goalBonus;
 
     return SplitScore(
       split: split,

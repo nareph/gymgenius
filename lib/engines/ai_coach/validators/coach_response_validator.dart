@@ -13,12 +13,14 @@ class CoachResponseValidator {
     JsonRepairService? jsonRepair,
   }) : _jsonRepair = jsonRepair ?? JsonRepairService();
 
-  /// Forbidden action tags when volume was reduced by Decision Engine.
-  static const forbiddenWhenVolumeReduced = {
+  /// Forbidden action tags when the Decision Engine reduced load or prescribed rest.
+  static const forbiddenWhenProtective = {
     'increase_volume',
     'increase_intensity',
     'push_harder',
     'add_sets',
+    'skip_rest',
+    'train_harder',
   };
 
   CoachResponse? tryParse({
@@ -64,15 +66,21 @@ class CoachResponseValidator {
   }
 
   CoachResponse _applyGuardrails(CoachResponse response, CoachContext context) {
-    if (!context.volumeWasReduced) return response;
+    if (!context.isProtectiveDay) return response;
 
     final filtered = response.recommendations.where((r) {
+      if (!r.alignsWithDecision &&
+          r.category == CoachRecommendationCategory.workout) {
+        return false;
+      }
       final tag = r.actionTag?.toLowerCase() ?? '';
       final text = r.text.toLowerCase();
-      if (forbiddenWhenVolumeReduced.contains(tag)) return false;
+      if (forbiddenWhenProtective.contains(tag)) return false;
       if (text.contains('increase volume') ||
           text.contains('add more sets') ||
-          text.contains('train harder')) {
+          text.contains('train harder') ||
+          text.contains('push harder') ||
+          text.contains('skip rest')) {
         return false;
       }
       return true;
@@ -102,10 +110,7 @@ class CoachResponseValidator {
               : 'Complete your planned session.',
           reason: 'Aligned with Decision Engine',
           alignsWithDecision: true,
-          actionTag: context.workoutAdjustment ==
-                  WorkoutAdjustment.reduceVolume.value
-              ? 'follow_reduced_volume'
-              : 'follow_plan',
+          actionTag: fallbackActionTag(context),
         ),
       ],
       providerId: providerId,
@@ -113,5 +118,19 @@ class CoachResponseValidator {
       generatedAt: generatedAt ?? DateTime.now(),
       usedFallback: true,
     );
+  }
+
+  static String fallbackActionTag(CoachContext context) {
+    if (context.isRestDay ||
+        context.workoutAdjustment == WorkoutAdjustment.restDay.value ||
+        context.workoutAdjustment == WorkoutAdjustment.skipWorkout.value) {
+      return 'rest';
+    }
+    if (context.workoutAdjustment ==
+        WorkoutAdjustment.recoverySession.value) {
+      return 'follow_recovery';
+    }
+    if (context.volumeWasReduced) return 'follow_reduced_volume';
+    return 'follow_plan';
   }
 }

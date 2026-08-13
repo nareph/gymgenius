@@ -105,4 +105,38 @@ const List<ExercisePoolEntry> pullResistanceBandsExercises = [
         '2. Pull the band down towards your chest, squeezing lats.\n'
         '3. Return with control.',
   ),
+  ExercisePoolEntry(
+    id: 'pull_band_single_arm_row',
+    name: 'Band Single-Arm Row',
+    category: ExerciseCategory.compound,
+    difficulty: ExerciseDifficulty.beginner,
+    equipmentType: EquipmentType.resistanceBands,
+    targetMuscles: [MuscleGroup.back, MuscleGroup.biceps],
+    secondaryMuscles: [MuscleGroup.shoulders],
+    usesWeight: true,
+    movementPattern: MovementPattern.pull,
+    mechanics: Mechanics.openChain,
+    forceType: ForceType.pull,
+    laterality: Laterality.unilateral,
+    planeOfMotion: PlaneOfMotion.sagittal,
+    description:
+        '**Target: Back, Biceps**\n\n1. Anchor the band at chest height.\n2. Pull one handle to your hip while keeping torso stable.\n3. Alternate or complete all reps on one side.',
+  ),
+  ExercisePoolEntry(
+    id: 'pull_band_straight_arm_pulldown',
+    name: 'Band Straight-Arm Pulldown',
+    category: ExerciseCategory.isolation,
+    difficulty: ExerciseDifficulty.intermediate,
+    equipmentType: EquipmentType.resistanceBands,
+    targetMuscles: [MuscleGroup.back],
+    secondaryMuscles: [MuscleGroup.triceps],
+    usesWeight: true,
+    movementPattern: MovementPattern.pull,
+    mechanics: Mechanics.openChain,
+    forceType: ForceType.pull,
+    laterality: Laterality.bilateral,
+    planeOfMotion: PlaneOfMotion.sagittal,
+    description:
+        '**Target: Lats**\n\n1. Anchor the band overhead.\n2. With nearly straight arms, pull the band down to your thighs.\n3. Return with control.',
+  ),
 ];

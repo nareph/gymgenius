@@ -9,7 +9,7 @@ Version 3.0
 
 The Workout Engine is responsible for generating, adapting and optimizing workout routines.
 
-Its objective is to create training programs that maximize long-term progress while respecting the user's profile, recovery status and training history.
+Its objective is to create training programs that maximize long-term progress while respecting the user's **HealthProfile** (the single source of truth for generation). Daily recovery and progress signals are applied by the Decision Engine, not at initial generation.
 
 The engine operates entirely through deterministic business rules.
 
@@ -51,39 +51,40 @@ Those responsibilities belong to other engines.
 
 # 4. Inputs
 
-The engine consumes structured data from multiple sources.
+Inputs are split by **when** they are used. Recovery and daily progress never feed *initial* program generation.
 
-## User Profile
+## At creation (`generateProgram`)
 
-- age
-- sex
-- height
-- weight
+Consumed from **HealthProfile** only:
+
+- age, sex, height, weight
 - goal
 - experience level
+- activity level (session volume offset; Nutrition uses the same field for TDEE)
 - available equipment
-- medical restrictions
-- preferred training days
+- avoided muscles / medical restrictions on the profile
+- preferred training days and frequency
 - preferred session duration
+- focus areas (or goal-based defaults when empty)
 
----
+## At regeneration (`regenerateProgram`)
 
-## Progress Data
+Same profile contract as creation, plus:
 
-- previous training programs
-- completed workouts
-- missed workouts
-- personal records
-- training consistency
+- previous training program (structure to keep or replace)
+- user regeneration options (equipment, focus, avoid list, intensity)
+- **ProgramRefreshPolicy** (Decision Engine): expired program, plateau with enough data, low consistency (completion < 50% over the lookback). Workout Engine executes the new program.
 
----
+Progress and consistency can trigger a **full program refresh**. They are not injected into the first-time generator.
 
-## Recovery Data
+## Daily (Decision Engine — not the Workout Engine)
 
-- recovery score
-- fatigue score
-- soreness
-- readiness level
+These change *today's* session only. The TrainingProgram is left untouched:
+
+- recovery score, fatigue, soreness, readiness
+- injury / safety (avoided muscles, contraindicated session)
+- deload week prescription
+- nutrition aligned to today's workout (rest / recovery / scaled training load)
 
 ---
 
@@ -364,13 +365,15 @@ Instead, daily adaptations are handled by the Decision Engine, while the Workout
 
 A new Training Program may be generated when one or more of the following conditions are met:
 
-- program duration completed
-- long-term plateau detected
+- program expired (`expiresAt`)
+- long-term plateau with sufficient data (program age ≥ 14 days; not during a deload week)
+- low consistency (completion < 50% over 6+ planned sessions, same cooldown)
 - major goal change
-- significant fitness progression
 - equipment availability changes
-- medical restriction changes
+- medical restriction / avoided-muscle changes
 - manual regeneration requested by the user
+
+`ProgramRefreshPolicy` lives in the Decision Engine. It decides *whether* to replace the block (expiry, plateau, low consistency). The Workout Engine only *executes* `regenerateProgram`. Home follows `DailyPlan.shouldRefreshProgram` — it does not re-evaluate the policy. Daily session rules stay observe-or-adapt for *today* only.
 
 ---
 

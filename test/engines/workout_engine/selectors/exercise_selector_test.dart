@@ -170,6 +170,23 @@ void main() {
       );
     });
 
+    test('profile avoided muscles are never selected', () {
+      final restricted = profile.copyWith(
+        training: profile.training.copyWith(
+          avoidedMuscles: const [MuscleGroup.triceps],
+        ),
+      );
+      final exercises = selector.select(
+        split: pushSplit,
+        profile: restricted,
+        desiredCount: 6,
+      );
+      expect(
+        exercises.every((e) => !e.targetMuscles.contains(MuscleGroup.triceps)),
+        isTrue,
+      );
+    });
+
     test('excluded muscles are never selected', () {
       final exercises = selector.select(
         split: pushSplit,

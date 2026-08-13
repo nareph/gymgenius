@@ -15,6 +15,7 @@ import 'package:gymgenius/engines/workout_engine/planner/split_planner.dart';
 import 'package:gymgenius/engines/workout_engine/planner/workout_frequency_planner.dart';
 
 import 'package:gymgenius/engines/workout_engine/program_generator.dart';
+import 'package:gymgenius/engines/workout_engine/shared/profile_coherence.dart';
 import 'package:gymgenius/engines/workout_engine/validators/program_validator.dart';
 
 /// Orchestrates the complete Workout Engine generation pipeline.
@@ -97,7 +98,10 @@ class GenerationService {
       workoutDaysCount: daysResult.count,
       useSpecifiedDays: daysResult.useSpecifiedDays,
       previousProgram: previousProgram,
-      excludeMuscles: _parseExcludeMuscles(options),
+      excludeMuscles: ProfileCoherence.resolveAvoidedMuscles(
+        profileAvoided: profile.training.avoidedMuscles,
+        extra: _parseExcludeMuscles(options),
+      ),
       intensityOverride: options?['intensity'] as String?,
     );
 
@@ -172,10 +176,16 @@ class GenerationService {
     int workoutDays,
     HealthProfile profile,
   ) {
+    final focusMuscles = ProfileCoherence.resolveFocusAreas(
+      goal: profile.training.goal,
+      userFocusAreas: profile.training.focusAreas,
+    );
+
     return _splitPlanner.plan(
       workoutDays: workoutDays,
       experience: profile.training.experience,
-      focusMuscles: profile.training.focusAreas,
+      focusMuscles: focusMuscles,
+      goal: profile.training.goal,
     );
   }
 

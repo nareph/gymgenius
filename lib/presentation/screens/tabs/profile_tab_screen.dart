@@ -8,6 +8,7 @@ import 'package:gymgenius/presentation/blocs/auth/auth_bloc.dart';
 import 'package:gymgenius/presentation/viewmodels/profile_viewmodel.dart';
 import 'package:gymgenius/presentation/widgets/common/error_state_view.dart';
 import 'package:gymgenius/presentation/widgets/profile/profile_view.dart';
+import 'package:gymgenius/presentation/widgets/profile/workout_session_settings_card.dart';
 import 'package:provider/provider.dart';
 
 class ProfileTabScreen extends StatelessWidget {
@@ -64,7 +65,10 @@ class ProfileTabScreen extends StatelessWidget {
               onCancelChanges: () => viewModel.toggleEditMode(cancel: true),
               onUpdatePreference: viewModel.updateEditValue,
             ),
-            if (!viewModel.isEditing) _buildSignOutButton(context),
+            if (!viewModel.isEditing) ...[
+              const WorkoutSessionSettingsCard(),
+              _buildSignOutButton(context),
+            ],
           ],
         );
         break;

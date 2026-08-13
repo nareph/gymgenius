@@ -4,6 +4,7 @@ import 'package:gymgenius/domain/entities/exercise.dart';
 import 'package:gymgenius/domain/entities/recovery_status.dart';
 import 'package:gymgenius/domain/entities/today_workout.dart';
 import 'package:gymgenius/domain/entities/training_program.dart';
+import 'package:gymgenius/domain/enums/activity_level.dart';
 import 'package:gymgenius/domain/enums/decision_reason.dart';
 import 'package:gymgenius/domain/enums/energy_level.dart';
 import 'package:gymgenius/domain/enums/equipment_type.dart';
@@ -117,12 +118,15 @@ RecoveryStatus _status({required int readiness}) {
   );
 }
 
-DecisionContext _context({RecoveryStatus? recovery}) {
+DecisionContext _context({
+  RecoveryStatus? recovery,
+  ActivityLevel activity = ActivityLevel.moderatelyActive,
+}) {
   final date = DateTime(2026, 8, 11);
   final exercises = [_exercise(id: '1'), _exercise(id: '2')];
   return DecisionContext(
     now: date,
-    healthProfile: buildTestProfile(),
+    healthProfile: buildTestProfile(activity: activity),
     trainingProgram: _program(),
     programProgress: _progress(),
     todayWorkout: TodayWorkout(
@@ -206,6 +210,22 @@ void main() {
       final d = rule.evaluate(_context(recovery: _status(readiness: 20)));
       expect(d.adjustment, WorkoutAdjustment.reduceVolume);
       expect(d.adjustment, isNot(WorkoutAdjustment.restDay));
+    });
+
+    test('very-active profile gets a softer volume cut than moderately active',
+        () {
+      final status = _status(readiness: 45);
+      final moderate = rule.evaluate(_context(recovery: status));
+      final veryActive = rule.evaluate(
+        _context(
+          recovery: status,
+          activity: ActivityLevel.veryActive,
+        ),
+      );
+
+      expect(moderate.volumeMultiplier, 0.70);
+      expect(veryActive.volumeMultiplier, 0.85);
+      expect(veryActive.volumeMultiplier, greaterThan(moderate.volumeMultiplier!));
     });
   });
 

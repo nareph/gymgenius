@@ -30,11 +30,15 @@ class CalorieEstimator {
   CalorieEstimate estimate({
     required HealthProfile profile,
     required bool isTrainingDay,
+    double trainingLoad = 1.0,
   }) {
     final bmr = calculateBmr(profile);
     final maintenance = (bmr * _activityMultiplier(profile)).round();
     final goalAdjusted = _applyGoalAdjustment(maintenance, profile.goal);
-    final trainingBonus = isTrainingDay ? _trainingBonus(profile) : 0;
+    final load = trainingLoad.clamp(0.0, 1.0);
+    final fullBonus = _trainingBonus(profile);
+    final trainingBonus =
+        isTrainingDay ? (fullBonus * load).round() : 0;
     final target = goalAdjusted + trainingBonus;
 
     final reasons = <String>[
@@ -42,8 +46,11 @@ class CalorieEstimator {
       'Maintenance calories: $maintenance kcal '
           '(activity: ${profile.training.activityLevel.value}).',
       _goalReason(profile.goal, maintenance, goalAdjusted),
-      if (isTrainingDay)
+      if (isTrainingDay && load >= 0.99)
         'Training day: +$trainingBonus kcal to support workout expenditure.',
+      if (isTrainingDay && load < 0.99)
+        'Training load ${(load * 100).round()}%: +$trainingBonus kcal '
+            '(scaled from +$fullBonus kcal full session).',
       if (!isTrainingDay) 'Rest day: no training calorie bonus.',
     ];
 

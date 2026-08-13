@@ -52,6 +52,11 @@ class ProfileSetupMapper {
     final focusRaw = (answers['focus_areas'] as List?)?.cast<String>() ?? [];
     final focusAreas = focusRaw.map(MuscleGroupExtension.fromValue).toList();
 
+    final avoidedRaw =
+        (answers['avoided_muscles'] as List?)?.cast<String>() ?? [];
+    final avoidedMuscles =
+        avoidedRaw.map(MuscleGroupExtension.fromValue).toList();
+
     final country = answers['country'] as String? ?? 'Unknown';
 
     final body = BodyMeasurements(
@@ -71,6 +76,7 @@ class ProfileSetupMapper {
       preferredDays: preferredDays,
       equipment: equipment,
       focusAreas: focusAreas,
+      avoidedMuscles: avoidedMuscles,
     );
 
     final lifestyle = LifestylePreferences(

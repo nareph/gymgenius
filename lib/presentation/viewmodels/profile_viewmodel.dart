@@ -96,6 +96,8 @@ class ProfileViewModel extends ChangeNotifier {
           profile.training.preferredDays.map((d) => d.value).toList(),
       'equipment': profile.training.equipment.map((e) => e.value).toList(),
       'focus_areas': profile.training.focusAreas.map((m) => m.value).toList(),
+      'avoided_muscles':
+          profile.training.avoidedMuscles.map((m) => m.value).toList(),
       'country': profile.lifestyle.country,
       'physical_stats': {
         'age': profile.body.age,

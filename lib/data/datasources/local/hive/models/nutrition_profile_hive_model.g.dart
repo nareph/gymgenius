@@ -2,6 +2,10 @@
 
 part of 'nutrition_profile_hive_model.dart';
 
+// **************************************************************************
+// TypeAdapterGenerator
+// **************************************************************************
+
 class NutritionProfileHiveModelAdapter
     extends TypeAdapter<NutritionProfileHiveModel> {
   @override

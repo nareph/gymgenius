@@ -103,6 +103,13 @@ final List<ProfileField> profileFields = [
     optionLabels: {for (var e in MuscleGroup.values) e.value: e.displayName},
   ),
   ProfileField(
+    id: 'avoided_muscles',
+    label: 'Muscles to Avoid',
+    type: FieldType.multipleChoice,
+    options: MuscleGroup.values.map((e) => e.value).toList(),
+    optionLabels: {for (var e in MuscleGroup.values) e.value: e.displayName},
+  ),
+  ProfileField(
     id: 'country',
     label: 'Country',
     type: FieldType.singleChoice,

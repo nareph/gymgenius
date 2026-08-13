@@ -36,6 +36,7 @@ class WorkoutDayGenerator {
           // built-in enum identifier) — see note in the original fix.
           profile.training.sessionDuration.value,
           _random.nextInt(3),
+          activityLevel: profile.training.activityLevel,
         );
 
     final entries = _selector.select(

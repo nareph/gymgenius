@@ -17,6 +17,7 @@ class TrainingPreferences {
   final List<WorkoutDay> preferredDays;
   final List<EquipmentType> equipment;
   final List<MuscleGroup> focusAreas;
+  final List<MuscleGroup> avoidedMuscles;
 
   const TrainingPreferences({
     required this.goal,
@@ -27,6 +28,7 @@ class TrainingPreferences {
     required this.preferredDays,
     required this.equipment,
     required this.focusAreas,
+    this.avoidedMuscles = const [],
   });
 
   TrainingPreferences copyWith({
@@ -38,6 +40,7 @@ class TrainingPreferences {
     List<WorkoutDay>? preferredDays,
     List<EquipmentType>? equipment,
     List<MuscleGroup>? focusAreas,
+    List<MuscleGroup>? avoidedMuscles,
   }) {
     return TrainingPreferences(
       goal: goal ?? this.goal,
@@ -48,6 +51,7 @@ class TrainingPreferences {
       preferredDays: preferredDays ?? this.preferredDays,
       equipment: equipment ?? this.equipment,
       focusAreas: focusAreas ?? this.focusAreas,
+      avoidedMuscles: avoidedMuscles ?? this.avoidedMuscles,
     );
   }
 }

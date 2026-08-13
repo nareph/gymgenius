@@ -406,6 +406,16 @@ class RegenerationService {
       }
     }
 
+    final avoidRaw = options['avoidMuscles'];
+    if (avoidRaw is List && avoidRaw.isNotEmpty) {
+      final extra = avoidRaw
+          .map((v) => MuscleGroupExtension.fromValue(v.toString()));
+      training = training.copyWith(
+        avoidedMuscles: {...training.avoidedMuscles, ...extra}.toList(),
+      );
+      changed = true;
+    }
+
     if (!changed) return profile;
     return profile.copyWith(training: training);
   }

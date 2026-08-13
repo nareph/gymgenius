@@ -18,13 +18,19 @@ class NutritionPlanBuilder {
     required DecisionContext context,
     required TodayWorkout finalWorkout,
   }) {
-    final isTrainingDay =
-        finalWorkout.hasExercises && !finalWorkout.isRecoverySession;
+    final isTrainingDay = finalWorkout.hasExercises &&
+        !finalWorkout.isRecoverySession &&
+        !finalWorkout.isRestDay;
+    final trainingLoad = _trainingLoad(
+      finalWorkout: finalWorkout,
+      isTrainingDay: isTrainingDay,
+    );
 
     final basePlan = _nutritionEngine.computeDailyPlanSync(
       profile: context.healthProfile,
       isTrainingDay: isTrainingDay,
       date: context.now,
+      trainingLoad: trainingLoad,
     );
 
     final extraReasons = <String>[];
@@ -36,6 +42,11 @@ class NutritionPlanBuilder {
     } else if (finalWorkout.isRecoverySession) {
       extraReasons.add(
         'Recovery session: nutrition plan uses rest-day energy targets.',
+      );
+    } else if (isTrainingDay && trainingLoad < 0.99) {
+      extraReasons.add(
+        'Workout volume is ${(trainingLoad * 100).round()}% of a full session — '
+        'calories and carbs scaled to match.',
       );
     }
 
@@ -59,6 +70,16 @@ class NutritionPlanBuilder {
       reasons: [...basePlan.reasons, ...extraReasons],
       generatedBy: basePlan.generatedBy,
     );
+  }
+
+  /// 0 = rest/recovery calories, 1 = full training bonus.
+  /// Daily volume cuts (deload, reduceVolume) scale the bonus in between.
+  double _trainingLoad({
+    required TodayWorkout finalWorkout,
+    required bool isTrainingDay,
+  }) {
+    if (!isTrainingDay) return 0;
+    return finalWorkout.volumeMultiplier.clamp(0.0, 1.0);
   }
 
   Future<NutritionPlan> buildAndPersist({

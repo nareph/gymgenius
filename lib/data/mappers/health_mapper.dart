@@ -28,6 +28,9 @@ class HealthMapper {
         preferredDays: model.preferredWorkoutDays.map(_mapWorkoutDay).toList(),
         equipment: model.availableEquipment.map(_mapEquipmentType).toList(),
         focusAreas: model.focusAreas.map(_mapMuscleGroup).toList(),
+        avoidedMuscles: (model.avoidedMuscles ?? const [])
+            .map(_mapMuscleGroup)
+            .toList(),
       ),
       lifestyle: LifestylePreferences(
         country: model.country,
@@ -68,6 +71,8 @@ class HealthMapper {
           entity.training.preferredDays.map((d) => d.name).toList(),
       availableEquipment: entity.training.equipment.map((e) => e.name).toList(),
       focusAreas: entity.training.focusAreas.map((m) => m.name).toList(),
+      avoidedMuscles:
+          entity.training.avoidedMuscles.map((m) => m.name).toList(),
       country: entity.lifestyle.country,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,

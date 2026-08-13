@@ -2,7 +2,12 @@
 
 part of 'nutrition_plan_hive_model.dart';
 
-class NutritionPlanHiveModelAdapter extends TypeAdapter<NutritionPlanHiveModel> {
+// **************************************************************************
+// TypeAdapterGenerator
+// **************************************************************************
+
+class NutritionPlanHiveModelAdapter
+    extends TypeAdapter<NutritionPlanHiveModel> {
   @override
   final int typeId = 11;
 

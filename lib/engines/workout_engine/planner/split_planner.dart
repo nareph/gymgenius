@@ -1,4 +1,5 @@
 import 'package:gymgenius/domain/enums/experience_level.dart';
+import 'package:gymgenius/domain/enums/fitness_goal.dart';
 import 'package:gymgenius/domain/enums/muscle_group.dart';
 import 'package:gymgenius/engines/workout_engine/models/muscle_split.dart';
 
@@ -30,6 +31,7 @@ class SplitPlanner {
     required int workoutDays,
     required ExperienceLevel experience,
     required List<MuscleGroup> focusMuscles,
+    FitnessGoal? goal,
   }) {
     final selected = <MuscleSplit>[];
 
@@ -57,6 +59,8 @@ class SplitPlanner {
           split: split,
           focusMuscles: focusMuscles,
           selectedSplits: selected,
+          goal: goal,
+          workoutDays: workoutDays,
         );
 
         if (best == null || score.score > best.score) {

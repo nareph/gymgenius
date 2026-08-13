@@ -4,6 +4,8 @@ import 'package:gymgenius/domain/entities/health_profile.dart';
 import 'package:gymgenius/domain/entities/training_program.dart';
 
 import 'package:gymgenius/domain/enums/equipment_type.dart';
+import 'package:gymgenius/domain/enums/experience_level.dart';
+import 'package:gymgenius/domain/enums/fitness_goal.dart';
 import 'package:gymgenius/domain/enums/muscle_group.dart';
 
 import 'package:gymgenius/domain/value_objects/workout_preferences.dart';
@@ -18,6 +20,7 @@ import 'package:gymgenius/engines/workout_engine/selectors/selection_state.dart'
 
 import 'package:gymgenius/engines/workout_engine/shared/exercises/exercise_pool.dart';
 import 'package:gymgenius/engines/workout_engine/shared/exercise_pool_entry.dart';
+import 'package:gymgenius/engines/workout_engine/shared/profile_coherence.dart';
 
 /// ---------------------------------------------------------------------------
 /// ExerciseSelector
@@ -109,16 +112,25 @@ class ExerciseSelector {
     final candidatePool = _buildCandidatePool(
       split: split,
       training: training,
-      excludeMuscles: excludeMuscles,
+      excludeMuscles: ProfileCoherence.resolveAvoidedMuscles(
+        profileAvoided: training.avoidedMuscles,
+        extra: excludeMuscles,
+      ),
+      experience: training.experience,
     );
 
     //----------------------------------------------------------
     // Focus plan
     //----------------------------------------------------------
 
+    final focusMuscles = ProfileCoherence.resolveFocusAreas(
+      goal: training.goal,
+      userFocusAreas: training.focusAreas,
+    );
+
     final FocusPlan focusPlan = _quotaPlanner.buildPlan(
       split: split,
-      focusMuscles: training.focusAreas,
+      focusMuscles: focusMuscles,
       desiredExerciseCount: desiredCount,
     );
 
@@ -184,6 +196,7 @@ class ExerciseSelector {
     required MuscleSplit split,
     required WorkoutPreferences training,
     List<MuscleGroup>? excludeMuscles,
+    required ExperienceLevel experience,
   }) {
     //----------------------------------------------------------
     // Requested equipment
@@ -228,7 +241,14 @@ class ExerciseSelector {
     // Shuffle
     //----------------------------------------------------------
 
-    final pool = merged.values.toList();
+    final pool = merged.values
+        .where(
+          (exercise) => ProfileCoherence.isExerciseAppropriateForExperience(
+            exercise: exercise,
+            experience: experience,
+          ),
+        )
+        .toList();
 
     pool.shuffle(_random);
 

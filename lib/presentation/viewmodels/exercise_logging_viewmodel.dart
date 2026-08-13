@@ -119,29 +119,40 @@ class ExerciseLoggingViewModel extends ChangeNotifier {
     _isExerciseTimerRunning = true;
     _timerPaused = false;
     _sessionManager.resetExerciseTimeUpSoundFlag();
+    _publishExerciseTimerSnapshot();
     notifyListeners();
 
     _exerciseTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_currentExerciseRunDownSeconds > 0) {
-        _currentExerciseRunDownSeconds--;
-        _actualDurationCompleted++;
-        notifyListeners();
-      } else {
-        _stopTimerAndLog(isFinished: true);
-      }
+      _onExerciseTimerTick(timer);
     });
+  }
+
+  void _publishExerciseTimerSnapshot() {
+    _sessionManager.updateExerciseTimerSnapshot(
+      isActive: _isExerciseTimerRunning && !_timerPaused,
+      remainingSeconds: _currentExerciseRunDownSeconds,
+      exerciseName: exercise.name,
+    );
+  }
+
+  void _onExerciseTimerTick(Timer timer) {
+    if (_currentExerciseRunDownSeconds > 0) {
+      unawaited(_sessionManager.onExerciseTimerSecond(
+        _currentExerciseRunDownSeconds,
+      ));
+      _currentExerciseRunDownSeconds--;
+      _actualDurationCompleted++;
+      _publishExerciseTimerSnapshot();
+      notifyListeners();
+    } else {
+      _stopTimerAndLog(isFinished: true);
+    }
   }
 
   void pauseOrResumeTimer() {
     if (_timerPaused) {
       _exerciseTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-        if (_currentExerciseRunDownSeconds > 0) {
-          _currentExerciseRunDownSeconds--;
-          _actualDurationCompleted++;
-          notifyListeners();
-        } else {
-          _stopTimerAndLog(isFinished: true);
-        }
+        _onExerciseTimerTick(timer);
       });
       _timerPaused = false;
     } else {
@@ -149,6 +160,7 @@ class ExerciseLoggingViewModel extends ChangeNotifier {
       _exerciseTimer = null;
       _timerPaused = true;
     }
+    _publishExerciseTimerSnapshot();
     notifyListeners();
   }
 
@@ -164,11 +176,12 @@ class ExerciseLoggingViewModel extends ChangeNotifier {
     _exerciseTimer = null;
     _isExerciseTimerRunning = false;
     _timerPaused = false;
+    _sessionManager.updateExerciseTimerSnapshot(isActive: false);
 
     int durationToLog = _actualDurationCompleted;
     if (isFinished) {
       durationToLog = _targetDurationSeconds;
-      _sessionManager.playExerciseTimeUpSound();
+      unawaited(_sessionManager.playExerciseTimeUpSound());
     }
 
     _sessionManager.logSetForCurrentExercise(
@@ -184,6 +197,7 @@ class ExerciseLoggingViewModel extends ChangeNotifier {
     _exerciseTimer = null;
     _isExerciseTimerRunning = false;
     _timerPaused = false;
+    _sessionManager.updateExerciseTimerSnapshot(isActive: false);
   }
 
   String? logSet() {
@@ -249,6 +263,7 @@ class ExerciseLoggingViewModel extends ChangeNotifier {
     minutesController.dispose();
     secondsController.dispose();
     _exerciseTimer?.cancel();
+    _sessionManager.updateExerciseTimerSnapshot(isActive: false);
     super.dispose();
   }
 }

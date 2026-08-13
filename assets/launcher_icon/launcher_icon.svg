@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" role="img" aria-label="GymGenius v3">
+  <!--
+    Palette alignee sur GymGenius (app_theme.dart + colors.xml)
+    - Fond launcher     : #1565C0  (Blue 800)
+    - Primary           : #1E88E5  (Blue 600)
+    - Secondary / moteur: #FF9100  (Orange Accent)
+    - Surface sombre    : #212121  (Grey 900, hint M3 dark)
+  -->
+  <defs>
+    <linearGradient id="bg" x1="96" y1="64" x2="416" y2="448" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1E88E5"/>
+      <stop offset="1" stop-color="#1565C0"/>
+    </linearGradient>
+    <linearGradient id="engine" x1="196" y1="188" x2="316" y2="324" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFB74D"/>
+      <stop offset="1" stop-color="#FF9100"/>
+    </linearGradient>
+    <filter id="shadow" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#0D47A1" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+
+  <!-- Fond icone (Material, coins arrondis) -->
+  <rect width="512" height="512" rx="108" fill="url(#bg)"/>
+
+  <!-- Anneau externe : 4 domaines Decision Engine -->
+  <rect
+    x="118" y="118" width="276" height="276" rx="36"
+    stroke="#FF9100" stroke-width="20" fill="none"
+  />
+
+  <!-- Hub central : disque (heritage icone v1) + moteur v3 -->
+  <g filter="url(#shadow)">
+    <circle cx="256" cy="256" r="92" fill="url(#engine)"/>
+  </g>
+  <circle cx="256" cy="256" r="72" fill="#1565C0" fill-opacity="0.22"/>
+
+  <!-- 4 modules : Workout / Nutrition / Recovery / Progress -->
+  <g fill="#FFFFFF">
+    <circle cx="256" cy="104" r="22"/>
+    <circle cx="408" cy="256" r="22"/>
+    <circle cx="256" cy="408" r="22"/>
+    <circle cx="104" cy="256" r="22"/>
+  </g>
+
+  <!-- Liaisons vers le hub -->
+  <g stroke="#FFFFFF" stroke-width="8" stroke-linecap="round" opacity="0.85">
+    <line x1="256" y1="126" x2="256" y2="168"/>
+    <line x1="386" y1="256" x2="344" y2="256"/>
+    <line x1="256" y1="386" x2="256" y2="344"/>
+    <line x1="126" y1="256" x2="168" y2="256"/>
+  </g>
+
+  <!-- Barres croisees (heritage haltere / plate) -->
+  <g stroke="#FFFFFF" stroke-width="10" stroke-linecap="round" opacity="0.95">
+    <line x1="256" y1="208" x2="256" y2="304"/>
+    <line x1="208" y1="256" x2="304" y2="256"/>
+  </g>
+
+  <!-- Pulse sante (Health Platform v3) -->
+  <path
+    d="M214 262 H232 L242 242 L252 278 L262 252 H298"
+    stroke="#FFFFFF"
+    stroke-width="8"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  />
+
+  <!-- Point central coach / decision -->
+  <circle cx="256" cy="256" r="10" fill="#FFFFFF"/>
+</svg>

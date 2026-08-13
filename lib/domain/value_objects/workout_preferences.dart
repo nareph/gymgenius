@@ -17,6 +17,10 @@ class WorkoutPreferences {
   final List<EquipmentType> equipment;
   final List<MuscleGroup> focusAreas;
 
+  /// Muscle groups the user wants to avoid (injury, pain, medical restriction).
+  /// Empty means no restriction. Optional at onboarding.
+  final List<MuscleGroup> avoidedMuscles;
+
   const WorkoutPreferences({
     required this.goal,
     required this.experience,
@@ -26,6 +30,7 @@ class WorkoutPreferences {
     required this.preferredDays,
     required this.equipment,
     required this.focusAreas,
+    this.avoidedMuscles = const [],
   });
 
   WorkoutPreferences copyWith({
@@ -37,6 +42,7 @@ class WorkoutPreferences {
     List<WorkoutDay>? preferredDays,
     List<EquipmentType>? equipment,
     List<MuscleGroup>? focusAreas,
+    List<MuscleGroup>? avoidedMuscles,
   }) {
     return WorkoutPreferences(
       goal: goal ?? this.goal,
@@ -47,6 +53,7 @@ class WorkoutPreferences {
       preferredDays: preferredDays ?? this.preferredDays,
       equipment: equipment ?? this.equipment,
       focusAreas: focusAreas ?? this.focusAreas,
+      avoidedMuscles: avoidedMuscles ?? this.avoidedMuscles,
     );
   }
 

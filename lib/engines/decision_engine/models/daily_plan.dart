@@ -5,6 +5,7 @@ import 'package:gymgenius/domain/entities/recovery_status.dart';
 import 'package:gymgenius/domain/entities/today_workout.dart';
 import 'package:gymgenius/domain/entities/workout_decision.dart';
 import 'package:gymgenius/engines/decision_engine/models/health_decision.dart';
+import 'package:gymgenius/engines/decision_engine/policies/program_refresh_policy.dart';
 
 import 'decision_context.dart';
 import 'program_progress.dart';
@@ -47,6 +48,10 @@ class DailyPlan {
   /// Deterministic health recommendation for today.
   final HealthDecision? healthDecision;
 
+  /// Decision Engine verdict on replacing the TrainingProgram.
+  /// Independent from [todayWorkout] / [finalDecision].
+  final ProgramRefreshDecision? programRefresh;
+
   /// Confidence of the final decision (0–1).
   final double confidence;
 
@@ -63,6 +68,7 @@ class DailyPlan {
     this.progressSnapshot,
     this.healthPlatformSnapshot,
     this.healthDecision,
+    this.programRefresh,
     required this.confidence,
     required this.generatedAt,
   });
@@ -82,6 +88,9 @@ class DailyPlan {
   bool get hasHealthPlatform => healthPlatformSnapshot != null;
 
   bool get hasHealthDecision => healthDecision != null;
+
+  bool get shouldRefreshProgram =>
+      programRefresh?.shouldRegenerate ?? false;
 
   @override
   String toString() {

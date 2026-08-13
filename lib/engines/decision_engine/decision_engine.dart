@@ -11,6 +11,7 @@ import 'package:gymgenius/engines/decision_engine/builders/health_decision_build
 import 'package:gymgenius/engines/decision_engine/services/conflict_resolver.dart';
 import 'package:gymgenius/engines/decision_engine/rules/nutrition/nutrition_rule.dart';
 import 'package:gymgenius/engines/recovery_engine/recovery_engine.dart';
+import 'package:gymgenius/engines/decision_engine/policies/program_refresh_policy.dart';
 
 import 'builders/today_workout_builder.dart';
 import 'models/daily_plan.dart';
@@ -148,11 +149,18 @@ class DecisionEngine {
       context: adaptedContext,
       finalWorkout: finalWorkout,
     );
+    final programRefresh = ProgramRefreshPolicy.evaluate(
+      program: trainingProgram,
+      progress: progress,
+      snapshot: progressSnapshot,
+      now: currentDate,
+    );
     final healthDecision = _healthDecisionBuilder.build(
       generatedAt: currentDate,
       finalDecision: finalDecision,
       recoveryStatus: recoveryStatus,
       progressSnapshot: progressSnapshot,
+      programRefresh: programRefresh,
     );
 
     return DailyPlan(
@@ -165,6 +173,7 @@ class DecisionEngine {
       progressSnapshot: progressSnapshot,
       healthPlatformSnapshot: healthPlatformSnapshot,
       healthDecision: healthDecision,
+      programRefresh: programRefresh,
       confidence: finalDecision.confidence.clamp(0.0, 1.0),
       generatedAt: currentDate,
     );
@@ -192,11 +201,18 @@ class DecisionEngine {
       context: adaptedContext,
       finalWorkout: finalWorkout,
     );
+    final programRefresh = ProgramRefreshPolicy.evaluate(
+      program: context.trainingProgram,
+      progress: progress,
+      snapshot: progressSnapshot,
+      now: currentDate,
+    );
     final healthDecision = _healthDecisionBuilder.build(
       generatedAt: currentDate,
       finalDecision: finalDecision,
       recoveryStatus: recoveryStatus,
       progressSnapshot: progressSnapshot,
+      programRefresh: programRefresh,
     );
 
     return DailyPlan(
@@ -209,6 +225,7 @@ class DecisionEngine {
       progressSnapshot: progressSnapshot,
       healthPlatformSnapshot: healthPlatformSnapshot,
       healthDecision: healthDecision,
+      programRefresh: programRefresh,
       confidence: finalDecision.confidence.clamp(0.0, 1.0),
       generatedAt: currentDate,
     );

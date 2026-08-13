@@ -235,6 +235,27 @@ final List<ProfileQuestion> defaultProfileQuestions = [
     ],
     type: QuestionType.multipleChoice,
   ),
+  // 10b. Avoided muscles (optional — injury / medical restriction)
+  ProfileQuestion(
+    id: "avoided_muscles",
+    text:
+        "Any body parts you need to avoid because of injury or pain? (Optional)",
+    options: [
+      AnswerOption(value: "chest", text: "Chest"),
+      AnswerOption(value: "back", text: "Back"),
+      AnswerOption(value: "shoulders", text: "Shoulders"),
+      AnswerOption(value: "biceps", text: "Biceps"),
+      AnswerOption(value: "triceps", text: "Triceps"),
+      AnswerOption(value: "quadriceps", text: "Quadriceps (front of thighs)"),
+      AnswerOption(value: "hamstrings", text: "Hamstrings (back of thighs)"),
+      AnswerOption(value: "glutes", text: "Glutes (buttocks)"),
+      AnswerOption(value: "calves", text: "Calves"),
+      AnswerOption(value: "abs_core", text: "Abs / Core"),
+      AnswerOption(value: "forearms", text: "Forearms"),
+      AnswerOption(value: "traps", text: "Traps"),
+    ],
+    type: QuestionType.multipleChoice,
+  ),
   // 11. Country (NEW – used for nutrition localization)
   ProfileQuestion(
     id: "country",

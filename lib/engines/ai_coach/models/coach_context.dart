@@ -81,6 +81,14 @@ class CoachContext {
       workoutAdjustment == WorkoutAdjustment.reduceIntensity.value ||
       (volumeMultiplier != null && volumeMultiplier! < 1.0);
 
+  /// Rest, skip, recovery session, or reduced volume — coach must not push harder.
+  bool get isProtectiveDay =>
+      isRestDay ||
+      workoutAdjustment == WorkoutAdjustment.restDay.value ||
+      workoutAdjustment == WorkoutAdjustment.recoverySession.value ||
+      workoutAdjustment == WorkoutAdjustment.skipWorkout.value ||
+      volumeWasReduced;
+
   Map<String, dynamic> toPromptMap() {
     return {
       'userId': userId,

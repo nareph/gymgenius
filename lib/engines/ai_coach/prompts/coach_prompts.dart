@@ -24,7 +24,9 @@ Return JSON:
   "recommendations": [{"category":"workout|recovery|nutrition|progress|motivation|general","text":"...","reason":"...","alignsWithDecision":true,"actionTag":"follow_plan|follow_reduced_volume|rest|hydrate|etc"}],
   "tone": "supportive"
 }
-If volume was reduced, do NOT recommend increasing volume or intensity.
+If volume was reduced or this is a deload, do NOT recommend increasing volume or intensity.
+If today is a rest day, recovery session, or skip: do NOT recommend training harder, adding volume, or skipping rest.
+Every recommendation must have alignsWithDecision true.
 If data is missing, say so — do not invent metrics.
 ''';
 

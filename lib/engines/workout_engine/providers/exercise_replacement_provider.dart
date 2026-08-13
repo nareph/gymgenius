@@ -28,9 +28,12 @@ class ExerciseReplacementProvider {
     Set<String> excludeNames = const {},
   }) {
     final equipment = profile.training.equipment;
+    final avoided = profile.training.avoidedMuscles;
+    final hitsAvoided =
+        exercise.primaryMuscles.any(avoided.contains);
 
-    // Already compatible with the user's equipment.
-    if (equipment.contains(exercise.equipment)) {
+    // Already compatible with equipment and safety constraints.
+    if (equipment.contains(exercise.equipment) && !hitsAvoided) {
       return exercise;
     }
 
@@ -38,6 +41,7 @@ class ExerciseReplacementProvider {
       targetMuscles: exercise.primaryMuscles,
       allowedEquipment: equipment,
       excludeNames: excludeNames,
+      excludeMuscles: avoided,
     );
 
     if (alternative == null) {

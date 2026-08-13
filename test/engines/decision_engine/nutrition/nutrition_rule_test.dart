@@ -160,4 +160,106 @@ void main() {
       expect(decision.confidence, 0.95);
     });
   });
+
+  group('NutritionPlanBuilder', () {
+    late NutritionPlanBuilder builder;
+
+    setUp(() {
+      builder = NutritionPlanBuilder(nutritionEngine: NutritionEngine());
+    });
+
+    test('rest and recovery sessions use rest-day calories', () {
+      final date = DateTime(2026, 8, 11);
+      final profile = buildTestProfile();
+      final rest = builder.build(
+        context: DecisionContext(
+          now: date,
+          healthProfile: profile,
+          trainingProgram: _stubProgram(),
+          programProgress: _stubProgress(),
+          todayWorkout: _restDayWorkout(date),
+        ),
+        finalWorkout: _restDayWorkout(date),
+      );
+      final recoveryWorkout = TodayWorkout(
+        date: date,
+        dayKey: 'tuesday',
+        plannedExercises: [_stubExercise()],
+        finalExercises: [_stubExercise()],
+        isRecoverySession: true,
+        volumeMultiplier: 0.5,
+      );
+      final recovery = builder.build(
+        context: DecisionContext(
+          now: date,
+          healthProfile: profile,
+          trainingProgram: _stubProgram(),
+          programProgress: _stubProgress(),
+          todayWorkout: recoveryWorkout,
+        ),
+        finalWorkout: recoveryWorkout,
+      );
+      final training = builder.build(
+        context: DecisionContext(
+          now: date,
+          healthProfile: profile,
+          trainingProgram: _stubProgram(),
+          programProgress: _stubProgress(),
+          todayWorkout: _trainingDayWorkout(date),
+        ),
+        finalWorkout: _trainingDayWorkout(date),
+      );
+
+      expect(rest.isTrainingDay, isFalse);
+      expect(recovery.isTrainingDay, isFalse);
+      expect(rest.dailyCalories, recovery.dailyCalories);
+      expect(training.dailyCalories, greaterThan(rest.dailyCalories));
+    });
+
+    test('reduced volume scales calories between rest and full training', () {
+      final date = DateTime(2026, 8, 11);
+      final profile = buildTestProfile();
+      final reducedWorkout = TodayWorkout(
+        date: date,
+        dayKey: 'tuesday',
+        plannedExercises: [_stubExercise()],
+        finalExercises: [_stubExercise()],
+        volumeMultiplier: 0.7,
+      );
+      final reduced = builder.build(
+        context: DecisionContext(
+          now: date,
+          healthProfile: profile,
+          trainingProgram: _stubProgram(),
+          programProgress: _stubProgress(),
+          todayWorkout: reducedWorkout,
+        ),
+        finalWorkout: reducedWorkout,
+      );
+      final full = builder.build(
+        context: DecisionContext(
+          now: date,
+          healthProfile: profile,
+          trainingProgram: _stubProgram(),
+          programProgress: _stubProgress(),
+          todayWorkout: _trainingDayWorkout(date),
+        ),
+        finalWorkout: _trainingDayWorkout(date),
+      );
+      final rest = builder.build(
+        context: DecisionContext(
+          now: date,
+          healthProfile: profile,
+          trainingProgram: _stubProgram(),
+          programProgress: _stubProgress(),
+          todayWorkout: _restDayWorkout(date),
+        ),
+        finalWorkout: _restDayWorkout(date),
+      );
+
+      expect(reduced.isTrainingDay, isTrue);
+      expect(reduced.dailyCalories, lessThan(full.dailyCalories));
+      expect(reduced.dailyCalories, greaterThan(rest.dailyCalories));
+    });
+  });
 }

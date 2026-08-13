@@ -68,6 +68,9 @@ class HomeViewModel extends ChangeNotifier {
   bool _isGeneratingProgram = false;
   bool get isGeneratingProgram => _isGeneratingProgram;
 
+  /// At most one silent full-program refresh per ViewModel lifetime.
+  bool _autoRefreshAttempted = false;
+
   // -------------------------------------------------------------------------
   // Health profile
   // -------------------------------------------------------------------------
@@ -158,6 +161,14 @@ class HomeViewModel extends ChangeNotifier {
           progressSnapshot: progressSnapshot,
           healthPlatformSnapshot: healthPlatformSnapshot,
         );
+
+        if (await _maybeAutoRefreshProgram(
+          program: program,
+          profile: healthProfile,
+          plan: _dailyPlan!,
+        )) {
+          return;
+        }
       }
 
       Log.info('HomeViewModel: Profile complete: $_isProfileComplete');
@@ -179,6 +190,45 @@ class HomeViewModel extends ChangeNotifier {
       _state = HomeState.error;
       notifyListeners();
     }
+  }
+
+  /// Executes a full-program regeneration when the Decision Engine said so
+  /// via [DailyPlan.shouldRefreshProgram]. Does not re-evaluate the policy.
+  Future<bool> _maybeAutoRefreshProgram({
+    required TrainingProgram program,
+    required HealthProfile profile,
+    required DailyPlan plan,
+  }) async {
+    if (_autoRefreshAttempted) return false;
+    if (!plan.shouldRefreshProgram) return false;
+
+    _autoRefreshAttempted = true;
+    final refresh = plan.programRefresh!;
+    Log.info(
+      'HomeViewModel: Auto-refreshing program (${refresh.reason.name}): '
+      '${refresh.message}',
+    );
+
+    try {
+      await _workoutEngine.regenerateProgram(
+        profile: profile,
+        previousProgram: program,
+        options: const RegenerationOptions(
+          type: RegenerationType.fullProgram,
+          keepStructure: false,
+        ).toMap(),
+      );
+    } catch (e, s) {
+      Log.error(
+        'HomeViewModel: Auto-refresh failed',
+        error: e,
+        stackTrace: s,
+      );
+      return false;
+    }
+
+    await _loadData();
+    return true;
   }
 
   Future<void> _loadDailyCoaching(String userId, DailyPlan plan) async {

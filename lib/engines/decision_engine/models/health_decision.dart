@@ -28,6 +28,8 @@ class HealthDecision {
         return 'Monitor plateau';
       case 'follow_adapted_workout':
         return 'Follow adapted workout';
+      case 'refresh_program':
+        return 'Refresh training program';
       case 'complete_scheduled_workout':
       default:
         return 'Complete scheduled workout';
