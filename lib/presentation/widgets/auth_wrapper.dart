@@ -6,10 +6,21 @@ import 'package:gymgenius/core/logger/logger_service.dart';
 import 'package:gymgenius/presentation/blocs/auth/auth_bloc.dart';
 import 'package:gymgenius/presentation/screens/home_screen.dart';
 import 'package:gymgenius/presentation/screens/main_dashboard_screen.dart';
-import 'package:gymgenius/presentation/screens/profile_setup/profile_setup_screen.dart';
 
 /// AuthWrapper is the gatekeeper of the application's navigation.
 /// It listens to the global [AuthBloc] state and displays the correct screen.
+///
+/// NOTE: this no longer hard-gates on profile completeness. Previously,
+/// an authenticated user with an incomplete profile was forced into
+/// ProfileSetupScreen here, before ever reaching MainDashboardScreen —
+/// which made HomeTabScreen's own CompleteProfileView unreachable, since
+/// AuthWrapper never let an incomplete-profile user get that far.
+/// Account creation and profile completion are now separate steps (see
+/// SignUpBloc / HomeScreen): a fresh account has an empty, incomplete
+/// profile by design, and the user should land on the dashboard shell
+/// regardless — it's HomeTabScreen's job to prompt for profile
+/// completion before generating a program, not AuthWrapper's job to
+/// block navigation entirely.
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
@@ -25,20 +36,8 @@ class AuthWrapper extends StatelessWidget {
 
         switch (state.status) {
           case AuthStatus.authenticated:
-            if (state.isProfileComplete) {
-              Log.debug(
-                  "AuthWrapper: User authenticated with complete profile -> MainDashboard");
-              return const MainDashboardScreen();
-            } else {
-              Log.debug(
-                  "AuthWrapper: User authenticated but profile incomplete -> ProfileSetup");
-              return ProfileSetupScreen(
-                isPostLogin: true,
-                // Resume with only the still-missing questions instead of
-                // the full questionnaire.
-                missingFieldIds: state.missingFieldIds,
-              );
-            }
+            Log.debug("AuthWrapper: User authenticated -> MainDashboard");
+            return const MainDashboardScreen();
 
           case AuthStatus.unauthenticated:
             Log.debug("AuthWrapper: User unauthenticated -> HomeScreen");

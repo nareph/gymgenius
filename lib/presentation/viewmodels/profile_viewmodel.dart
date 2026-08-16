@@ -1,19 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:gymgenius/core/logger/logger_service.dart';
 import 'package:gymgenius/domain/entities/health_profile.dart';
-import 'package:gymgenius/domain/enums/activity_level.dart';
-import 'package:gymgenius/domain/enums/equipment_type.dart';
-import 'package:gymgenius/domain/enums/experience_level.dart';
-import 'package:gymgenius/domain/enums/fitness_goal.dart';
-import 'package:gymgenius/domain/enums/gender.dart';
-import 'package:gymgenius/domain/enums/muscle_group.dart';
-import 'package:gymgenius/domain/enums/session_duration.dart';
-import 'package:gymgenius/domain/enums/workout_day.dart';
-import 'package:gymgenius/domain/enums/workout_frequency.dart';
 import 'package:gymgenius/domain/repositories/health_repository.dart';
 import 'package:gymgenius/domain/repositories/user_repository.dart';
 import 'package:gymgenius/presentation/mappers/profile_setup_mapper.dart';
 import 'package:gymgenius/presentation/question/profile_questions.dart';
+
+import '../../domain/enums/exports.dart';
 
 enum ProfileState { initial, loading, loaded, saving, error }
 
@@ -99,6 +92,12 @@ class ProfileViewModel extends ChangeNotifier {
       'avoided_muscles':
           profile.training.avoidedMuscles.map((m) => m.value).toList(),
       'country': profile.lifestyle.country,
+      // --- Nutrition Engine fields (new) ---
+      // foodRestrictions/foodPreferences are already List<String> — no
+      // enum mapping needed, unlike focus_areas/equipment/etc above.
+      'food_budget': profile.lifestyle.budget.value,
+      'food_restrictions': profile.lifestyle.foodRestrictions,
+      'food_preferences': profile.lifestyle.foodPreferences,
       'physical_stats': {
         'age': profile.body.age,
         'weight_kg': profile.body.currentWeightKg,
@@ -150,7 +149,6 @@ class ProfileViewModel extends ChangeNotifier {
         final text = controller.text.trim();
         if (text.isNotEmpty) {
           if (entry.key == 'age') {
-            // L'âge doit être un int
             final value = int.tryParse(text);
             if (value != null) {
               statsMap[entry.key] = value;
@@ -158,7 +156,6 @@ class ProfileViewModel extends ChangeNotifier {
               Log.warning('Invalid integer for age: "$text"');
             }
           } else {
-            // Poids, taille → double
             final value = double.tryParse(text);
             if (value != null) {
               statsMap[entry.key] = value;
@@ -167,7 +164,6 @@ class ProfileViewModel extends ChangeNotifier {
             }
           }
         } else {
-          // Champ vide → on le met à null (ou on garde l'ancienne valeur)
           statsMap[entry.key] = null;
         }
       }
@@ -188,14 +184,12 @@ class ProfileViewModel extends ChangeNotifier {
       _disposeControllers();
       Log.debug("ProfileViewModel: Changes saved successfully");
       _setState(ProfileState.loaded);
-      // On notifie un succès via un message stocké (pour la vue)
-      _errorMessage = null; // pas d'erreur
+      _errorMessage = null;
     } catch (e, s) {
       Log.error("ProfileViewModel: Failed to save profile",
           error: e, stackTrace: s);
       _errorMessage = "Failed to save changes. Please try again.";
       _setState(ProfileState.error);
-      // Ne pas réinitialiser l'état d'édition, l'utilisateur peut réessayer
     }
   }
 

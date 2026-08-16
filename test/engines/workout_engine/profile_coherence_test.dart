@@ -11,7 +11,6 @@ import 'package:gymgenius/domain/enums/movement_pattern.dart';
 import 'package:gymgenius/domain/enums/muscle_group.dart';
 import 'package:gymgenius/domain/enums/plane_of_motion.dart';
 import 'package:gymgenius/domain/enums/workout_frequency.dart';
-import 'package:gymgenius/engines/workout_engine/models/muscle_split.dart';
 import 'package:gymgenius/engines/workout_engine/planner/split_catalog.dart';
 import 'package:gymgenius/engines/workout_engine/planner/split_planner.dart';
 import 'package:gymgenius/engines/workout_engine/planner/workout_frequency_planner.dart';

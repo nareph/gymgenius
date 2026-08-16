@@ -15,12 +15,14 @@ class ProfileQuestion {
   final String text;
   final List<AnswerOption> options;
   final QuestionType type;
+  final bool isRequired;
 
   const ProfileQuestion({
     required this.id,
     required this.text,
     this.options = const [],
     required this.type,
+    this.isRequired = true,
   });
 }
 
@@ -89,7 +91,7 @@ final List<ProfileQuestion> defaultProfileQuestions = [
     ],
     type: QuestionType.singleChoice,
   ),
-  // 5. Activity Level (NEW)
+  // 5. Activity Level
   ProfileQuestion(
     id: "activity_level",
     text: "How active are you outside of your workouts?",
@@ -234,6 +236,7 @@ final List<ProfileQuestion> defaultProfileQuestions = [
       AnswerOption(value: "abs_core", text: "Abs / Core"),
     ],
     type: QuestionType.multipleChoice,
+    isRequired: false,
   ),
   // 10b. Avoided muscles (optional — injury / medical restriction)
   ProfileQuestion(
@@ -255,14 +258,66 @@ final List<ProfileQuestion> defaultProfileQuestions = [
       AnswerOption(value: "traps", text: "Traps"),
     ],
     type: QuestionType.multipleChoice,
+    isRequired: false,
   ),
-  // 11. Country (NEW – used for nutrition localization)
+  // 11. Food Budget (Nutrition Engine — FoodKnowledgeBase._budgetAllows)
+  ProfileQuestion(
+    id: "food_budget",
+    text: "What's your budget for groceries and meals? (Optional)",
+    options: [
+      AnswerOption(value: "low", text: "Low — I need budget-friendly options"),
+      AnswerOption(value: "medium", text: "Medium — I have some flexibility"),
+      AnswerOption(
+          value: "high",
+          text: "High — quality and variety matter more than cost"),
+    ],
+    type: QuestionType.singleChoice,
+    isRequired: false,
+  ),
+  // 12. Food Restrictions / Allergies (Nutrition Engine —
+  // FoodKnowledgeBase._conflictsWithRestrictions handles these exact
+  // aliases: vegetarian/vegan, peanut/groundnut, fish/seafood, egg).
+  ProfileQuestion(
+    id: "food_restrictions",
+    text: "Any food allergies or restrictions we should know about? (Optional)",
+    options: [
+      AnswerOption(value: "vegetarian", text: "Vegetarian"),
+      AnswerOption(value: "vegan", text: "Vegan"),
+      AnswerOption(value: "peanut", text: "Peanut / Groundnut Allergy"),
+      AnswerOption(value: "fish", text: "Fish / Seafood Allergy"),
+      AnswerOption(value: "egg", text: "Egg Allergy"),
+      AnswerOption(value: "dairy", text: "Dairy / Lactose Intolerance"),
+      AnswerOption(value: "gluten", text: "Gluten Intolerance"),
+    ],
+    type: QuestionType.multipleChoice,
+    isRequired: false,
+  ),
+  // 13. Food Preferences (Nutrition Engine — FoodKnowledgeBase._preferenceScore
+  // substring-matches these against meal template ingredient names).
+  ProfileQuestion(
+    id: "food_preferences",
+    text:
+        "Any foods you especially enjoy? We'll prioritize them when possible. (Optional)",
+    options: [
+      AnswerOption(value: "rice", text: "Rice"),
+      AnswerOption(value: "plantain", text: "Plantain"),
+      AnswerOption(value: "cassava", text: "Cassava"),
+      AnswerOption(value: "beans", text: "Beans"),
+      AnswerOption(value: "fish", text: "Fish"),
+      AnswerOption(value: "chicken", text: "Chicken"),
+      AnswerOption(value: "beef", text: "Beef"),
+      AnswerOption(value: "vegetables", text: "Vegetables"),
+      AnswerOption(value: "fruits", text: "Fruits"),
+      AnswerOption(value: "eggs", text: "Eggs"),
+    ],
+    type: QuestionType.multipleChoice,
+    isRequired: false,
+  ),
+  // 14. Country (used for nutrition localization)
   ProfileQuestion(
     id: "country",
     text: "Which country do you currently live in?",
     options: [
-      // You can expand this list as needed.
-      // For now, we keep a basic list; you can add more countries.
       AnswerOption(value: "Cameroon", text: "Cameroon"),
       AnswerOption(value: "Nigeria", text: "Nigeria"),
       AnswerOption(value: "Ghana", text: "Ghana"),

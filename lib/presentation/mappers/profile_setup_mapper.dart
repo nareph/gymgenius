@@ -59,6 +59,15 @@ class ProfileSetupMapper {
 
     final country = answers['country'] as String? ?? 'Unknown';
 
+    // --- Nutrition Engine fields (new) ---
+    final budgetString = answers['food_budget'] as String? ?? 'medium';
+    final budget = BudgetLevelExtension.fromValue(budgetString);
+
+    final foodRestrictions =
+        (answers['food_restrictions'] as List?)?.cast<String>() ?? [];
+    final foodPreferences =
+        (answers['food_preferences'] as List?)?.cast<String>() ?? [];
+
     final body = BodyMeasurements(
       age: age,
       heightCm: heightCm,
@@ -81,7 +90,9 @@ class ProfileSetupMapper {
 
     final lifestyle = LifestylePreferences(
       country: country,
-      budget: BudgetLevel.medium,
+      budget: budget,
+      foodPreferences: foodPreferences,
+      foodRestrictions: foodRestrictions,
     );
 
     // The values above are ALWAYS populated (defaulted when unanswered) so

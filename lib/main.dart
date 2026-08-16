@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gymgenius/core/logger/logger_service.dart';
 import 'package:gymgenius/data/datasources/local/hive/boxes/hive_datasource.dart';
 import 'package:gymgenius/di/injection.dart';
+import 'package:gymgenius/domain/repositories/workout_repository.dart';
 import 'package:gymgenius/presentation/blocs/auth/auth_bloc.dart';
 import 'package:gymgenius/presentation/blocs/login/login_bloc.dart';
 import 'package:gymgenius/presentation/blocs/signup/signup_bloc.dart';
@@ -46,6 +47,16 @@ class MyApp extends StatelessWidget {
         ),
         BlocProvider<SignUpBloc>(
           create: (context) => getIt<SignUpBloc>(),
+        ),
+        // NOTE: registered in GetIt (injection.dart) but was never
+        // bridged into the widget tree — GetIt and Provider are
+        // separate mechanisms; being in GetIt doesn't make something
+        // reachable via context.read<>(). ActiveWorkoutSessionScreen
+        // calls context.read<WorkoutRepository>() when building
+        // ActiveWorkoutViewModel — without this line, that throws
+        // ProviderNotFoundException the moment "Start" is tapped.
+        Provider<WorkoutRepository>(
+          create: (context) => getIt<WorkoutRepository>(),
         ),
         ChangeNotifierProvider(
           create: (context) => getIt<WorkoutSessionManager>(),

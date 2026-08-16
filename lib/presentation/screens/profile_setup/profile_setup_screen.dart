@@ -3,19 +3,17 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gymgenius/di/injection.dart';
 import 'package:gymgenius/domain/entities/health_profile.dart';
 import 'package:gymgenius/domain/repositories/health_repository.dart';
+import 'package:gymgenius/presentation/blocs/auth/auth_bloc.dart';
 import 'package:gymgenius/presentation/blocs/profile_setup/profile_setup_bloc.dart';
 import 'package:gymgenius/presentation/mappers/profile_completeness.dart';
 import 'package:gymgenius/presentation/question/profile_questions.dart';
+import 'package:gymgenius/presentation/screens/profile_setup/views/profile_summary_view.dart';
 import 'package:gymgenius/presentation/screens/profile_setup/views/question_view.dart';
 import 'package:gymgenius/presentation/screens/profile_setup/views/stats_input_view.dart';
 
 class ProfileSetupScreen extends StatelessWidget {
   final bool isPostLogin;
   final void Function(HealthProfile)? onProfileComplete;
-
-  /// Required question ids still missing (from `HealthProfile.missingFieldIds`,
-  /// via AuthBloc). When provided and non-empty, only these questions are
-  /// shown — not the whole questionnaire again.
   final List<String>? missingFieldIds;
 
   const ProfileSetupScreen({
@@ -35,11 +33,19 @@ class ProfileSetupScreen extends StatelessWidget {
         listener: (context, state) {
           if (state.status == ProfileSetupStatus.complete) {
             if (isPostLogin) {
-              Navigator.of(context).pop();
+              context.read<AuthBloc>().add(const AuthStateCheckRequested());
+              if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop();
+              }
             } else if (onProfileComplete != null && state.profile != null) {
               onProfileComplete!(state.profile!);
             }
           }
+          // NOTE: ProfileSetupStatus.error is now surfaced inline on
+          // ProfileSummaryView (next to the CONFIRM & SAVE button)
+          // instead of only a SnackBar — the summary page is where the
+          // user is looking right when the save can fail. The SnackBar
+          // stays as a fallback for errors on other pages.
           if (state.status == ProfileSetupStatus.error) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -76,6 +82,9 @@ class _ProfileSetupViewState extends State<_ProfileSetupView> {
   int _currentPage = 0;
   late final List<ProfileQuestion> _questions;
 
+  /// +1 for the review/summary page appended after the last question.
+  int get _totalPages => _questions.length + 1;
+
   @override
   void initState() {
     super.initState();
@@ -84,9 +93,6 @@ class _ProfileSetupViewState extends State<_ProfileSetupView> {
     if (missing != null && missing.isNotEmpty) {
       final filtered = ProfileCompleteness.filterQuestionsById(
           defaultProfileQuestions, missing);
-      // Safety net: if the filter yields nothing (shouldn't normally
-      // happen if the caller routed here correctly), fall back to the
-      // full list rather than showing an empty PageView.
       _questions = filtered.isNotEmpty ? filtered : defaultProfileQuestions;
     } else {
       _questions = defaultProfileQuestions;
@@ -99,24 +105,22 @@ class _ProfileSetupViewState extends State<_ProfileSetupView> {
     super.dispose();
   }
 
+  /// Advances to the next page. On the last QUESTION page this now
+  /// lands on the summary page instead of submitting immediately —
+  /// ProfileSummaryView's own "CONFIRM & SAVE" button is what actually
+  /// dispatches CompleteProfileSetup.
   void _nextPage() {
-    if (_currentPage < _questions.length - 1) {
+    if (_currentPage < _totalPages - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
-    } else {
-      context.read<ProfileSetupBloc>().add(
-            CompleteProfileSetup(isPostLogin: widget.isPostLogin),
-          );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final isPostLogin = widget.isPostLogin;
-    final isResuming =
-        widget.missingFieldIds != null && widget.missingFieldIds!.isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
@@ -124,19 +128,6 @@ class _ProfileSetupViewState extends State<_ProfileSetupView> {
           isPostLogin ? "Complete Your Profile" : "Your Fitness Profile",
         ),
         automaticallyImplyLeading: isPostLogin,
-        actions: [
-          // SKIP is only offered on first-time onboarding, never when
-          // resuming a profile the app has flagged as incomplete.
-          if (!isPostLogin && !isResuming)
-            TextButton(
-              onPressed: () {
-                context.read<ProfileSetupBloc>().add(
-                      CompleteProfileSetup(isPostLogin: false),
-                    );
-              },
-              child: const Text("SKIP"),
-            ),
-        ],
       ),
       body: Column(
         children: [
@@ -147,18 +138,24 @@ class _ProfileSetupViewState extends State<_ProfileSetupView> {
                 setState(() => _currentPage = index);
               },
               physics: const NeverScrollableScrollPhysics(),
-              children: _questions.map((question) {
-                if (question.id == 'physical_stats') {
-                  return StatsInputView(
+              children: [
+                ..._questions.map((question) {
+                  if (question.id == 'physical_stats') {
+                    return StatsInputView(
+                      question: question,
+                      onNext: _nextPage,
+                    );
+                  }
+                  return QuestionView(
                     question: question,
                     onNext: _nextPage,
                   );
-                }
-                return QuestionView(
-                  question: question,
-                  onNext: _nextPage,
-                );
-              }).toList(),
+                }),
+                ProfileSummaryView(
+                  questions: _questions,
+                  isPostLogin: isPostLogin,
+                ),
+              ],
             ),
           ),
           Padding(
@@ -166,7 +163,7 @@ class _ProfileSetupViewState extends State<_ProfileSetupView> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
-                _questions.length,
+                _totalPages,
                 (index) => _buildDotIndicator(index),
               ),
             ),

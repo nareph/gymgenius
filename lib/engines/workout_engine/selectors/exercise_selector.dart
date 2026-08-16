@@ -5,7 +5,6 @@ import 'package:gymgenius/domain/entities/training_program.dart';
 
 import 'package:gymgenius/domain/enums/equipment_type.dart';
 import 'package:gymgenius/domain/enums/experience_level.dart';
-import 'package:gymgenius/domain/enums/fitness_goal.dart';
 import 'package:gymgenius/domain/enums/muscle_group.dart';
 
 import 'package:gymgenius/domain/value_objects/workout_preferences.dart';

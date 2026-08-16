@@ -11,12 +11,6 @@ part 'profile_setup_state.dart';
 class ProfileSetupBloc extends Bloc<ProfileSetupEvent, ProfileSetupState> {
   final HealthRepository? _healthRepository;
 
-  /// [initialAnswers] lets the screen resume an in-progress profile with
-  /// pre-filled values when a page for an already-answered question is
-  /// revisited in the same session. For cross-session resume (after an
-  /// app restart), ProfileSetupScreen instead filters WHICH questions to
-  /// show using `HealthProfile.missingFieldIds` — it doesn't need the
-  /// previous raw values, since only unanswered questions are shown.
   ProfileSetupBloc({
     HealthRepository? healthRepository,
     Map<String, dynamic>? initialAnswers,
@@ -36,18 +30,34 @@ class ProfileSetupBloc extends Bloc<ProfileSetupEvent, ProfileSetupState> {
       CompleteProfileSetup event, Emitter<ProfileSetupState> emit) async {
     Log.debug('ProfileSetupBloc: Completing profile setup');
 
-    // Build HealthProfile from collected answers. `answeredQuestionIds` is
-    // computed inside the mapper and travels with the profile — no
-    // separate persistence step needed.
     try {
-      final profile = ProfileSetupMapper.toDomain(state.answers);
-      emit(state.copyWith(
-          profile: profile, status: ProfileSetupStatus.complete));
+      var profile = ProfileSetupMapper.toDomain(state.answers);
 
       if (event.isPostLogin && _healthRepository != null) {
+        // ProfileSetupMapper.toDomain() only knows about the answers
+        // collected in THIS session — it has no way to know which user
+        // this belongs to, so it can't set a correct userId. Without
+        // this fix, saveHealthProfile() writes under whatever
+        // placeholder/empty userId the mapper defaults to, while
+        // AuthBloc's re-check reads by the REAL current user id and
+        // finds nothing there — the save silently goes nowhere, and the
+        // app keeps reporting every field missing right after
+        // completion. Fetching the existing (empty, placeholder)
+        // profile created at sign-up and carrying its real userId over
+        // fixes this — we're completing that record, not replacing it.
+        final existing = await _healthRepository!.getCurrentProfile();
+        if (existing != null) {
+          profile = profile.copyWith(userId: existing.userId);
+        }
+
         await _healthRepository!.saveHealthProfile(profile);
         Log.debug('ProfileSetupBloc: Profile saved for existing user');
       }
+
+      emit(state.copyWith(
+        profile: profile,
+        status: ProfileSetupStatus.complete,
+      ));
     } catch (e) {
       Log.error('ProfileSetupBloc: Failed to build profile', error: e);
       emit(state.copyWith(

@@ -1,6 +1,7 @@
 // lib/presentation/widgets/profile/profile_view.dart
 
 import 'package:flutter/material.dart';
+import 'package:gymgenius/domain/enums/budget_level.dart';
 import 'package:gymgenius/domain/enums/equipment_type.dart';
 import 'package:gymgenius/domain/enums/experience_level.dart';
 import 'package:gymgenius/domain/enums/fitness_goal.dart';
@@ -108,6 +109,69 @@ final List<ProfileField> profileFields = [
     type: FieldType.multipleChoice,
     options: MuscleGroup.values.map((e) => e.value).toList(),
     optionLabels: {for (var e in MuscleGroup.values) e.value: e.displayName},
+  ),
+  // --- Nutrition Engine fields (new) ---
+  ProfileField(
+    id: 'food_budget',
+    label: 'Food Budget',
+    type: FieldType.singleChoice,
+    options: BudgetLevel.values.map((e) => e.value).toList(),
+    optionLabels: {for (var e in BudgetLevel.values) e.value: e.displayName},
+  ),
+  // food_restrictions/food_preferences are plain string tags, not enums —
+  // options/labels mirror the choices offered in profile_questions.dart
+  // so the same values round-trip cleanly between onboarding and editing.
+  const ProfileField(
+    id: 'food_restrictions',
+    label: 'Food Allergies / Restrictions',
+    type: FieldType.multipleChoice,
+    options: [
+      'vegetarian',
+      'vegan',
+      'peanut',
+      'fish',
+      'egg',
+      'dairy',
+      'gluten',
+    ],
+    optionLabels: {
+      'vegetarian': 'Vegetarian',
+      'vegan': 'Vegan',
+      'peanut': 'Peanut / Groundnut Allergy',
+      'fish': 'Fish / Seafood Allergy',
+      'egg': 'Egg Allergy',
+      'dairy': 'Dairy / Lactose Intolerance',
+      'gluten': 'Gluten Intolerance',
+    },
+  ),
+  const ProfileField(
+    id: 'food_preferences',
+    label: 'Favorite Foods',
+    type: FieldType.multipleChoice,
+    options: [
+      'rice',
+      'plantain',
+      'cassava',
+      'beans',
+      'fish',
+      'chicken',
+      'beef',
+      'vegetables',
+      'fruits',
+      'eggs',
+    ],
+    optionLabels: {
+      'rice': 'Rice',
+      'plantain': 'Plantain',
+      'cassava': 'Cassava',
+      'beans': 'Beans',
+      'fish': 'Fish',
+      'chicken': 'Chicken',
+      'beef': 'Beef',
+      'vegetables': 'Vegetables',
+      'fruits': 'Fruits',
+      'eggs': 'Eggs',
+    },
   ),
   ProfileField(
     id: 'country',

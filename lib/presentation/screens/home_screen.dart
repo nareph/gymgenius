@@ -2,12 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:gymgenius/core/logger/logger_service.dart';
 import 'package:gymgenius/data/datasources/local/hive/boxes/hive_datasource.dart';
-import 'package:gymgenius/domain/entities/health_profile.dart';
 import 'package:gymgenius/presentation/screens/auth/login_screen.dart';
 import 'package:gymgenius/presentation/screens/auth/sign_up_screen.dart';
-import 'package:gymgenius/presentation/screens/profile_setup/profile_setup_screen.dart';
 import 'package:gymgenius/presentation/widgets/data_loss_warning_dialog.dart';
 
+/// NOTE: This screen no longer routes through ProfileSetupScreen before
+/// account creation. Onboarding now happens AFTER sign-up (see
+/// AuthWrapper -> HomeTabScreen's CompleteProfileView gate) — "Get
+/// Started" goes straight to account creation with an empty profile;
+/// SignUpBloc fills in a placeholder HealthProfile when none is
+/// provided. This avoids asking for 11 answers before the user even has
+/// an account to lose if they drop off partway through.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -21,7 +26,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   _HomeView _currentView = _HomeView.landing;
-  HealthProfile? _healthProfile; // Holds profile for sign-up
   final _secureStorage = const FlutterSecureStorage();
 
   void _showLogin() {
@@ -31,19 +35,19 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  void _showSignUp(HealthProfile? profile) {
+  void _showSignUp() {
     setState(() {
       _currentView = _HomeView.signUp;
-      _healthProfile = profile;
-      Log.debug('HomeScreen: Switched to signup view with health profile');
+      Log.debug('HomeScreen: Switched to signup view');
     });
   }
 
-  /// Show profile setup screen (instead of old onboarding)
-  Future<void> _showProfileSetup() async {
-    Log.debug('HomeScreen: _showProfileSetup called');
+  /// Checks for stale local data (e.g. a previous session that wasn't
+  /// cleanly signed out) before starting a brand new account, then
+  /// proceeds to sign-up.
+  Future<void> _startSignUp() async {
+    Log.debug('HomeScreen: _startSignUp called');
 
-    // Check for existing data using HiveDatasource
     final hasExistingData = HiveDatasource.getAllUsers().isNotEmpty ||
         HiveDatasource.getCurrentUserId() != null;
 
@@ -63,10 +67,8 @@ class _HomeScreenState extends State<HomeScreen> {
       await _clearAllUserData();
     }
 
-    // Navigate to profile setup
-    setState(() {
-      _currentView = _HomeView.profileSetup;
-    });
+    if (!mounted) return;
+    _showSignUp();
   }
 
   /// Clear ALL user data (Hive + FlutterSecureStorage)
@@ -76,10 +78,8 @@ class _HomeScreenState extends State<HomeScreen> {
       Log.warning('HomeScreen: USER CONFIRMED DATA DELETION');
       Log.warning('═══════════════════════════════════════════════════');
 
-      // 1. Clear Hive database using HiveDatasource
       await HiveDatasource.clearAll();
 
-      // 2. Clear FlutterSecureStorage
       final allKeys = await _secureStorage.readAll();
       int deletedCount = 0;
 
@@ -118,27 +118,17 @@ class _HomeScreenState extends State<HomeScreen> {
       case _HomeView.landing:
         return _LandingPage(
           key: const ValueKey('landing'),
-          onGetStarted: _showProfileSetup,
+          onGetStarted: _startSignUp,
           onLogin: _showLogin,
         );
       case _HomeView.login:
         return LoginScreen(
           key: const ValueKey('login'),
-          onSignUpRequested: _showProfileSetup,
-        );
-      case _HomeView.profileSetup:
-        return ProfileSetupScreen(
-          key: const ValueKey('profileSetup'),
-          isPostLogin: false,
-          onProfileComplete: (profile) {
-            // When profile is complete, go to sign-up with the profile
-            _showSignUp(profile);
-          },
+          onSignUpRequested: _startSignUp,
         );
       case _HomeView.signUp:
         return SignUpScreen(
           key: const ValueKey('signUp'),
-          profile: _healthProfile,
           onLoginRequested: _showLogin,
         );
     }
@@ -148,7 +138,6 @@ class _HomeScreenState extends State<HomeScreen> {
 enum _HomeView {
   landing,
   login,
-  profileSetup,
   signUp,
 }
 
@@ -186,7 +175,6 @@ class _LandingPage extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // App Logo
                 Image.asset(
                   'assets/launcher_icon/launcher_icon.png',
                   height: screenHeight * 0.15,
@@ -201,8 +189,6 @@ class _LandingPage extends StatelessWidget {
                   },
                 ),
                 SizedBox(height: screenHeight * 0.02),
-
-                // App Title
                 Text(
                   "GYMGENIUS",
                   textAlign: TextAlign.center,
@@ -212,8 +198,6 @@ class _LandingPage extends StatelessWidget {
                   ),
                 ),
                 SizedBox(height: screenHeight * 0.01),
-
-                // App Tagline
                 Text(
                   "Your AI-Powered Fitness Coach",
                   textAlign: TextAlign.center,
@@ -222,8 +206,6 @@ class _LandingPage extends StatelessWidget {
                   ),
                 ),
                 SizedBox(height: screenHeight * 0.1),
-
-                // "Get Started" Button
                 ElevatedButton(
                   onPressed: () {
                     Log.debug('User tapped GET STARTED button');
@@ -235,8 +217,6 @@ class _LandingPage extends StatelessWidget {
                   child: const Text("GET STARTED"),
                 ),
                 SizedBox(height: screenHeight * 0.025),
-
-                // "Log In" Button
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [

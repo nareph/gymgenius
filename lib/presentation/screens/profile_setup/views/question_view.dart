@@ -75,6 +75,12 @@ class _QuestionViewState extends State<QuestionView> {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
 
+    // Only relevant for multipleChoice — singleChoice questions in this
+    // questionnaire are all required and advance immediately on tap.
+    final canProceedWithoutAnswer = !widget.question.isRequired;
+    final canProceed = canProceedWithoutAnswer || _selectedValues.isNotEmpty;
+    final showAsSkip = canProceedWithoutAnswer && _selectedValues.isEmpty;
+
     return Padding(
       padding: EdgeInsets.symmetric(
           horizontal: screenWidth * 0.08, vertical: screenHeight * 0.03),
@@ -173,10 +179,15 @@ class _QuestionViewState extends State<QuestionView> {
                     ),
                   ),
                   SizedBox(height: screenHeight * 0.03),
+                  // For optional questions (focus_areas, avoided_muscles),
+                  // this button is enabled even with zero selections and
+                  // relabels itself "SKIP" — replacing the old AppBar-level
+                  // SKIP that submitted the ENTIRE form regardless of which
+                  // question was on screen. Each question now owns its own
+                  // skip affordance, only when it's actually optional.
                   ElevatedButton(
-                    onPressed:
-                        _selectedValues.isNotEmpty ? widget.onNext : null,
-                    child: const Text("NEXT"),
+                    onPressed: canProceed ? widget.onNext : null,
+                    child: Text(showAsSkip ? "SKIP" : "NEXT"),
                   ),
                 ],
               ),
