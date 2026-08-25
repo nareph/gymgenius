@@ -30,7 +30,7 @@ class SignUpState extends Equatable {
       email: email ?? this.email,
       password: password ?? this.password,
       status: status ?? this.status,
-      errorMessage: errorMessage ?? this.errorMessage,
+      errorMessage: errorMessage,
     );
   }
 

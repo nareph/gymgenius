@@ -1,3 +1,5 @@
+// lib/presentation/widgets/home/program_dashboard_view.dart
+
 import 'package:flutter/material.dart';
 import 'package:gymgenius/domain/entities/exercise.dart';
 import 'package:gymgenius/domain/entities/health_profile.dart';
@@ -18,6 +20,10 @@ import 'package:gymgenius/presentation/viewmodels/home_viewmodel.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+/// Displays the main dashboard for an active training program.
+///
+/// Recovery information is displayed only when a real DailyCheckIn has
+/// produced a RecoveryStatus.
 class ProgramDashboardView extends StatelessWidget {
   final TrainingProgram program;
   final HealthProfile healthProfile;
@@ -32,81 +38,45 @@ class ProgramDashboardView extends StatelessWidget {
 
   String capitalize(String s) {
     if (s.isEmpty) return s;
+
     return s[0].toUpperCase() + s.substring(1);
   }
 
-  String _extractSplitTheme(List<Exercise> exercises) {
-    if (exercises.isEmpty) return 'Rest';
-    for (final exercise in exercises) {
-      final description = exercise.description;
-      final splitMatch = RegExp(r'Split:\s*([^*\n]+)', caseSensitive: false)
-          .firstMatch(description);
-      if (splitMatch != null) {
-        String splitTheme = splitMatch.group(1)?.trim() ?? '';
-        splitTheme = splitTheme
-            .replaceAll('Day', '')
-            .replaceAll('Focus', '')
-            .replaceAll('Training', '')
-            .trim();
-        final standardizedSplits = {
-          'push': 'Push',
-          'pull': 'Pull',
-          'legs': 'Legs',
-          'upper body': 'Upper Body',
-          'lower body': 'Lower Body',
-          'chest': 'Chest',
-          'back': 'Back',
-          'shoulders': 'Shoulders',
-          'arms': 'Arms',
-          'core': 'Core',
-          'full body': 'Full Body',
-          'chest & triceps': 'Chest & Triceps',
-          'back & biceps': 'Back & Biceps',
-          'shoulders & core': 'Shoulders & Core',
-        };
-        final lowerTheme = splitTheme.toLowerCase();
-        for (final entry in standardizedSplits.entries) {
-          if (lowerTheme.contains(entry.key)) return entry.value;
-        }
-        if (splitTheme.isNotEmpty) return splitTheme;
-      }
-    }
-    // fallback
-    if (exercises.any((e) =>
-        e.name.toLowerCase().contains('push') ||
-        e.name.toLowerCase().contains('chest'))) {
-      return 'Push';
-    }
-    if (exercises.any((e) =>
-        e.name.toLowerCase().contains('pull') ||
-        e.name.toLowerCase().contains('back'))) {
-      return 'Pull';
-    }
-    if (exercises.any((e) =>
-        e.name.toLowerCase().contains('squat') ||
-        e.name.toLowerCase().contains('leg'))) {
-      return 'Legs';
-    }
-    return 'Workout';
-  }
+  Color _getSplitColor(
+    String splitName,
+    ColorScheme colorScheme,
+  ) {
+    final lower = splitName.toLowerCase();
 
-  Color _getSplitThemeColor(List<Exercise> exercises, ColorScheme colorScheme) {
-    if (exercises.isEmpty) return colorScheme.surfaceContainerHighest;
-    final splitTheme = _extractSplitTheme(exercises).toLowerCase();
-    if (splitTheme.contains('push') || splitTheme.contains('chest')) {
-      return colorScheme.primaryContainer;
-    } else if (splitTheme.contains('pull') || splitTheme.contains('back')) {
-      return colorScheme.secondaryContainer;
-    } else if (splitTheme.contains('legs') || splitTheme.contains('lower')) {
-      return colorScheme.tertiaryContainer;
-    } else if (splitTheme.contains('shoulders') ||
-        splitTheme.contains('arms')) {
-      return colorScheme.errorContainer;
-    } else if (splitTheme.contains('core')) {
-      return Colors.orange.shade100;
-    } else if (splitTheme.contains('upper')) {
+    if (lower.contains('chest') || lower.contains('push')) {
       return colorScheme.primaryContainer;
     }
+
+    if (lower.contains('back') || lower.contains('pull')) {
+      return colorScheme.secondaryContainer;
+    }
+
+    if (lower.contains('legs') ||
+        lower.contains('lower') ||
+        lower.contains('glutes')) {
+      return colorScheme.tertiaryContainer;
+    }
+
+    if (lower.contains('shoulders') ||
+        lower.contains('arms') ||
+        lower.contains('triceps') ||
+        lower.contains('biceps')) {
+      return colorScheme.errorContainer;
+    }
+
+    if (lower.contains('core') || lower.contains('abs')) {
+      return Colors.orange.shade100;
+    }
+
+    if (lower.contains('upper')) {
+      return colorScheme.primaryContainer;
+    }
+
     return colorScheme.surfaceContainerHigh;
   }
 
@@ -115,10 +85,15 @@ class ProgramDashboardView extends StatelessWidget {
     List<Exercise> exercises,
     String dayKey,
   ) {
-    final workoutManager =
-        Provider.of<WorkoutSessionManager>(context, listen: false);
+    final workoutManager = Provider.of<WorkoutSessionManager>(
+      context,
+      listen: false,
+    );
+
     final theme = Theme.of(context);
-    final sessionName = "${capitalize(program.name)} - ${capitalize(dayKey)}";
+
+    final sessionName = "${capitalize(program.name)} - "
+        "${capitalize(dayKey)}";
 
     void initiateAndNavigate() {
       workoutManager.forceStartNewWorkout(
@@ -127,15 +102,20 @@ class ProgramDashboardView extends StatelessWidget {
         programId: program.id,
         dayKey: dayKey.toLowerCase(),
       );
+
       if (workoutManager.isWorkoutActive) {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const ActiveWorkoutSessionScreen()),
+          MaterialPageRoute(
+            builder: (_) => const ActiveWorkoutSessionScreen(),
+          ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text("Failed to start the workout."),
+            content: const Text(
+              "Failed to start the workout.",
+            ),
             backgroundColor: theme.colorScheme.error,
           ),
         );
@@ -146,13 +126,18 @@ class ProgramDashboardView extends StatelessWidget {
       showDialog(
         context: context,
         builder: (dialogCtx) => AlertDialog(
-          title: const Text("Workout in Progress"),
+          title: const Text(
+            "Workout in Progress",
+          ),
           content: const Text(
-              "A workout session is currently active. What would you like to do?"),
+            "A workout session is currently active. "
+            "What would you like to do?",
+          ),
           actions: <Widget>[
             TextButton(
               onPressed: () {
                 Navigator.of(dialogCtx).pop();
+
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -175,7 +160,9 @@ class ProgramDashboardView extends StatelessWidget {
               },
               child: Text(
                 "End & Start New",
-                style: TextStyle(color: theme.colorScheme.error),
+                style: TextStyle(
+                  color: theme.colorScheme.error,
+                ),
               ),
             ),
             TextButton(
@@ -191,68 +178,85 @@ class ProgramDashboardView extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
+
     final today = DateTime.now();
-    final daysOfWeek = [
+
+    const daysOfWeek = [
       'monday',
       'tuesday',
       'wednesday',
       'thursday',
       'friday',
       'saturday',
-      'sunday'
+      'sunday',
     ];
+
     final todayDayKey = daysOfWeek[today.weekday - 1];
-    // --------------------------------------------------------------
-    // The DecisionEngine's final decision for today's workout.
-    // If empty, today is a rest day.
-    // --------------------------------------------------------------
+
     final todaysExercises = dailyPlan.todayWorkout.finalExercises;
+
+    final splitDisplayName = dailyPlan.todayWorkout.splitDisplayName;
 
     final user = context.read<AuthBloc>().state.user;
 
     return ListView(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(16),
       children: [
         Text(
-          "Your Current Program: ${program.name}",
+          "Your Current Program: "
+          "${program.name}",
           style: textTheme.headlineSmall,
         ),
         Text(
-          "Duration: ${program.durationWeeks} weeks. "
-          "Expires: ${DateFormat.yMMMd().add_jm().format(program.expiresAt.toLocal())}",
-          style: textTheme.bodySmall
-              ?.copyWith(color: colorScheme.onSurfaceVariant),
+          "Duration: "
+          "${program.durationWeeks} weeks. "
+          "Expires: "
+          "${DateFormat.yMMMd().add_jm().format(
+                program.expiresAt.toLocal(),
+              )}",
+          style: textTheme.bodySmall?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+          ),
         ),
         Text(
-          "Week ${dailyPlan.programProgress.currentWeek} of ${program.durationWeeks}",
+          "Week "
+          "${dailyPlan.programProgress.currentWeek} "
+          "of ${program.durationWeeks}",
           style: textTheme.bodySmall?.copyWith(
             color: colorScheme.primary,
           ),
         ),
         const SizedBox(height: 16),
 
-        // ------------------------------------------------------------------
-        // Today's workout card (only if not expired and not a rest day)
-        // ------------------------------------------------------------------
+        // ==========================================================
+        // Today's workout
+        // ==========================================================
+
         if (todaysExercises.isNotEmpty && !program.isExpired)
           Card(
-            color: _getSplitThemeColor(todaysExercises, colorScheme)
-                .withAlpha(178),
+            color: _getSplitColor(
+              splitDisplayName,
+              colorScheme,
+            ).withAlpha(178),
             elevation: 2,
             child: ListTile(
-              contentPadding:
-                  const EdgeInsets.symmetric(vertical: 10.0, horizontal: 16.0),
+              contentPadding: const EdgeInsets.symmetric(
+                vertical: 10,
+                horizontal: 16,
+              ),
               leading: Icon(
                 Icons.fitness_center,
                 color: colorScheme.onPrimaryContainer,
                 size: 30,
               ),
               title: Text(
-                "Today: ${_extractSplitTheme(todaysExercises)}",
+                "Today: $splitDisplayName",
                 style: textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: colorScheme.onPrimaryContainer,
@@ -262,14 +266,17 @@ class ProgramDashboardView extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "${todaysExercises.length} exercises planned",
+                    "${todaysExercises.length} "
+                    "exercises planned",
                     style: textTheme.bodyMedium?.copyWith(
                       color: colorScheme.onPrimaryContainer.withAlpha(204),
                     ),
                   ),
-                  if (_extractSplitTheme(todaysExercises) != 'Rest')
+                  if (splitDisplayName != 'Rest' &&
+                      splitDisplayName != 'Workout')
                     Text(
-                      "Split: ${_extractSplitTheme(todaysExercises)}",
+                      "Split: "
+                      "$splitDisplayName",
                       style: textTheme.bodySmall?.copyWith(
                         color: colorScheme.onPrimaryContainer.withAlpha(180),
                         fontStyle: FontStyle.italic,
@@ -278,10 +285,16 @@ class ProgramDashboardView extends StatelessWidget {
                 ],
               ),
               trailing: ElevatedButton.icon(
-                icon: const Icon(Icons.play_arrow_rounded, size: 20),
+                icon: const Icon(
+                  Icons.play_arrow_rounded,
+                  size: 20,
+                ),
                 label: const Text("START"),
-                onPressed: () =>
-                    _startTodaysWorkout(context, todaysExercises, todayDayKey),
+                onPressed: () => _startTodaysWorkout(
+                  context,
+                  todaysExercises,
+                  todayDayKey,
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: colorScheme.primary,
                   foregroundColor: colorScheme.onPrimary,
@@ -289,36 +302,38 @@ class ProgramDashboardView extends StatelessWidget {
                     horizontal: 16,
                     vertical: 10,
                   ),
-                  textStyle: textTheme.labelLarge
-                      ?.copyWith(fontWeight: FontWeight.bold),
+                  textStyle: textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
           )
-        // ------------------------------------------------------------------
-        // Rest day message (when todaysExercises is empty and program valid)
-        // ------------------------------------------------------------------
         else if (!program.isExpired)
           Card(
             color: colorScheme.surfaceContainerHighest,
             elevation: 1,
             child: ListTile(
-              contentPadding:
-                  const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+              contentPadding: const EdgeInsets.symmetric(
+                vertical: 12,
+                horizontal: 16,
+              ),
               leading: Icon(
                 Icons.hotel_rounded,
                 color: colorScheme.onSurfaceVariant,
                 size: 30,
               ),
               title: Text(
-                "${capitalize(todayDayKey)} (Rest Day)",
+                "${capitalize(todayDayKey)} "
+                "(Rest Day)",
                 style: textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: colorScheme.onSurfaceVariant,
                 ),
               ),
               subtitle: Text(
-                "Enjoy your recovery, ${user?.displayName?.split(' ')[0] ?? 'User'}.",
+                "Enjoy your recovery, "
+                "${user?.displayName?.split(' ')[0] ?? 'User'}.",
                 style: textTheme.bodyMedium?.copyWith(
                   color: colorScheme.onSurfaceVariant.withAlpha(204),
                 ),
@@ -326,14 +341,18 @@ class ProgramDashboardView extends StatelessWidget {
             ),
           ),
 
-        // ------------------------------------------------------------------
+        // ==========================================================
         // AI Coach
-        // ------------------------------------------------------------------
+        // ==========================================================
+
         Builder(
           builder: (context) {
             final homeVm = context.watch<HomeViewModel>();
+
             return Padding(
-              padding: const EdgeInsets.only(top: 16),
+              padding: const EdgeInsets.only(
+                top: 16,
+              ),
               child: CoachHomeCard(
                 response: homeVm.dailyCoaching,
                 isLoading: homeVm.isLoadingCoaching,
@@ -344,57 +363,83 @@ class ProgramDashboardView extends StatelessWidget {
           },
         ),
 
-        // ------------------------------------------------------------------
-        // Health Platform CTA
-        // ------------------------------------------------------------------
-        Padding(
-          padding: const EdgeInsets.only(top: 16),
-          child: HomeHealthPlatformCard(
-            snapshot: dailyPlan.healthPlatformSnapshot,
-          ),
-        ),
+        // ==========================================================
+        // Health Platform
+        // ==========================================================
 
-        // ------------------------------------------------------------------
-        // Workout adaptation (from DailyPlan.finalDecision)
-        // ------------------------------------------------------------------
+        if (dailyPlan.healthPlatformSnapshot != null)
+          Padding(
+            padding: const EdgeInsets.only(
+              top: 16,
+            ),
+            child: HomeHealthPlatformCard(
+              snapshot: dailyPlan.healthPlatformSnapshot!,
+            ),
+          ),
+
+        // ==========================================================
+        // Workout adaptation
+        // ==========================================================
+
         if (dailyPlan.finalDecision.requiresAdaptation) ...[
           const SizedBox(height: 16),
-          WorkoutAdaptationBanner(decision: dailyPlan.finalDecision),
+          WorkoutAdaptationBanner(
+            decision: dailyPlan.finalDecision,
+          ),
         ],
 
-        // ------------------------------------------------------------------
-        // Health recommendation
-        // ------------------------------------------------------------------
+        // ==========================================================
+        // Health decision
+        // ==========================================================
+
         if (dailyPlan.healthDecision != null) ...[
           const SizedBox(height: 16),
-          HealthDecisionCard(decision: dailyPlan.healthDecision!),
+          HealthDecisionCard(
+            decision: dailyPlan.healthDecision!,
+          ),
         ],
 
-        // ------------------------------------------------------------------
-        // Recovery summary (from DailyPlan)
-        // ------------------------------------------------------------------
+        // ==========================================================
+        // Recovery
+        //
+        // CRITICAL:
+        // No DailyCheckIn -> no RecoveryStatus -> no card.
+        // ==========================================================
+
         if (dailyPlan.recoveryStatus != null) ...[
           const SizedBox(height: 16),
-          RecoverySummaryCard(status: dailyPlan.recoveryStatus!),
+          RecoverySummaryCard(
+            status: dailyPlan.recoveryStatus!,
+          ),
         ],
 
-        // ------------------------------------------------------------------
-        // Nutrition summary (from DailyPlan)
-        // ------------------------------------------------------------------
+        // ==========================================================
+        // Nutrition
+        // ==========================================================
+
         if (dailyPlan.nutritionPlan != null) ...[
           const SizedBox(height: 16),
-          NutritionSummaryCard(plan: dailyPlan.nutritionPlan!),
+          NutritionSummaryCard(
+            plan: dailyPlan.nutritionPlan!,
+          ),
         ],
 
-        // ------------------------------------------------------------------
-        // Progress summary (from DailyPlan)
-        // ------------------------------------------------------------------
+        // ==========================================================
+        // Progress
+        // ==========================================================
+
         if (dailyPlan.progressSnapshot != null) ...[
           const SizedBox(height: 16),
-          HomeProgressSummaryCard(snapshot: dailyPlan.progressSnapshot!),
+          HomeProgressSummaryCard(
+            snapshot: dailyPlan.progressSnapshot!,
+          ),
         ],
 
         const SizedBox(height: 24),
+
+        // ==========================================================
+        // Weekly schedule
+        // ==========================================================
 
         if (!program.isExpired) ...[
           OutlinedButton.icon(
@@ -406,15 +451,25 @@ class ProgramDashboardView extends StatelessWidget {
                 ),
               );
             },
-            icon: const Icon(Icons.calendar_view_week_rounded),
-            label: const Text('View Weekly Training Schedule'),
+            icon: const Icon(
+              Icons.calendar_view_week_rounded,
+            ),
+            label: const Text(
+              'View Weekly Training Schedule',
+            ),
             style: OutlinedButton.styleFrom(
-              minimumSize: const Size.fromHeight(48),
+              minimumSize: const Size.fromHeight(
+                48,
+              ),
               alignment: Alignment.centerLeft,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
             ),
           ),
         ],
+
         const SizedBox(height: 24),
       ],
     );

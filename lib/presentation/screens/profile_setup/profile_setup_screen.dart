@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
 import 'package:gymgenius/di/injection.dart';
 import 'package:gymgenius/domain/entities/health_profile.dart';
+import 'package:gymgenius/domain/repositories/auth_repository.dart';
 import 'package:gymgenius/domain/repositories/health_repository.dart';
 import 'package:gymgenius/presentation/blocs/auth/auth_bloc.dart';
 import 'package:gymgenius/presentation/blocs/profile_setup/profile_setup_bloc.dart';
@@ -27,25 +29,25 @@ class ProfileSetupScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) => ProfileSetupBloc(
-        healthRepository: isPostLogin ? getIt<HealthRepository>() : null,
+        healthRepository: getIt<HealthRepository>(),
+        authRepository: getIt<AuthRepository>(),
+        initialAnswers: null, // Could be pre-filled if editing later
       ),
       child: BlocListener<ProfileSetupBloc, ProfileSetupState>(
         listener: (context, state) {
           if (state.status == ProfileSetupStatus.complete) {
+            // For post‑login flow, refresh auth state and close the screen.
             if (isPostLogin) {
               context.read<AuthBloc>().add(const AuthStateCheckRequested());
               if (Navigator.of(context).canPop()) {
                 Navigator.of(context).pop();
               }
             } else if (onProfileComplete != null && state.profile != null) {
+              // For pre‑signup flow (if any), invoke the callback.
               onProfileComplete!(state.profile!);
             }
           }
-          // NOTE: ProfileSetupStatus.error is now surfaced inline on
-          // ProfileSummaryView (next to the CONFIRM & SAVE button)
-          // instead of only a SnackBar — the summary page is where the
-          // user is looking right when the save can fail. The SnackBar
-          // stays as a fallback for errors on other pages.
+
           if (state.status == ProfileSetupStatus.error) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -63,6 +65,10 @@ class ProfileSetupScreen extends StatelessWidget {
     );
   }
 }
+
+// ---------------------------------------------------------------------
+// The UI part remains unchanged, but we keep it here for completeness.
+// ---------------------------------------------------------------------
 
 class _ProfileSetupView extends StatefulWidget {
   final bool isPostLogin;
@@ -82,7 +88,6 @@ class _ProfileSetupViewState extends State<_ProfileSetupView> {
   int _currentPage = 0;
   late final List<ProfileQuestion> _questions;
 
-  /// +1 for the review/summary page appended after the last question.
   int get _totalPages => _questions.length + 1;
 
   @override
@@ -105,10 +110,6 @@ class _ProfileSetupViewState extends State<_ProfileSetupView> {
     super.dispose();
   }
 
-  /// Advances to the next page. On the last QUESTION page this now
-  /// lands on the summary page instead of submitting immediately —
-  /// ProfileSummaryView's own "CONFIRM & SAVE" button is what actually
-  /// dispatches CompleteProfileSetup.
   void _nextPage() {
     if (_currentPage < _totalPages - 1) {
       _pageController.nextPage(
@@ -116,6 +117,14 @@ class _ProfileSetupViewState extends State<_ProfileSetupView> {
         curve: Curves.easeInOut,
       );
     }
+  }
+
+  void _goToQuestion(int questionIndex) {
+    _pageController.animateToPage(
+      questionIndex,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
   }
 
   @override
@@ -154,6 +163,7 @@ class _ProfileSetupViewState extends State<_ProfileSetupView> {
                 ProfileSummaryView(
                   questions: _questions,
                   isPostLogin: isPostLogin,
+                  onEditQuestion: _goToQuestion,
                 ),
               ],
             ),

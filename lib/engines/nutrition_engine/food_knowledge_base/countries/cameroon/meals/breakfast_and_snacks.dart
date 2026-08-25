@@ -1,0 +1,75 @@
+import 'package:gymgenius/domain/enums/budget_level.dart';
+import 'package:gymgenius/domain/enums/meal_objective.dart';
+import 'package:gymgenius/domain/value_objects/macro_targets.dart';
+import '../../../models/meal_template.dart';
+
+const List<MealTemplate> cameroonBreakfastAndSnacks = [
+  MealTemplate(
+    id: 'cm_meal_eggs_bread',
+    name: 'Eggs with bread and avocado',
+    objective: MealObjective.highProtein,
+    ingredientIds: ['cm_eggs', 'cm_bread', 'cm_avocado'],
+    ingredientNames: ['Eggs', 'Local bread', 'Avocado'],
+    baseMacros: MacroTargets(calories: 450, proteinG: 22, carbsG: 35, fatG: 24),
+    allergens: ['egg'],
+    tags: ['breakfast'],
+  ),
+  MealTemplate(
+    id: 'cm_meal_fruit_eggs',
+    name: 'Fruit plate with boiled eggs',
+    objective: MealObjective.light,
+    ingredientIds: ['cm_banana', 'cm_papaya', 'cm_eggs'],
+    ingredientNames: ['Banana', 'Papaya', 'Eggs'],
+    baseMacros: MacroTargets(calories: 320, proteinG: 15, carbsG: 40, fatG: 10),
+    allergens: ['egg'],
+    tags: ['snack', 'breakfast'],
+  ),
+  MealTemplate(
+    id: 'cm_meal_power_porridge',
+    name: 'Maize Power Porridge',
+    objective: MealObjective.highProtein,
+    ingredientIds: [
+      'cm_corn_flour',
+      'cm_soy_flour',
+      'cm_nido_powder',
+      'cm_eggs',
+      'cm_peanut_paste',
+      'cm_peanut_oil',
+      'cm_sugar',
+    ],
+    ingredientNames: [
+      'Corn flour',
+      'Soy flour',
+      'Nido powder',
+      'Eggs',
+      'Peanut paste',
+      'Peanut oil',
+      'Sugar'
+    ],
+    baseMacros:
+        MacroTargets(calories: 720, proteinG: 43, carbsG: 106, fatG: 52),
+    minBudget: BudgetLevel.low,
+    allergens: ['egg', 'peanut'],
+    tags: ['breakfast', 'mass_gain', 'porridge', 'post_workout'],
+  ),
+  MealTemplate(
+    id: 'cm_meal_beignets_lait',
+    name: 'Doughnuts with fermented milk (Pendidam)',
+    objective: MealObjective.highEnergy,
+    ingredientIds: ['cm_beignets', 'cm_fermented_milk'],
+    ingredientNames: ['Doughnuts', 'Fermented milk'],
+    baseMacros: MacroTargets(calories: 420, proteinG: 12, carbsG: 45, fatG: 22),
+    allergens: ['dairy'],
+    tags: ['breakfast', 'street_food', 'snack'],
+  ),
+  MealTemplate(
+    id: 'cm_meal_soya_brochettes',
+    name: 'Soya (Beef or Chicken Skewers)',
+    objective: MealObjective.highProtein,
+    ingredientIds: ['cm_beef', 'cm_onion', 'cm_hot_pepper'],
+    ingredientNames: ['Beef', 'Onion', 'Hot pepper'],
+    baseMacros: MacroTargets(calories: 320, proteinG: 30, carbsG: 5, fatG: 20),
+    minBudget: BudgetLevel.medium,
+    tags: ['street_food', 'snack', 'high_protein'],
+  ),
+];

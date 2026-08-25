@@ -134,6 +134,7 @@ DecisionContext _context({
       dayKey: 'tuesday',
       plannedExercises: exercises,
       finalExercises: exercises,
+      splitDisplayName: '',
     ),
     recoveryStatus: recovery,
   );
@@ -225,7 +226,8 @@ void main() {
 
       expect(moderate.volumeMultiplier, 0.70);
       expect(veryActive.volumeMultiplier, 0.85);
-      expect(veryActive.volumeMultiplier, greaterThan(moderate.volumeMultiplier!));
+      expect(
+          veryActive.volumeMultiplier, greaterThan(moderate.volumeMultiplier!));
     });
   });
 
@@ -242,6 +244,7 @@ void main() {
         dayKey: 'tuesday',
         plannedExercises: exercises,
         finalExercises: exercises,
+        splitDisplayName: '',
       );
 
       final adapted = volumeService.reduceVolume(
@@ -265,6 +268,7 @@ void main() {
         dayKey: 'tuesday',
         plannedExercises: exercises,
         finalExercises: exercises,
+        splitDisplayName: '',
       );
       final adapted =
           volumeService.reduceVolume(workout, volumeMultiplier: 1.0);

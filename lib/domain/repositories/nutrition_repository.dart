@@ -1,5 +1,6 @@
 // lib/domain/repositories/nutrition_repository.dart
 
+import 'package:gymgenius/domain/entities/nutrition_log.dart';
 import 'package:gymgenius/domain/entities/nutrition_plan.dart';
 import 'package:gymgenius/domain/entities/nutrition_profile.dart';
 
@@ -12,4 +13,13 @@ abstract interface class NutritionRepository {
   Future<NutritionPlan?> getPlanForDate(String userId, DateTime date);
   Future<void> savePlan(NutritionPlan plan);
   Future<void> deletePlansForUser(String userId);
+
+  Future<void> saveNutritionLog(NutritionLog log);
+  Future<List<NutritionLog>> getNutritionLogsForDay(
+    String userId,
+    DateTime day,
+  );
+  Future<List<NutritionLog>> getNutritionLogHistory(String userId);
+  Future<void> deleteNutritionLog(String id);
+  Future<void> deleteNutritionLogsForUser(String userId);
 }

@@ -200,6 +200,7 @@ void main() {
             dayKey: 'tuesday',
             plannedExercises: const [],
             finalExercises: const [],
+            splitDisplayName: '',
           ),
         ),
       );

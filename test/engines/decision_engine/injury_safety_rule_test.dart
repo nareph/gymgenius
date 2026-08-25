@@ -121,6 +121,7 @@ DecisionContext _context({
       dayKey: 'tuesday',
       plannedExercises: session,
       finalExercises: session,
+      splitDisplayName: '',
     ),
   );
 }

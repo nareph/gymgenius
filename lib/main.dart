@@ -15,7 +15,7 @@ import 'package:gymgenius/presentation/theme/app_theme.dart';
 import 'package:gymgenius/presentation/viewmodels/home_viewmodel.dart';
 import 'package:gymgenius/presentation/viewmodels/profile_viewmodel.dart';
 import 'package:gymgenius/presentation/viewmodels/tracking_viewmodel.dart';
-import 'package:gymgenius/presentation/widgets/auth_wrapper.dart';
+import 'package:gymgenius/auth_wrapper.dart';
 import 'package:gymgenius/presentation/widgets/workout/workout_app_lifecycle_bridge.dart';
 import 'package:provider/provider.dart';
 

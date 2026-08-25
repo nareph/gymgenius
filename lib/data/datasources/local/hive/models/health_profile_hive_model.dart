@@ -55,18 +55,25 @@ class HealthProfileHiveModel extends HiveObject {
   @HiveField(16)
   DateTime updatedAt;
 
-  /// Question ids the user genuinely answered during onboarding. Nullable
-  /// (rather than defaulted to `[]` at the Hive level) so that records
-  /// saved BEFORE this field existed still deserialize correctly — Hive
-  /// leaves it null for those, and `HealthMapper.toDomain` treats null as
-  /// "unknown/legacy profile" (see mapper note).
   @HiveField(17)
   List<String>? answeredQuestionIds;
 
-  /// Muscle groups to avoid. Nullable so profiles saved before this field
-  /// still deserialize (Hive leaves it null; mapper treats null as empty).
   @HiveField(18)
   List<String>? avoidedMuscles;
+
+  /// BudgetLevel.value string (e.g. 'medium'). Nullable so profiles
+  /// saved before this field existed still deserialize — mapper treats
+  /// null as BudgetLevel.medium, matching the previous hardcoded default.
+  @HiveField(19)
+  String? budget;
+
+  /// Nullable so profiles saved before this field existed still
+  /// deserialize — mapper treats null as an empty list.
+  @HiveField(20)
+  List<String>? foodPreferences;
+
+  @HiveField(21)
+  List<String>? foodRestrictions;
 
   HealthProfileHiveModel({
     required this.userId,
@@ -88,5 +95,8 @@ class HealthProfileHiveModel extends HiveObject {
     required this.updatedAt,
     this.answeredQuestionIds,
     this.avoidedMuscles,
+    this.budget,
+    this.foodPreferences,
+    this.foodRestrictions,
   });
 }

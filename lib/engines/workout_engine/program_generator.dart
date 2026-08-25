@@ -15,19 +15,21 @@ import 'package:gymgenius/engines/workout_engine/shared/workout_constants.dart';
 /// ProgramGenerator
 /// ---------------------------------------------------------------------------
 ///
-/// Generates a complete TrainingProgram from:
+/// Generates a complete [TrainingProgram] from:
 ///
 /// • HealthProfile
-/// • selected workout splits
+/// • validated weekly workout splits
 /// • workout frequency
 /// • previous program
 ///
-/// The generator itself does not receive or manage Random.
+/// The generator does NOT decide which split should be used.
+/// That responsibility belongs to the planner layer.
 ///
-/// Exercise selection and workout composition are delegated to
-/// WorkoutDayGenerator.
+/// The generator receives the final validated split structure and simply
+/// maps each split to the corresponding workout day.
 ///
-/// The generator is therefore a pure orchestration layer.
+/// Exercise selection and workout composition remain delegated to
+/// [WorkoutDayGenerator].
 /// ---------------------------------------------------------------------------
 class ProgramGenerator {
   ProgramGenerator({
@@ -62,6 +64,19 @@ class ProgramGenerator {
     );
 
     //-----------------------------------------------------------------------
+    // Normalize the final split list
+    //
+    // The planner is responsible for producing a coherent list, but this
+    // guard prevents an invalid list length from causing silent generation
+    // gaps.
+    //-----------------------------------------------------------------------
+
+    final normalizedSplits = _normalizeSplits(
+      selectedSplit,
+      workoutDays.length,
+    );
+
+    //-----------------------------------------------------------------------
     // Initialize weekly schedule
     //-----------------------------------------------------------------------
 
@@ -73,9 +88,11 @@ class ProgramGenerator {
     // Generate each workout day
     //-----------------------------------------------------------------------
 
-    for (var i = 0; i < workoutDays.length && i < selectedSplit.length; i++) {
+    for (var i = 0;
+        i < workoutDays.length && i < normalizedSplits.length;
+        i++) {
       final day = workoutDays[i];
-      final split = selectedSplit[i];
+      final split = normalizedSplits[i];
 
       weeklySchedule[day] = _dayGenerator.generate(
         split: split,
@@ -105,11 +122,11 @@ class ProgramGenerator {
       id: '',
       userId: profile.userId,
       name: _programName(
-        workoutDaysCount,
-        selectedSplit,
+        workoutDays: workoutDays.length,
+        splits: normalizedSplits,
       ),
       goal: training.goal,
-      split: _splitType(selectedSplit),
+      split: _splitType(normalizedSplits),
       experience: training.experience,
       durationWeeks: durationWeeks,
       weeklySchedule: weeklySchedule,
@@ -132,12 +149,48 @@ class ProgramGenerator {
     required bool useSpecifiedDays,
   }) {
     if (useSpecifiedDays && training.preferredDays.isNotEmpty) {
-      return training.preferredDays.map((day) => day.name).toList();
+      final preferredDays = training.preferredDays
+          .map((day) => day.name)
+          .where(WorkoutConstants.daysOfWeek.contains)
+          .toList();
+
+      if (preferredDays.isNotEmpty) {
+        return preferredDays.take(7).toList();
+      }
     }
 
     return WorkoutConstants.defaultWorkoutDays(
-      workoutDaysCount,
+      workoutDaysCount.clamp(1, 7),
     );
+  }
+
+  //===========================================================================
+  // Split normalization
+  //===========================================================================
+
+  /// Ensures the final split list contains exactly one split per generated
+  /// workout day.
+  ///
+  /// In normal operation the planner already guarantees this. This method
+  /// exists as a defensive boundary so the generator never silently creates
+  /// empty workout days because the planner returned too few splits.
+  List<MuscleSplit> _normalizeSplits(
+    List<MuscleSplit> splits,
+    int workoutDays,
+  ) {
+    if (workoutDays <= 0 || splits.isEmpty) {
+      return const [];
+    }
+
+    final result = <MuscleSplit>[];
+
+    for (var i = 0; i < workoutDays; i++) {
+      result.add(
+        splits[i % splits.length],
+      );
+    }
+
+    return result;
   }
 
   //===========================================================================
@@ -147,7 +200,25 @@ class ProgramGenerator {
   SplitType _splitType(
     List<MuscleSplit> splits,
   ) {
+    if (splits.isEmpty) {
+      return SplitType.custom;
+    }
+
     final names = splits.map((split) => split.name.toLowerCase()).join(' ');
+
+    //-----------------------------------------------------------------------
+    // Specialized focus split
+    //-----------------------------------------------------------------------
+
+    if (splits.every(
+      (split) => split.name.startsWith('Focused:'),
+    )) {
+      return SplitType.custom;
+    }
+
+    //-----------------------------------------------------------------------
+    // Push / Pull / Legs
+    //-----------------------------------------------------------------------
 
     if (names.contains('push') &&
         names.contains('pull') &&
@@ -155,11 +226,21 @@ class ProgramGenerator {
       return SplitType.pushPullLegs;
     }
 
+    //-----------------------------------------------------------------------
+    // Upper / Lower
+    //-----------------------------------------------------------------------
+
     if (names.contains('upper') && names.contains('lower')) {
       return SplitType.upperLower;
     }
 
-    if (names.contains('chest') || names.contains('back')) {
+    //-----------------------------------------------------------------------
+    // Traditional body-part split
+    //-----------------------------------------------------------------------
+
+    if (names.contains('chest') ||
+        names.contains('back') ||
+        names.contains('arms')) {
       return SplitType.broSplit;
     }
 
@@ -170,10 +251,14 @@ class ProgramGenerator {
   // Program name
   //===========================================================================
 
-  String _programName(
-    int workoutDays,
-    List<MuscleSplit> splits,
-  ) {
+  String _programName({
+    required int workoutDays,
+    required List<MuscleSplit> splits,
+  }) {
+    if (splits.isEmpty) {
+      return '$workoutDays-Day Custom Split';
+    }
+
     final splitNames =
         splits.take(workoutDays).map((split) => split.name).join('/');
 

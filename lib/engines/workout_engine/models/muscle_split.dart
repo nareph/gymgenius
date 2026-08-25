@@ -1,3 +1,5 @@
+// lib/engines/workout_engine/models/muscle_split.dart
+
 import 'package:gymgenius/domain/enums/muscle_group.dart';
 
 /// Describes a training split used by the Workout Engine.
@@ -13,46 +15,13 @@ import 'package:gymgenius/domain/enums/muscle_group.dart';
 /// • human-readable theme
 /// • estimated recovery cost
 /// • whether it is upper/lower/full body
-///
-/// The SplitPlanner selects the most appropriate collection of
-/// MuscleSplits according to:
-///
-/// • training frequency
-/// • experience
-/// • focus muscles
-/// • recovery
-/// • future specialization rules
 class MuscleSplit {
-  /// Unique split name.
-  ///
-  /// Examples:
-  ///
-  /// • Push
-  /// • Pull
-  /// • Legs
-  /// • Upper Body
-  /// • Lower Body
-  /// • Shoulders & Core
   final String name;
-
-  /// Muscles trained by this split.
   final List<MuscleGroup> muscles;
-
-  /// Display theme.
   final String theme;
-
-  /// Estimated recovery cost.
-  ///
-  /// Higher values mean the split is more demanding.
   final int recoveryCost;
-
-  /// Whether this split mainly targets the upper body.
   final bool isUpperBody;
-
-  /// Whether this split mainly targets the lower body.
   final bool isLowerBody;
-
-  /// Whether this split trains the whole body.
   final bool isFullBody;
 
   const MuscleSplit({
@@ -65,19 +34,128 @@ class MuscleSplit {
     this.isFullBody = false,
   });
 
-  /// True if this split trains the given muscle.
-  bool targets(MuscleGroup muscle) {
-    return muscles.contains(muscle);
+  // ============================================================
+  // Primary muscles (visible identity of the session)
+  // ============================================================
+
+  /// Primary muscles that define the visible identity of this session.
+  ///
+  /// These are used for compatibility checks with user focus areas.
+  List<MuscleGroup> get primaryMuscles {
+    switch (name) {
+      case 'Push':
+        return const [MuscleGroup.chest];
+
+      case 'Pull':
+        return const [MuscleGroup.back];
+
+      case 'Legs':
+        return const [
+          MuscleGroup.quadriceps,
+          MuscleGroup.hamstrings,
+          MuscleGroup.glutes,
+        ];
+
+      case 'Chest':
+        return const [MuscleGroup.chest];
+
+      case 'Back':
+        return const [MuscleGroup.back];
+
+      case 'Arms':
+        return const [
+          MuscleGroup.biceps,
+          MuscleGroup.triceps,
+          MuscleGroup.forearms,
+        ];
+
+      case 'Chest & Triceps':
+        return const [
+          MuscleGroup.chest,
+          MuscleGroup.triceps,
+        ];
+
+      case 'Back & Biceps':
+        return const [
+          MuscleGroup.back,
+          MuscleGroup.biceps,
+        ];
+
+      case 'Shoulders & Core':
+        return const [
+          MuscleGroup.shoulders,
+          MuscleGroup.absCore,
+        ];
+
+      case 'Upper Body':
+        return const [
+          MuscleGroup.chest,
+          MuscleGroup.back,
+          MuscleGroup.shoulders,
+        ];
+
+      case 'Lower Body':
+        return const [
+          MuscleGroup.quadriceps,
+          MuscleGroup.hamstrings,
+          MuscleGroup.glutes,
+        ];
+
+      case 'Full Body':
+        return List<MuscleGroup>.unmodifiable(muscles);
+
+      default:
+        return List<MuscleGroup>.unmodifiable(muscles);
+    }
   }
 
-  /// Number of focus muscles matched by this split.
-  int scoreAgainst(
-    List<MuscleGroup> focusMuscles,
-  ) {
-    if (focusMuscles.isEmpty) {
-      return 0;
-    }
+  // ============================================================
+  // User-facing display names
+  // ============================================================
 
+  /// User-friendly name of the main focus of this session.
+  String get displayName {
+    switch (name) {
+      case 'Push':
+        return 'Chest';
+      case 'Pull':
+        return 'Back';
+      case 'Legs':
+        return 'Legs';
+      case 'Chest':
+        return 'Chest';
+      case 'Back':
+        return 'Back';
+      case 'Arms':
+        return 'Arms';
+      case 'Chest & Triceps':
+        return 'Chest & Triceps';
+      case 'Back & Biceps':
+        return 'Back & Biceps';
+      case 'Shoulders & Core':
+        return 'Shoulders & Core';
+      case 'Upper Body':
+        return 'Upper Body';
+      case 'Lower Body':
+        return 'Lower Body';
+      case 'Full Body':
+        return 'Full Body';
+      default:
+        return name;
+    }
+  }
+
+  /// Full title for today's workout (e.g. "Today: Chest").
+  String get todayTitle => 'Today: $displayName';
+
+  // ============================================================
+  // Helpers
+  // ============================================================
+
+  bool targets(MuscleGroup muscle) => muscles.contains(muscle);
+
+  int scoreAgainst(List<MuscleGroup> focusMuscles) {
+    if (focusMuscles.isEmpty) return 0;
     return muscles.where(focusMuscles.contains).length;
   }
 

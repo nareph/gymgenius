@@ -1,7 +1,7 @@
 import 'package:gymgenius/domain/entities/health_profile.dart';
 import 'package:gymgenius/domain/value_objects/body_measurements.dart';
-import 'package:gymgenius/domain/value_objects/workout_preferences.dart';
 import 'package:gymgenius/domain/value_objects/lifestyle_preferences.dart';
+import 'package:gymgenius/domain/value_objects/workout_preferences.dart';
 import 'package:gymgenius/presentation/mappers/profile_completeness.dart';
 
 import '../../domain/enums/exports.dart';
@@ -10,7 +10,7 @@ class ProfileSetupMapper {
   const ProfileSetupMapper._();
 
   static HealthProfile toDomain(Map<String, dynamic> answers) {
-    // Physical stats
+    // --- Physical stats ---
     final stats = answers['physical_stats'] as Map<String, dynamic>? ?? {};
     final age = stats['age'] as int? ?? 0;
     final weightKg = stats['weight_kg'] as double? ?? 0.0;
@@ -19,7 +19,7 @@ class ProfileSetupMapper {
 
     final heightCm = heightM * 100.0;
 
-    // Preferences
+    // --- Preferences ---
     final goalString = answers['goal'] as String? ?? 'general_fitness';
     final goal = FitnessGoalExtension.fromValue(goalString);
 
@@ -59,7 +59,7 @@ class ProfileSetupMapper {
 
     final country = answers['country'] as String? ?? 'Unknown';
 
-    // --- Nutrition Engine fields (new) ---
+    // --- Nutrition ---
     final budgetString = answers['food_budget'] as String? ?? 'medium';
     final budget = BudgetLevelExtension.fromValue(budgetString);
 
@@ -68,6 +68,7 @@ class ProfileSetupMapper {
     final foodPreferences =
         (answers['food_preferences'] as List?)?.cast<String>() ?? [];
 
+    // --- Build value objects ---
     final body = BodyMeasurements(
       age: age,
       heightCm: heightCm,
@@ -95,22 +96,21 @@ class ProfileSetupMapper {
       foodRestrictions: foodRestrictions,
     );
 
-    // The values above are ALWAYS populated (defaulted when unanswered) so
-    // every engine gets a usable profile. `answeredQuestionIds` is the
-    // only place that records which of those values are real user input
-    // vs. a silent fallback — see HealthProfile.isComplete.
+    // --- Track which questions were actually answered by the user ---
+    // Use the new method that considers ALL questions (including optional ones).
     final answeredQuestionIds =
-        ProfileCompleteness.getAnsweredRequiredQuestionIds(answers);
+        ProfileCompleteness.getAnsweredQuestionIds(answers);
 
     final now = DateTime.now();
+
     return HealthProfile(
-      userId: '', // will be set later
+      userId: '', // will be set later by the Bloc
       body: body,
       training: training,
       lifestyle: lifestyle,
+      answeredQuestionIds: answeredQuestionIds,
       createdAt: now,
       updatedAt: now,
-      answeredQuestionIds: answeredQuestionIds,
     );
   }
 }

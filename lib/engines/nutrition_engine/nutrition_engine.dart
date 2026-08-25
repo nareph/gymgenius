@@ -1,4 +1,5 @@
 import 'package:gymgenius/domain/entities/health_profile.dart';
+import 'package:gymgenius/domain/entities/nutrition_log.dart';
 import 'package:gymgenius/domain/entities/nutrition_plan.dart';
 import 'package:gymgenius/domain/entities/nutrition_profile.dart';
 import 'package:gymgenius/domain/enums/nutrition_status.dart';
@@ -57,6 +58,11 @@ class NutritionEngine {
     );
 
     if (persist && _nutritionRepository != null) {
+      final adherence = await _adherenceForDay(
+        profile.userId,
+        day,
+        plan.targets.calories,
+      );
       await _nutritionRepository!.savePlan(plan);
       await _nutritionRepository!.saveNutritionProfile(
         NutritionProfile(
@@ -66,7 +72,7 @@ class NutritionEngine {
           country: plan.country,
           preferredFoods: profile.lifestyle.foodPreferences,
           restrictedFoods: profile.lifestyle.foodRestrictions,
-          adherenceScore: _adherenceTracker.placeholderScore(),
+          adherenceScore: adherence,
         ),
       );
       Log.debug('NutritionEngine: final plan persisted for ${profile.userId}');
@@ -86,6 +92,11 @@ class NutritionEngine {
   }) async {
     if (_nutritionRepository == null) return;
 
+    final adherence = await _adherenceForDay(
+      profile.userId,
+      plan.date,
+      plan.targets.calories,
+    );
     await _nutritionRepository!.savePlan(plan);
     await _nutritionRepository!.saveNutritionProfile(
       NutritionProfile(
@@ -95,10 +106,86 @@ class NutritionEngine {
         country: plan.country,
         preferredFoods: profile.lifestyle.foodPreferences,
         restrictedFoods: profile.lifestyle.foodRestrictions,
-        adherenceScore: _adherenceTracker.placeholderScore(),
+        adherenceScore: adherence,
       ),
     );
     Log.debug('NutritionEngine: final plan persisted for ${profile.userId}');
+  }
+
+  /// Persists a nutrition log and refreshes the day's adherence score.
+  Future<void> logMeal({
+    required NutritionLog log,
+    required NutritionPlan plan,
+    required HealthProfile profile,
+  }) async {
+    if (_nutritionRepository == null) return;
+
+    await _nutritionRepository!.saveNutritionLog(log);
+    final logs = await _nutritionRepository!.getNutritionLogsForDay(
+      profile.userId,
+      plan.date,
+    );
+    final adherence = _adherenceTracker.scoreFromLogs(
+      targetCalories: plan.targets.calories,
+      logs: logs,
+    );
+    await _nutritionRepository!.saveNutritionProfile(
+      NutritionProfile(
+        userId: profile.userId,
+        date: plan.date,
+        targets: plan.targets,
+        country: plan.country,
+        preferredFoods: profile.lifestyle.foodPreferences,
+        restrictedFoods: profile.lifestyle.foodRestrictions,
+        adherenceScore: adherence,
+      ),
+    );
+  }
+
+  Future<void> deleteMealLog({
+    required String logId,
+    required NutritionPlan plan,
+    required HealthProfile profile,
+  }) async {
+    if (_nutritionRepository == null) return;
+
+    await _nutritionRepository!.deleteNutritionLog(logId);
+    final logs = await _nutritionRepository!.getNutritionLogsForDay(
+      profile.userId,
+      plan.date,
+    );
+    final adherence = logs.isEmpty
+        ? 0.0
+        : _adherenceTracker.scoreFromLogs(
+            targetCalories: plan.targets.calories,
+            logs: logs,
+          );
+    await _nutritionRepository!.saveNutritionProfile(
+      NutritionProfile(
+        userId: profile.userId,
+        date: plan.date,
+        targets: plan.targets,
+        country: plan.country,
+        preferredFoods: profile.lifestyle.foodPreferences,
+        restrictedFoods: profile.lifestyle.foodRestrictions,
+        adherenceScore: adherence,
+      ),
+    );
+  }
+
+  Future<double> _adherenceForDay(
+    String userId,
+    DateTime day,
+    int targetCalories,
+  ) async {
+    final repo = _nutritionRepository;
+    if (repo == null) return 0;
+    final logs = await repo.getNutritionLogsForDay(userId, day);
+    if (logs.isEmpty) return 0;
+    return _adherenceTracker.scoreFromLogs(
+      targetCalories: targetCalories,
+      logs: logs,
+    );
   }
 
   /// Synchronous compute helper for Decision Engine (no I/O).

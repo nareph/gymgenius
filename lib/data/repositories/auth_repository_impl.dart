@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:crypto/crypto.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:gymgenius/core/exceptions/auth_exception.dart';
@@ -34,9 +35,11 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<void> signIn(String email, String password) async {
+    final normalizedEmail = email.trim().toLowerCase();
     final hashed = _hashPassword(password);
-    final storedHash = await _secureStorage.read(key: 'password_$email');
-    final storedUid = await _secureStorage.read(key: 'uid_$email');
+    final storedHash =
+        await _secureStorage.read(key: 'password_$normalizedEmail');
+    final storedUid = await _secureStorage.read(key: 'uid_$normalizedEmail');
 
     if (storedHash == null || storedUid == null) {
       throw AuthException('No user found with this email');
@@ -47,9 +50,13 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<void> signUp(
-      String email, String password, HealthProfile profile) async {
-    final existing = await _secureStorage.read(key: 'uid_$email');
+  Future<void> signUp(String email, String password) async {
+    final normalizedEmail = email.trim().toLowerCase();
+
+    // check if user already exists
+    final existing = await _secureStorage.read(
+      key: 'uid_$normalizedEmail',
+    );
     if (existing != null) {
       throw AuthException('An account with this email already exists');
     }
@@ -57,28 +64,22 @@ class AuthRepositoryImpl implements AuthRepository {
     final uid = _uuid.v4();
     final hashed = _hashPassword(password);
 
-    await _secureStorage.write(key: 'uid_$email', value: uid);
-    await _secureStorage.write(key: 'password_$email', value: hashed);
+    await _secureStorage.write(key: 'uid_$normalizedEmail', value: uid);
+    await _secureStorage.write(
+      key: 'password_$normalizedEmail',
+      value: hashed,
+    );
 
-    // IMPORTANT: save the HealthProfile BEFORE the User record. Saving
-    // the User is what makes `watchUser()` emit (AuthBloc is subscribed
-    // to it from construction time) and triggers
-    // `AuthBloc._handleUserStatusCheck()`, which immediately reads
-    // `_healthRepository.getCurrentProfile()`. That reaction happens
-    // asynchronously via Dart's event loop — there's no guarantee it
-    // waits for any code written after `saveUser()` in this function.
-    // If the profile isn't saved yet when AuthBloc checks, it finds
-    // nothing and reports ALL required fields as missing (the exact
-    // symptom seen: 10/10 fields, not a partial/inconsistent read).
-    // Saving the profile first closes that race entirely: by the time
-    // anything can react to the user existing, the profile is already
-    // durable.
-    final healthProfile = profile.copyWith(userId: uid);
-    await _healthRepository.saveHealthProfile(healthProfile);
-
-    final user =
-        User(id: uid, email: email, displayName: email.split('@').first);
+    final user = User(
+      id: uid,
+      email: normalizedEmail,
+      displayName: normalizedEmail.split('@').first,
+    );
     await _userRepository.saveUser(user);
+
+    Log.debug(
+      'AuthRepositoryImpl: Account created successfully (no HealthProfile)',
+    );
   }
 
   @override
@@ -91,13 +92,19 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<void> sendPasswordResetEmail(String email) async {
-    final storedUid = await _secureStorage.read(key: 'uid_$email');
+    final normalizedEmail = email.trim().toLowerCase();
+    final storedUid = await _secureStorage.read(key: 'uid_$normalizedEmail');
     if (storedUid == null) {
       throw AuthException('No user found with this email');
     }
     final resetToken = _uuid.v4();
-    await _secureStorage.write(key: 'reset_token_$email', value: resetToken);
-    Log.debug("AuthRepositoryImpl: Password reset token generated for $email");
+    await _secureStorage.write(
+      key: 'reset_token_$normalizedEmail',
+      value: resetToken,
+    );
+    Log.debug(
+      'AuthRepositoryImpl: Password reset token generated for $email',
+    );
   }
 
   @override

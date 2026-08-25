@@ -28,15 +28,19 @@ class HealthMapper {
         preferredDays: model.preferredWorkoutDays.map(_mapWorkoutDay).toList(),
         equipment: model.availableEquipment.map(_mapEquipmentType).toList(),
         focusAreas: model.focusAreas.map(_mapMuscleGroup).toList(),
-        avoidedMuscles: (model.avoidedMuscles ?? const [])
-            .map(_mapMuscleGroup)
-            .toList(),
+        avoidedMuscles:
+            (model.avoidedMuscles ?? const []).map(_mapMuscleGroup).toList(),
       ),
       lifestyle: LifestylePreferences(
         country: model.country,
-        budget: BudgetLevel.medium,
-        foodPreferences: const [],
-        foodRestrictions: const [],
+        // `model.budget` is null for profiles saved before this field
+        // existed — falls back to the same BudgetLevel.medium default
+        // that was previously hardcoded here unconditionally.
+        budget: model.budget != null
+            ? BudgetLevelExtension.fromValue(model.budget!)
+            : BudgetLevel.medium,
+        foodPreferences: model.foodPreferences ?? const [],
+        foodRestrictions: model.foodRestrictions ?? const [],
       ),
       createdAt: model.createdAt,
       updatedAt: model.updatedAt,
@@ -44,11 +48,6 @@ class HealthMapper {
       // field existed. Falling back to `const []` means a legacy profile
       // is treated as "nothing confirmed yet" -> HealthProfile.isComplete
       // returns false -> AuthBloc routes the user back into ProfileSetup.
-      // That's the safe default: we genuinely don't know which of the
-      // legacy profile's values were real answers vs. mapper defaults, so
-      // we can't claim it's complete. The full questionnaire will show
-      // (missingFieldIds falls back to HealthProfile.requiredFieldIds),
-      // and re-answering will populate answeredQuestionIds going forward.
       answeredQuestionIds: model.answeredQuestionIds ?? const [],
     );
   }
@@ -65,7 +64,6 @@ class HealthMapper {
       experience: entity.training.experience.name,
       activityLevel: entity.training.activityLevel.name,
       workoutDaysPerWeek: entity.training.frequency.toDays(),
-      // ✅ Utilisation du getter 'minutes' au lieu de 'toMinutes()'
       workoutDurationMinutes: entity.training.sessionDuration.minutes,
       preferredWorkoutDays:
           entity.training.preferredDays.map((d) => d.name).toList(),
@@ -77,6 +75,9 @@ class HealthMapper {
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
       answeredQuestionIds: entity.answeredQuestionIds,
+      budget: entity.lifestyle.budget.value,
+      foodPreferences: entity.lifestyle.foodPreferences,
+      foodRestrictions: entity.lifestyle.foodRestrictions,
     );
   }
 

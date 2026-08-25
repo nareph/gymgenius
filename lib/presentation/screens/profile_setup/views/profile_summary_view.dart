@@ -7,17 +7,19 @@ import 'package:gymgenius/presentation/question/profile_questions.dart';
 
 /// Final page of the onboarding flow: shows everything the user just
 /// answered before it's actually saved, with an explicit confirm
-/// button. Previously the last question's answer submitted the whole
-/// form immediately — no chance to catch a mistake, and no visible
-/// confirmation that anything was about to be saved at all.
+/// button. Each row is tappable — jumps back to that question's page
+/// (via [onEditQuestion]) so the user can fix something they notice is
+/// wrong without restarting the whole flow.
 class ProfileSummaryView extends StatelessWidget {
   final List<ProfileQuestion> questions;
   final bool isPostLogin;
+  final void Function(int questionIndex) onEditQuestion;
 
   const ProfileSummaryView({
     super.key,
     required this.questions,
     required this.isPostLogin,
+    required this.onEditQuestion,
   });
 
   String _formatAnswer(ProfileQuestion question, dynamic answer) {
@@ -67,7 +69,7 @@ class ProfileSummaryView extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            "Make sure everything looks right, then save.",
+            "Tap any answer to change it, then save.",
             textAlign: TextAlign.center,
             style: textTheme.bodyMedium?.copyWith(
               color: colorScheme.onSurfaceVariant,
@@ -77,25 +79,43 @@ class ProfileSummaryView extends StatelessWidget {
           Expanded(
             child: ListView.separated(
               itemCount: questions.length,
-              separatorBuilder: (_, __) => const Divider(height: 24),
+              separatorBuilder: (_, __) => const Divider(height: 1),
               itemBuilder: (context, index) {
                 final question = questions[index];
                 final answer = state.answers[question.id];
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      question.text,
-                      style: textTheme.labelLarge?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
+                return InkWell(
+                  onTap: () => onEditQuestion(index),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12.0),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                question.text,
+                                style: textTheme.labelLarge?.copyWith(
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _formatAnswer(question, answer),
+                                style: textTheme.bodyLarge,
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(
+                          Icons.edit_outlined,
+                          size: 18,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _formatAnswer(question, answer),
-                      style: textTheme.bodyLarge,
-                    ),
-                  ],
+                  ),
                 );
               },
             ),

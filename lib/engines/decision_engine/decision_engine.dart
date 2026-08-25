@@ -1,3 +1,5 @@
+// lib/engines/decision_engine/decision_engine.dart
+
 import 'package:gymgenius/domain/entities/daily_checkin.dart';
 import 'package:gymgenius/domain/entities/health_platform_snapshot.dart';
 import 'package:gymgenius/domain/entities/health_profile.dart';
@@ -6,12 +8,15 @@ import 'package:gymgenius/domain/entities/recovery_status.dart';
 import 'package:gymgenius/domain/entities/today_workout.dart';
 import 'package:gymgenius/domain/entities/training_program.dart';
 import 'package:gymgenius/domain/entities/workout_decision.dart';
+
 import 'package:gymgenius/engines/decision_engine/Progression/program_progress_service.dart';
 import 'package:gymgenius/engines/decision_engine/builders/health_decision_builder.dart';
+import 'package:gymgenius/engines/decision_engine/policies/program_refresh_policy.dart';
 import 'package:gymgenius/engines/decision_engine/services/conflict_resolver.dart';
 import 'package:gymgenius/engines/decision_engine/rules/nutrition/nutrition_rule.dart';
+
 import 'package:gymgenius/engines/recovery_engine/recovery_engine.dart';
-import 'package:gymgenius/engines/decision_engine/policies/program_refresh_policy.dart';
+import 'package:gymgenius/engines/workout_engine/planner/split_catalog.dart';
 
 import 'builders/today_workout_builder.dart';
 import 'models/daily_plan.dart';
@@ -32,6 +37,11 @@ import 'services/workout_adaptation_service.dart';
 /// • Attach NutritionPlan
 /// • Build HealthDecision
 /// • Produce the final DailyPlan
+///
+/// Recovery is strictly data-driven:
+///
+/// • no DailyCheckIn → no RecoveryStatus
+/// • no RecoveryStatus → no recovery adaptation
 ///
 /// The DecisionEngine itself contains no domain business logic.
 class DecisionEngine {
@@ -67,6 +77,9 @@ class DecisionEngine {
   // Daily Plan
   // ============================================================
 
+  /// Builds the complete plan for today.
+  ///
+  /// A RecoveryStatus is computed ONLY when [checkIn] is non-null.
   DailyPlan buildDailyPlan(
     TrainingProgram trainingProgram,
     HealthProfile healthProfile, {
@@ -76,13 +89,27 @@ class DecisionEngine {
     HealthPlatformSnapshot? healthPlatformSnapshot,
   }) {
     final currentDate = now ?? DateTime.now();
-    final progress = _programProgressService.calculate(trainingProgram);
-    final plannedWorkout = _todayWorkoutBuilder.buildPlannedWorkout(
+
+    final progress = _programProgressService.calculate(
+      trainingProgram,
+    );
+
+    final splitDisplayName = _findSplitDisplayName(
+      trainingProgram,
+      currentDate,
+    );
+
+    final plannedWorkout = _todayWorkoutBuilder.build(
       program: trainingProgram,
+      splitDisplayName: splitDisplayName,
       now: currentDate,
     );
-    final recoveryStatus =
+
+    // IMPORTANT:
+    // No check-in means no recovery computation.
+    final RecoveryStatus? recoveryStatus =
         checkIn != null ? _recoveryEngine.compute(checkIn) : null;
+
     final context = DecisionContext(
       now: currentDate,
       healthProfile: healthProfile,
@@ -106,6 +133,8 @@ class DecisionEngine {
     );
   }
 
+  /// Builds the daily plan and persists recovery data only when a real
+  /// DailyCheckIn has been supplied.
   Future<DailyPlan> buildDailyPlanAndPersist(
     TrainingProgram trainingProgram,
     HealthProfile healthProfile, {
@@ -115,15 +144,30 @@ class DecisionEngine {
     HealthPlatformSnapshot? healthPlatformSnapshot,
   }) async {
     final currentDate = now ?? DateTime.now();
-    final progress = _programProgressService.calculate(trainingProgram);
-    final plannedWorkout = _todayWorkoutBuilder.buildPlannedWorkout(
+
+    final progress = _programProgressService.calculate(
+      trainingProgram,
+    );
+
+    final splitDisplayName = _findSplitDisplayName(
+      trainingProgram,
+      currentDate,
+    );
+
+    final plannedWorkout = _todayWorkoutBuilder.build(
       program: trainingProgram,
+      splitDisplayName: splitDisplayName,
       now: currentDate,
     );
 
     RecoveryStatus? recoveryStatus;
+
+    // IMPORTANT:
+    // Recovery persistence happens ONLY after an actual check-in.
     if (checkIn != null) {
-      recoveryStatus = await _recoveryEngine.computeAndPersist(checkIn);
+      recoveryStatus = await _recoveryEngine.computeAndPersist(
+        checkIn,
+      );
     }
 
     final context = DecisionContext(
@@ -138,23 +182,31 @@ class DecisionEngine {
     );
 
     final decisions = _evaluateRules(context);
+
     final finalDecision = _conflictResolver.resolve(decisions);
+
     final finalWorkout = _workoutAdaptationService.adapt(
       plannedWorkout: plannedWorkout,
       decision: finalDecision,
       profile: healthProfile,
     );
-    final adaptedContext = context.copyWith(todayWorkout: finalWorkout);
+
+    final adaptedContext = context.copyWith(
+      todayWorkout: finalWorkout,
+    );
+
     final nutritionPlan = await _nutritionRule.buildAndPersistNutritionPlan(
       context: adaptedContext,
       finalWorkout: finalWorkout,
     );
+
     final programRefresh = ProgramRefreshPolicy.evaluate(
       program: trainingProgram,
       progress: progress,
       snapshot: progressSnapshot,
       now: currentDate,
     );
+
     final healthDecision = _healthDecisionBuilder.build(
       generatedAt: currentDate,
       finalDecision: finalDecision,
@@ -179,6 +231,7 @@ class DecisionEngine {
     );
   }
 
+  /// Internal synchronous builder used by [buildDailyPlan].
   DailyPlan _buildDailyPlanFromContext({
     required DecisionContext context,
     required ProgramProgress progress,
@@ -190,23 +243,31 @@ class DecisionEngine {
     HealthPlatformSnapshot? healthPlatformSnapshot,
   }) {
     final decisions = _evaluateRules(context);
+
     final finalDecision = _conflictResolver.resolve(decisions);
+
     final finalWorkout = _workoutAdaptationService.adapt(
       plannedWorkout: plannedWorkout,
       decision: finalDecision,
       profile: healthProfile,
     );
-    final adaptedContext = context.copyWith(todayWorkout: finalWorkout);
+
+    final adaptedContext = context.copyWith(
+      todayWorkout: finalWorkout,
+    );
+
     final nutritionPlan = _nutritionRule.buildNutritionPlan(
       context: adaptedContext,
       finalWorkout: finalWorkout,
     );
+
     final programRefresh = ProgramRefreshPolicy.evaluate(
       program: context.trainingProgram,
       progress: progress,
       snapshot: progressSnapshot,
       now: currentDate,
     );
+
     final healthDecision = _healthDecisionBuilder.build(
       generatedAt: currentDate,
       finalDecision: finalDecision,
@@ -231,13 +292,18 @@ class DecisionEngine {
     );
   }
 
-  List<WorkoutDecision> _evaluateRules(DecisionContext context) {
+  /// Evaluates all registered rules against the current context.
+  List<WorkoutDecision> _evaluateRules(
+    DecisionContext context,
+  ) {
     final decisions = <WorkoutDecision>[];
+
     for (final rule in _rules) {
       decisions.add(
         rule.evaluate(context),
       );
     }
+
     return decisions;
   }
 
@@ -248,7 +314,9 @@ class DecisionEngine {
   ProgramProgress getProgramProgress(
     TrainingProgram program,
   ) {
-    return _programProgressService.calculate(program);
+    return _programProgressService.calculate(
+      program,
+    );
   }
 
   TodayWorkout getTodayWorkout(
@@ -263,15 +331,97 @@ class DecisionEngine {
     ).todayWorkout;
   }
 
-  /// Fallback health recommendation when no DailyPlan is available.
+  /// Fallback health recommendation when no DailyPlan exists.
   HealthDecision getDefaultDecision({
     DateTime? now,
   }) {
     return _healthDecisionBuilder.build(
       generatedAt: now ?? DateTime.now(),
-      finalDecision: WorkoutDecision.keepPlannedWorkout(confidence: 0.5),
+      finalDecision: WorkoutDecision.keepPlannedWorkout(
+        confidence: 0.5,
+      ),
       recoveryStatus: null,
       progressSnapshot: null,
     );
   }
+
+  // ============================================================
+  // Helpers
+  // ============================================================
+
+  String _dayKey(DateTime date) {
+    switch (date.weekday) {
+      case DateTime.monday:
+        return 'monday';
+
+      case DateTime.tuesday:
+        return 'tuesday';
+
+      case DateTime.wednesday:
+        return 'wednesday';
+
+      case DateTime.thursday:
+        return 'thursday';
+
+      case DateTime.friday:
+        return 'friday';
+
+      case DateTime.saturday:
+        return 'saturday';
+
+      case DateTime.sunday:
+        return 'sunday';
+
+      default:
+        throw StateError(
+          'Invalid weekday: ${date.weekday}',
+        );
+    }
+  }
+
+  /// Determines the display name of today's split.
+  ///
+  /// IMPORTANT:
+  /// The program itself remains the source of truth for the generated
+  /// weekly structure. The catalog is only used here for the predefined
+  /// stable templates.
+  String _findSplitDisplayName(
+    TrainingProgram program,
+    DateTime date,
+  ) {
+    final dayKey = _dayKey(date);
+
+    final workoutDays = program.weeklySchedule.entries
+        .where(
+          (entry) => entry.value.isNotEmpty,
+        )
+        .map(
+          (entry) => entry.key,
+        )
+        .toList();
+
+    if (workoutDays.isEmpty) {
+      return 'Workout';
+    }
+
+    final index = workoutDays.indexOf(dayKey);
+
+    if (index == -1) {
+      return 'Workout';
+    }
+
+    // Prefer the actual generated schedule when it contains the split
+    // identity. The program currently stores exercises, so the stable
+    // predefined catalog remains the fallback for legacy programs.
+    final template = SplitCatalog.templateForDays(
+      workoutDays.length,
+    );
+
+    if (index >= template.length) {
+      return 'Workout';
+    }
+
+    return template[index].displayName;
+  }
+
 }

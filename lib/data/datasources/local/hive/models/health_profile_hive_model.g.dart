@@ -37,13 +37,16 @@ class HealthProfileHiveModelAdapter
       updatedAt: fields[16] as DateTime,
       answeredQuestionIds: (fields[17] as List?)?.cast<String>(),
       avoidedMuscles: (fields[18] as List?)?.cast<String>(),
+      budget: fields[19] as String?,
+      foodPreferences: (fields[20] as List?)?.cast<String>(),
+      foodRestrictions: (fields[21] as List?)?.cast<String>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, HealthProfileHiveModel obj) {
     writer
-      ..writeByte(19)
+      ..writeByte(22)
       ..writeByte(0)
       ..write(obj.userId)
       ..writeByte(1)
@@ -81,7 +84,13 @@ class HealthProfileHiveModelAdapter
       ..writeByte(17)
       ..write(obj.answeredQuestionIds)
       ..writeByte(18)
-      ..write(obj.avoidedMuscles);
+      ..write(obj.avoidedMuscles)
+      ..writeByte(19)
+      ..write(obj.budget)
+      ..writeByte(20)
+      ..write(obj.foodPreferences)
+      ..writeByte(21)
+      ..write(obj.foodRestrictions);
   }
 
   @override

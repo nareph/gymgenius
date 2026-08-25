@@ -1,5 +1,3 @@
-// lib/presentation/screens/tabs/home_tab_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:gymgenius/presentation/screens/profile_setup/profile_setup_screen.dart';
 import 'package:gymgenius/presentation/viewmodels/home_viewmodel.dart';
@@ -33,11 +31,6 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
     });
   }
 
-  /// Pushed (not swapped in by AuthWrapper), so ProfileSetupScreen's own
-  /// Navigator.pop()-free listener still works fine here — but since we
-  /// removed that pop entirely (AuthWrapper case), we drive the pop from
-  /// here instead once the pushed route returns, then refresh so
-  /// HomeViewModel picks up the completed profile.
   Future<void> _completeProfile(
     BuildContext context,
     HomeViewModel viewModel,
@@ -106,21 +99,27 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
         ));
 
       case HomeState.loaded:
-        final isProfileComplete = viewModel.healthProfile?.isComplete ?? false;
-        if (!isProfileComplete) {
-          // Reuses the polished ProfileSetupScreen onboarding flow
-          // (one question at a time, per-question skip, progress dots)
-          // instead of the generic ProfileTabScreen edit form — the
-          // latter is built for editing an already-complete profile,
-          // not for guiding someone through filling one out for the
-          // first time.
+        final healthProfile = viewModel.healthProfile;
+
+        // Case 1: No profile exists at all → user must create one.
+        if (healthProfile == null) {
           return wrapInScrollable(CompleteProfileView(
-            key: const ValueKey('complete_profile'),
+            key: const ValueKey('no_profile'),
+            onNavigate: () => _completeProfile(context, viewModel),
+            isInsufficient: true, // or false; we can show a specific message
+          ));
+        }
+
+        // Case 2: Profile exists but is incomplete.
+        if (!healthProfile.isComplete) {
+          return wrapInScrollable(CompleteProfileView(
+            key: const ValueKey('incomplete_profile'),
             onNavigate: () => _completeProfile(context, viewModel),
             isInsufficient: true,
           ));
         }
 
+        // Case 3: No program yet.
         if (viewModel.currentProgram == null) {
           return wrapInScrollable(NoProgramView(
             key: const ValueKey('no_program'),
@@ -128,6 +127,7 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
           ));
         }
 
+        // Case 4: Program expired.
         if (viewModel.currentProgram!.isExpired) {
           return wrapInScrollable(ExpiredProgramView(
             key: const ValueKey('expired_program'),
@@ -137,10 +137,11 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
           ));
         }
 
+        // Case 5: Everything ready → dashboard.
         return ProgramDashboardView(
           key: const ValueKey('dashboard'),
           program: viewModel.currentProgram!,
-          healthProfile: viewModel.healthProfile!,
+          healthProfile: healthProfile,
           dailyPlan: viewModel.dailyPlan!,
         );
     }

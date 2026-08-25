@@ -1,3 +1,5 @@
+// lib/domain/entities/today_workout.dart
+
 import 'package:gymgenius/domain/entities/exercise.dart';
 import 'package:gymgenius/domain/enums/decision_reason.dart';
 import 'package:gymgenius/domain/enums/workout_adjustment.dart';
@@ -33,56 +35,19 @@ class TodayWorkout {
 
   // ==========================================================
   // Runtime prescription
-  //
-  // These values NEVER modify TrainingProgram.
-  // They only describe how today's workout should be executed.
   // ==========================================================
 
-  /// Volume multiplier.
-  ///
-  /// Examples:
-  ///
-  /// 1.00 → unchanged
-  ///
-  /// 0.80 → reduce total volume by 20%
-  ///
-  /// 1.15 → increase volume by 15%
   final double volumeMultiplier;
-
-  /// Intensity multiplier.
-  ///
-  /// Examples:
-  ///
-  /// 1.00 → unchanged
-  ///
-  /// 0.90 → reduce load by 10%
-  ///
-  /// 1.05 → increase load by 5%
   final double intensityMultiplier;
-
-  /// Target RPE for today's workout.
-  ///
-  /// Null means "use the default prescription".
   final double? targetRpe;
-
-  /// Suggested workout duration.
-  ///
-  /// Null means "use the original duration".
   final Duration? targetDuration;
-
-  /// Whether today's workout is a recovery session.
   final bool isRecoverySession;
-
-  /// Optional coach message.
-  ///
-  /// Examples:
-  ///
-  /// "Reduce rest periods today."
-  ///
-  /// "Focus on technique."
-  ///
-  /// "Avoid training to failure."
   final String? coachNote;
+
+  /// ==========================================================
+  /// NEW: Display name of the split for this day (e.g. "Chest", "Legs")
+  /// ==========================================================
+  final String splitDisplayName;
 
   const TodayWorkout({
     required this.date,
@@ -98,16 +63,13 @@ class TodayWorkout {
     this.targetDuration,
     this.isRecoverySession = false,
     this.coachNote,
+    required this.splitDisplayName,
   });
 
   bool get isRestDay => finalExercises.isEmpty;
-
   bool get hasExercises => finalExercises.isNotEmpty;
-
   int get plannedExerciseCount => plannedExercises.length;
-
   int get finalExerciseCount => finalExercises.length;
-
   bool get wasModified => isAdapted;
 
   TodayWorkout copyWith({
@@ -124,6 +86,7 @@ class TodayWorkout {
     Duration? targetDuration,
     bool? isRecoverySession,
     String? coachNote,
+    String? splitDisplayName,
   }) {
     return TodayWorkout(
       date: date ?? this.date,
@@ -139,6 +102,7 @@ class TodayWorkout {
       targetDuration: targetDuration ?? this.targetDuration,
       isRecoverySession: isRecoverySession ?? this.isRecoverySession,
       coachNote: coachNote ?? this.coachNote,
+      splitDisplayName: splitDisplayName ?? this.splitDisplayName,
     );
   }
 
@@ -150,7 +114,8 @@ class TodayWorkout {
         'final=${finalExercises.length}, '
         'volume=$volumeMultiplier, '
         'intensity=$intensityMultiplier, '
-        'adapted=$isAdapted'
+        'adapted=$isAdapted, '
+        'split=$splitDisplayName'
         ')';
   }
 }

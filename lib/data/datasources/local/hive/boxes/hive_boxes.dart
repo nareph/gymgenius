@@ -16,6 +16,8 @@ import '../models/hydration_log_hive_model.dart';
 import '../models/mental_wellness_hive_model.dart';
 import '../models/habit_hive_model.dart';
 import '../models/habit_log_hive_model.dart';
+import '../models/logged_food_portion_hive_model.dart';
+import '../models/nutrition_log_hive_model.dart';
 
 class HiveBoxes {
   static const String users = 'users';
@@ -37,6 +39,7 @@ class HiveBoxes {
   static const String mentalWellness = 'mental_wellness_checkins';
   static const String habits = 'habits';
   static const String habitLogs = 'habit_logs';
+  static const String nutritionLogs = 'nutrition_logs';
 
   static Box<UserHiveModel> get usersBox => Hive.box<UserHiveModel>(users);
   static Box<HealthProfileHiveModel> get healthProfilesBox =>
@@ -71,4 +74,6 @@ class HiveBoxes {
   static Box<HabitHiveModel> get habitsBox => Hive.box<HabitHiveModel>(habits);
   static Box<HabitLogHiveModel> get habitLogsBox =>
       Hive.box<HabitLogHiveModel>(habitLogs);
+  static Box<NutritionLogHiveModel> get nutritionLogsBox =>
+      Hive.box<NutritionLogHiveModel>(nutritionLogs);
 }

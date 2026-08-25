@@ -1,11 +1,16 @@
+import 'package:gymgenius/data/datasources/local/hive/models/logged_food_portion_hive_model.dart';
 import 'package:gymgenius/data/datasources/local/hive/models/meal_hive_model.dart';
+import 'package:gymgenius/data/datasources/local/hive/models/nutrition_log_hive_model.dart';
 import 'package:gymgenius/data/datasources/local/hive/models/nutrition_plan_hive_model.dart';
 import 'package:gymgenius/data/datasources/local/hive/models/nutrition_profile_hive_model.dart';
+import 'package:gymgenius/domain/entities/logged_food_portion.dart';
 import 'package:gymgenius/domain/entities/meal.dart';
+import 'package:gymgenius/domain/entities/nutrition_log.dart';
 import 'package:gymgenius/domain/entities/nutrition_plan.dart';
 import 'package:gymgenius/domain/entities/nutrition_profile.dart';
 import 'package:gymgenius/domain/enums/meal_objective.dart';
 import 'package:gymgenius/domain/enums/meal_type.dart';
+import 'package:gymgenius/domain/enums/nutrition_log_source.dart';
 import 'package:gymgenius/domain/enums/nutrition_status.dart';
 import 'package:gymgenius/domain/value_objects/macro_targets.dart';
 
@@ -125,6 +130,62 @@ class NutritionMapper {
       fatG: meal.macros.fatG,
       timingNote: meal.timingNote,
       reason: meal.reason,
+    );
+  }
+
+  static NutritionLog toLogDomain(NutritionLogHiveModel model) {
+    return NutritionLog(
+      id: model.id,
+      userId: model.userId,
+      name: model.name,
+      source: NutritionLogSourceExtension.fromValue(model.source),
+      mealType: MealTypeExtension.fromValue(model.mealType),
+      macros: MacroTargets(
+        calories: model.calories,
+        proteinG: model.proteinG,
+        carbsG: model.carbsG,
+        fatG: model.fatG,
+      ),
+      loggedAt: model.loggedAt,
+      templateId: model.templateId,
+      planMealId: model.planMealId,
+      portions: model.portions.map(_toPortionDomain).toList(),
+      note: model.note,
+    );
+  }
+
+  static NutritionLogHiveModel toLogHive(NutritionLog entity) {
+    return NutritionLogHiveModel(
+      id: entity.id,
+      userId: entity.userId,
+      name: entity.name,
+      source: entity.source.value,
+      mealType: entity.mealType.value,
+      calories: entity.macros.calories,
+      proteinG: entity.macros.proteinG,
+      carbsG: entity.macros.carbsG,
+      fatG: entity.macros.fatG,
+      loggedAt: entity.loggedAt,
+      templateId: entity.templateId,
+      planMealId: entity.planMealId,
+      portions: entity.portions.map(_toPortionHive).toList(),
+      note: entity.note,
+    );
+  }
+
+  static LoggedFoodPortion _toPortionDomain(LoggedFoodPortionHiveModel model) {
+    return LoggedFoodPortion(
+      foodId: model.foodId,
+      foodName: model.foodName,
+      grams: model.grams,
+    );
+  }
+
+  static LoggedFoodPortionHiveModel _toPortionHive(LoggedFoodPortion entity) {
+    return LoggedFoodPortionHiveModel(
+      foodId: entity.foodId,
+      foodName: entity.foodName,
+      grams: entity.grams,
     );
   }
 }

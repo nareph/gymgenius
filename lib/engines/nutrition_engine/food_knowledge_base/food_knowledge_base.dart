@@ -1,16 +1,30 @@
 import 'package:gymgenius/domain/entities/food_item.dart';
 import 'package:gymgenius/domain/enums/budget_level.dart';
-import 'package:gymgenius/engines/nutrition_engine/food_knowledge_base/cameroon_dataset.dart';
+
+import 'country_dataset_registry.dart';
+import 'country_food_dataset.dart';
+import 'countries/cameroon/cameroon_dataset.dart';
+import 'models/meal_template.dart';
 
 /// Resolves country-specific food datasets and applies user constraints.
+///
+/// Previously held a single hardcoded `CameroonFoodDataset` field and
+/// always resolved to it — this version looks up the right dataset from
+/// `countryFoodDatasets` (see country_dataset_registry.dart), falling
+/// back to Cameroon when no match is found (same "starter phase"
+/// behavior as before, just no longer hardcoded as the only option).
 class FoodKnowledgeBase {
-  final CameroonFoodDataset _cameroon;
+  final Map<String, CountryFoodDataset> _datasets;
+  final CountryFoodDataset _fallback;
 
   const FoodKnowledgeBase({
-    CameroonFoodDataset cameroon = const CameroonFoodDataset(),
-  }) : _cameroon = cameroon;
+    Map<String, CountryFoodDataset> datasets = countryFoodDatasets,
+    CountryFoodDataset fallback = const CameroonDataset(),
+  })  : _datasets = datasets,
+        _fallback = fallback;
 
-  /// Returns foods for [country], falling back to Cameroon.
+  /// Returns foods for [country], falling back to [_fallback] (Cameroon
+  /// by default) when no registered dataset matches.
   List<FoodItem> foodsForCountry(String country) {
     return _datasetFor(country).foods;
   }
@@ -20,14 +34,7 @@ class FoodKnowledgeBase {
   }
 
   String resolvedCountry(String country) {
-    final normalized = country.trim().toLowerCase();
-    if (normalized.contains('cameroon') ||
-        normalized.contains('cameroun') ||
-        normalized == 'cm') {
-      return _cameroon.countryCode;
-    }
-    // Starter phase: unknown countries fall back to Cameroon.
-    return _cameroon.countryCode;
+    return _datasetFor(country).countryCode;
   }
 
   /// Filters meal templates by budget, allergies/restrictions, and preferences.
@@ -38,10 +45,14 @@ class FoodKnowledgeBase {
     List<String> preferredFoods = const [],
   }) {
     final templates = mealTemplatesForCountry(country);
-    final normalizedRestrictions =
-        restrictions.map((r) => r.toLowerCase().trim()).where((r) => r.isNotEmpty).toList();
-    final preferred =
-        preferredFoods.map((p) => p.toLowerCase().trim()).where((p) => p.isNotEmpty).toList();
+    final normalizedRestrictions = restrictions
+        .map((r) => r.toLowerCase().trim())
+        .where((r) => r.isNotEmpty)
+        .toList();
+    final preferred = preferredFoods
+        .map((p) => p.toLowerCase().trim())
+        .where((p) => p.isNotEmpty)
+        .toList();
 
     final filtered = templates.where((template) {
       if (!_budgetAllows(budget, template.minBudget)) return false;
@@ -61,10 +72,21 @@ class FoodKnowledgeBase {
     return filtered;
   }
 
-  CameroonFoodDataset _datasetFor(String country) {
-    // Only Cameroon exists in v3.2 starter; always resolve to it.
-    resolvedCountry(country);
-    return _cameroon;
+  /// Finds the dataset whose countryCode or one of its aliases matches
+  /// [country] (case-insensitive, substring match on aliases — mirrors
+  /// the original "contains('cameroon') || contains('cameroun')"
+  /// logic), or [_fallback] if nothing matches.
+  CountryFoodDataset _datasetFor(String country) {
+    final normalized = country.trim().toLowerCase();
+    if (normalized.isEmpty) return _fallback;
+
+    for (final dataset in _datasets.values) {
+      if (dataset.countryCode.toLowerCase() == normalized) return dataset;
+      for (final alias in dataset.aliases) {
+        if (normalized.contains(alias.toLowerCase())) return dataset;
+      }
+    }
+    return _fallback;
   }
 
   bool _budgetAllows(BudgetLevel userBudget, BudgetLevel minBudget) {
@@ -90,7 +112,6 @@ class FoodKnowledgeBase {
           return true;
         }
       }
-      // Common aliases
       if (restriction.contains('vegetarian') || restriction.contains('vegan')) {
         if (template.tags.contains('animal') ||
             template.ingredientIds.any((id) =>

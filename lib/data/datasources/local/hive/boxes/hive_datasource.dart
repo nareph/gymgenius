@@ -20,6 +20,8 @@ import '../models/hydration_log_hive_model.dart';
 import '../models/mental_wellness_hive_model.dart';
 import '../models/habit_hive_model.dart';
 import '../models/habit_log_hive_model.dart';
+import '../models/logged_food_portion_hive_model.dart';
+import '../models/nutrition_log_hive_model.dart';
 import 'hive_boxes.dart';
 
 /// Hive datasource — handles all direct Hive operations.
@@ -50,6 +52,8 @@ class HiveDatasource {
     Hive.registerAdapter(MentalWellnessHiveModelAdapter());
     Hive.registerAdapter(HabitHiveModelAdapter());
     Hive.registerAdapter(HabitLogHiveModelAdapter());
+    Hive.registerAdapter(LoggedFoodPortionHiveModelAdapter());
+    Hive.registerAdapter(NutritionLogHiveModelAdapter());
 
     // Open boxes
     await Hive.openBox<UserHiveModel>(HiveBoxes.users);
@@ -70,6 +74,7 @@ class HiveDatasource {
     await Hive.openBox<MentalWellnessHiveModel>(HiveBoxes.mentalWellness);
     await Hive.openBox<HabitHiveModel>(HiveBoxes.habits);
     await Hive.openBox<HabitLogHiveModel>(HiveBoxes.habitLogs);
+    await Hive.openBox<NutritionLogHiveModel>(HiveBoxes.nutritionLogs);
   }
 
   // ============================================================
@@ -533,6 +538,44 @@ class HiveDatasource {
     await HiveBoxes.habitLogsBox.delete(id);
   }
 
+  static Future<void> saveNutritionLog(NutritionLogHiveModel model) async {
+    await HiveBoxes.nutritionLogsBox.put(model.id, model);
+  }
+
+  static List<NutritionLogHiveModel> getNutritionLogs(String userId) {
+    return HiveBoxes.nutritionLogsBox.values
+        .where((e) => e.userId == userId)
+        .toList()
+      ..sort((a, b) => b.loggedAt.compareTo(a.loggedAt));
+  }
+
+  static List<NutritionLogHiveModel> getNutritionLogsForDay(
+    String userId,
+    DateTime day,
+  ) {
+    final key = DateTime(day.year, day.month, day.day);
+    return HiveBoxes.nutritionLogsBox.values
+        .where((e) {
+          if (e.userId != userId) return false;
+          final d = DateTime(e.loggedAt.year, e.loggedAt.month, e.loggedAt.day);
+          return d == key;
+        })
+        .toList()
+      ..sort((a, b) => a.loggedAt.compareTo(b.loggedAt));
+  }
+
+  static Future<void> deleteNutritionLog(String id) async {
+    await HiveBoxes.nutritionLogsBox.delete(id);
+  }
+
+  static Future<void> deleteNutritionLogsForUser(String userId) async {
+    final keys = HiveBoxes.nutritionLogsBox.values
+        .where((e) => e.userId == userId)
+        .map((e) => e.id)
+        .toList();
+    await HiveBoxes.nutritionLogsBox.deleteAll(keys);
+  }
+
   // ============================================================
   // CLEAR ALL
   // ============================================================
@@ -555,6 +598,7 @@ class HiveDatasource {
     await HiveBoxes.mentalWellnessBox.clear();
     await HiveBoxes.habitsBox.clear();
     await HiveBoxes.habitLogsBox.clear();
+    await HiveBoxes.nutritionLogsBox.clear();
     await HiveBoxes.currentUserBox.clear();
   }
 }

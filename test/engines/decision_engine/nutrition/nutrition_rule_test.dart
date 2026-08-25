@@ -101,6 +101,7 @@ TodayWorkout _restDayWorkout(DateTime date) {
     dayKey: 'sunday',
     plannedExercises: const [],
     finalExercises: const [],
+    splitDisplayName: '',
   );
 }
 
@@ -111,6 +112,7 @@ TodayWorkout _trainingDayWorkout(DateTime date) {
     dayKey: 'tuesday',
     plannedExercises: exercises,
     finalExercises: exercises,
+    splitDisplayName: '',
   );
 }
 
@@ -188,6 +190,7 @@ void main() {
         finalExercises: [_stubExercise()],
         isRecoverySession: true,
         volumeMultiplier: 0.5,
+        splitDisplayName: '',
       );
       final recovery = builder.build(
         context: DecisionContext(
@@ -225,6 +228,7 @@ void main() {
         plannedExercises: [_stubExercise()],
         finalExercises: [_stubExercise()],
         volumeMultiplier: 0.7,
+        splitDisplayName: '',
       );
       final reduced = builder.build(
         context: DecisionContext(

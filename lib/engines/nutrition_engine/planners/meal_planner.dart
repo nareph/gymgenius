@@ -3,8 +3,8 @@ import 'package:gymgenius/domain/entities/meal.dart';
 import 'package:gymgenius/domain/enums/meal_objective.dart';
 import 'package:gymgenius/domain/enums/meal_type.dart';
 import 'package:gymgenius/domain/value_objects/macro_targets.dart';
-import 'package:gymgenius/engines/nutrition_engine/food_knowledge_base/cameroon_dataset.dart';
 import 'package:gymgenius/engines/nutrition_engine/food_knowledge_base/food_knowledge_base.dart';
+import 'package:gymgenius/engines/nutrition_engine/food_knowledge_base/models/meal_template.dart';
 
 /// Builds a daily meal structure from macro targets and local foods.
 class MealPlanner {
@@ -171,9 +171,7 @@ class MealPlanner {
       case MealType.postWorkout:
         return MealObjective.recovery;
       case MealType.dinner:
-        return isTrainingDay
-            ? MealObjective.recovery
-            : MealObjective.light;
+        return isTrainingDay ? MealObjective.recovery : MealObjective.light;
     }
   }
 

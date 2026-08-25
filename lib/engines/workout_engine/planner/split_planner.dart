@@ -1,143 +1,103 @@
 import 'package:gymgenius/domain/enums/experience_level.dart';
-import 'package:gymgenius/domain/enums/fitness_goal.dart';
 import 'package:gymgenius/domain/enums/muscle_group.dart';
 import 'package:gymgenius/engines/workout_engine/models/muscle_split.dart';
 
 import 'split_catalog.dart';
-import 'split_score.dart';
+import 'split_focus_validator.dart';
 
-/// Chooses the best collection of training splits for a user.
+/// Resolves the weekly workout structure.
 ///
-/// Unlike the previous implementation, this planner is goal-driven
-/// rather than template-driven.
+/// The planner follows a stable two-step process:
 ///
-/// Instead of:
+/// 1. Start from the predefined v1/v2 split for the requested number
+///    of workout days.
+/// 2. Validate/adapt that structure according to the user's focus areas.
 ///
-///     3 workouts -> Push / Pull / Legs
+/// Focus areas are treated as strict user intent:
 ///
-/// it asks:
+///     "I want to work only these muscles."
 ///
-/// • Which splits best cover the user's priorities?
-/// • Which splits provide the best weekly balance?
-/// • Which splits minimize unnecessary overlap?
+/// When the predefined split is compatible with the requested muscles,
+/// it is preserved.
 ///
-/// This allows GymGenius to evolve toward specialization programs
-/// without changing the planner architecture.
+/// When it is incompatible, [SplitFocusValidator] may replace the
+/// affected structure with a specialized focus split.
+///
+/// The planner never scores arbitrary individual splits against one another.
+/// This preserves the stable weekly structures that were used by v1/v2.
 class SplitPlanner {
-  const SplitPlanner();
+  const SplitPlanner({
+    SplitFocusValidator focusValidator = const SplitFocusValidator(),
+  }) : _focusValidator = focusValidator;
 
-  /// Builds the weekly split plan.
+  final SplitFocusValidator _focusValidator;
+
+  /// Builds the final weekly split plan.
+  ///
+  /// [workoutDays] determines the initial predefined v1/v2 template.
+  ///
+  /// [experience] is kept in the public API for compatibility with the
+  /// previous planner and for future experience-specific policies.
+  ///
+  /// [focusMuscles] represents the user's explicit muscle selection.
+  ///
+  /// When [focusMuscles] is empty, the predefined template is returned
+  /// unchanged.
   List<MuscleSplit> plan({
     required int workoutDays,
     required ExperienceLevel experience,
     required List<MuscleGroup> focusMuscles,
-    FitnessGoal? goal,
   }) {
-    final selected = <MuscleSplit>[];
+    final normalizedDays = _normalizeWorkoutDays(workoutDays);
 
-    while (selected.length < workoutDays) {
-      SplitScore? best;
+    final baseTemplate = SplitCatalog.templateCopyForDays(
+      normalizedDays,
+    );
 
-      for (final split in SplitCatalog.all) {
-        if (selected.contains(split)) {
-          continue;
-        }
-
-        // --------------------------------------------------------
-        // Experience filters
-        // --------------------------------------------------------
-
-        if (!_isAllowedForExperience(
-          split,
-          experience,
-          workoutDays,
-        )) {
-          continue;
-        }
-
-        final score = SplitScore.evaluate(
-          split: split,
-          focusMuscles: focusMuscles,
-          selectedSplits: selected,
-          goal: goal,
-          workoutDays: workoutDays,
-        );
-
-        if (best == null || score.score > best.score) {
-          best = score;
-        }
-      }
-
-      if (best == null) {
-        break;
-      }
-
-      selected.add(best.split);
+    if (baseTemplate.isEmpty) {
+      return const <MuscleSplit>[];
     }
 
-    return _order(selected);
+    if (focusMuscles.isEmpty) {
+      return baseTemplate;
+    }
+
+    return _focusValidator.validate(
+      baseSplits: baseTemplate,
+      focusMuscles: _normalizeFocusMuscles(focusMuscles),
+      workoutDays: normalizedDays,
+      experience: experience,
+    );
   }
 
   // ============================================================
-  // Filters
+  // Helpers
   // ============================================================
 
-  bool _isAllowedForExperience(
-    MuscleSplit split,
-    ExperienceLevel experience,
-    int workoutDays,
-  ) {
-    // Beginners:
-    //
-    // Avoid excessive specialization when training only
-    // a few days per week.
-
-    if (experience == ExperienceLevel.beginner) {
-      if (workoutDays <= 2) {
-        return split.isUpperBody || split.isLowerBody || split.isFullBody;
-      }
-
-      if (workoutDays == 3) {
-        return split.name == 'Push' ||
-            split.name == 'Pull' ||
-            split.name == 'Legs' ||
-            split.isFullBody;
-      }
+  int _normalizeWorkoutDays(int workoutDays) {
+    if (workoutDays <= 1) {
+      return 1;
     }
 
-    return true;
+    if (workoutDays >= 7) {
+      return 7;
+    }
+
+    return workoutDays;
   }
 
-  // ============================================================
-  // Final ordering
-  // ============================================================
-
-  List<MuscleSplit> _order(
-    List<MuscleSplit> splits,
+  List<MuscleGroup> _normalizeFocusMuscles(
+    List<MuscleGroup> muscles,
   ) {
-    final ordered = <MuscleSplit>[];
+    final seen = <MuscleGroup>{};
+    final normalized = <MuscleGroup>[];
 
-    final remaining = [...splits];
-
-    while (remaining.isNotEmpty) {
-      if (ordered.isEmpty) {
-        ordered.add(remaining.removeAt(0));
-        continue;
+    for (final muscle in muscles) {
+      if (seen.add(muscle)) {
+        normalized.add(muscle);
       }
-
-      final previous = ordered.last;
-
-      final next = remaining.firstWhere(
-        (split) =>
-            split.isUpperBody != previous.isUpperBody ||
-            split.isLowerBody != previous.isLowerBody,
-        orElse: () => remaining.first,
-      );
-
-      remaining.remove(next);
-      ordered.add(next);
     }
 
-    return ordered;
+    return List.unmodifiable(normalized);
   }
 }

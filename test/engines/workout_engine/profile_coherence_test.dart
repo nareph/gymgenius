@@ -1,4 +1,7 @@
+// test/engines/workout_engine/profile_coherence_test.dart
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gymgenius/domain/enums/activity_level.dart';
 import 'package:gymgenius/domain/enums/exercise_category.dart';
 import 'package:gymgenius/domain/enums/equipment_type.dart';
 import 'package:gymgenius/domain/enums/exercise_difficulty.dart';
@@ -15,7 +18,6 @@ import 'package:gymgenius/engines/workout_engine/planner/split_catalog.dart';
 import 'package:gymgenius/engines/workout_engine/planner/split_planner.dart';
 import 'package:gymgenius/engines/workout_engine/planner/workout_frequency_planner.dart';
 import 'package:gymgenius/engines/workout_engine/shared/exercise_pool_entry.dart';
-import 'package:gymgenius/domain/enums/activity_level.dart';
 import 'package:gymgenius/engines/workout_engine/shared/profile_coherence.dart';
 import 'package:gymgenius/engines/workout_engine/volume_calculator.dart';
 
@@ -26,31 +28,131 @@ void main() {
         goal: FitnessGoal.buildMuscle,
         userFocusAreas: const [],
       );
+
       expect(focus, isNotEmpty);
       expect(focus, contains(MuscleGroup.chest));
+    });
+
+    test('preserves explicit user focus areas exactly', () {
+      final focus = ProfileCoherence.resolveFocusAreas(
+        goal: FitnessGoal.buildMuscle,
+        userFocusAreas: const [
+          MuscleGroup.glutes,
+          MuscleGroup.absCore,
+        ],
+      );
+
+      expect(
+        focus,
+        equals(
+          const [
+            MuscleGroup.glutes,
+            MuscleGroup.absCore,
+          ],
+        ),
+      );
+    });
+
+    test('deduplicates explicit user focus areas', () {
+      final focus = ProfileCoherence.resolveFocusAreas(
+        goal: FitnessGoal.buildMuscle,
+        userFocusAreas: const [
+          MuscleGroup.glutes,
+          MuscleGroup.glutes,
+          MuscleGroup.absCore,
+        ],
+      );
+
+      expect(
+        focus,
+        equals(
+          const [
+            MuscleGroup.glutes,
+            MuscleGroup.absCore,
+          ],
+        ),
+      );
+    });
+
+    test('detects specialized single-muscle focus', () {
+      expect(
+        ProfileCoherence.isSpecializedFocus(
+          const [MuscleGroup.absCore],
+        ),
+        isTrue,
+      );
+
+      expect(
+        ProfileCoherence.isSingleFocus(
+          const [MuscleGroup.glutes],
+        ),
+        isTrue,
+      );
+    });
+
+    test('does not classify broad focus as specialized', () {
+      expect(
+        ProfileCoherence.isSpecializedFocus(
+          const [
+            MuscleGroup.chest,
+            MuscleGroup.back,
+            MuscleGroup.shoulders,
+            MuscleGroup.biceps,
+            MuscleGroup.triceps,
+            MuscleGroup.quadriceps,
+            MuscleGroup.hamstrings,
+            MuscleGroup.glutes,
+          ],
+        ),
+        isFalse,
+      );
     });
 
     test('merges extra avoided muscles onto the profile list', () {
       final merged = ProfileCoherence.resolveAvoidedMuscles(
         profileAvoided: const [MuscleGroup.shoulders],
-        extra: const [MuscleGroup.back, MuscleGroup.shoulders],
+        extra: const [
+          MuscleGroup.back,
+          MuscleGroup.shoulders,
+        ],
       );
-      expect(merged, containsAll([MuscleGroup.shoulders, MuscleGroup.back]));
+
+      expect(
+        merged,
+        containsAll(
+          [
+            MuscleGroup.shoulders,
+            MuscleGroup.back,
+          ],
+        ),
+      );
+
       expect(merged.length, 2);
     });
 
     test('detects exercises that target avoided muscles', () {
       expect(
         ProfileCoherence.exerciseTargetsAvoided(
-          primaryMuscles: const [MuscleGroup.chest, MuscleGroup.triceps],
-          avoidedMuscles: const [MuscleGroup.shoulders],
+          primaryMuscles: const [
+            MuscleGroup.chest,
+            MuscleGroup.triceps,
+          ],
+          avoidedMuscles: const [
+            MuscleGroup.shoulders,
+          ],
         ),
         isFalse,
       );
+
       expect(
         ProfileCoherence.exerciseTargetsAvoided(
-          primaryMuscles: const [MuscleGroup.chest, MuscleGroup.triceps],
-          avoidedMuscles: const [MuscleGroup.chest],
+          primaryMuscles: const [
+            MuscleGroup.chest,
+            MuscleGroup.triceps,
+          ],
+          avoidedMuscles: const [
+            MuscleGroup.chest,
+          ],
         ),
         isTrue,
       );
@@ -72,6 +174,7 @@ void main() {
         planeOfMotion: PlaneOfMotion.sagittal,
         description: 'test',
       );
+
       const beginner = ExercisePoolEntry(
         id: 'y',
         name: 'Beginner Move',
@@ -95,6 +198,7 @@ void main() {
         ),
         isFalse,
       );
+
       expect(
         ProfileCoherence.isExerciseAppropriateForExperience(
           exercise: beginner,
@@ -112,6 +216,7 @@ void main() {
         ),
         0.70,
       );
+
       expect(
         ProfileCoherence.dampenRecoveryVolumeMultiplier(
           volumeMultiplier: 0.70,
@@ -128,8 +233,13 @@ void main() {
     test('respects preferred day count inside frequency range', () {
       final result = planner.calculateWorkoutDays(
         frequency: WorkoutFrequency.threeToFour,
-        preferredDays: const ['monday', 'wednesday', 'friday'],
+        preferredDays: const [
+          'monday',
+          'wednesday',
+          'friday',
+        ],
       );
+
       expect(result.count, 3);
       expect(result.useSpecifiedDays, isTrue);
     });
@@ -137,48 +247,187 @@ void main() {
     test('clamps preferred days to frequency range', () {
       final result = planner.calculateWorkoutDays(
         frequency: WorkoutFrequency.oneToTwo,
-        preferredDays: List.generate(4, (i) => 'day_$i'),
+        preferredDays: List.generate(
+          4,
+          (i) => 'day_$i',
+        ),
       );
+
       expect(result.count, 2);
       expect(result.useSpecifiedDays, isFalse);
     });
   });
 
-  group('SplitPlanner goal coherence', () {
+  group('SplitPlanner predefined split coherence', () {
     const planner = SplitPlanner();
 
-    test('strength beginners favor full-body templates at low frequency', () {
+    test('keeps the stable 2-day upper/lower template', () {
       final splits = planner.plan(
-        workoutDays: 3,
-        experience: ExperienceLevel.beginner,
-        focusMuscles: ProfileCoherence.defaultFocusAreas(
-          FitnessGoal.increaseStrength,
-        ),
-        goal: FitnessGoal.increaseStrength,
+        workoutDays: 2,
+        experience: ExperienceLevel.intermediate,
+        focusMuscles: const [],
       );
 
-      expect(splits.length, 3);
       expect(
-        splits.any((split) => split.isFullBody || split.isUpperBody),
-        isTrue,
+        splits.map((split) => split.name).toList(),
+        equals(
+          const [
+            'Upper Body',
+            'Lower Body',
+          ],
+        ),
       );
     });
 
-    test('hypertrophy 4-day plan favors specialization splits', () {
+    test('keeps the stable 3-day push pull legs template without focus', () {
+      final splits = planner.plan(
+        workoutDays: 3,
+        experience: ExperienceLevel.intermediate,
+        focusMuscles: const [],
+      );
+
+      expect(
+        splits.map((split) => split.name).toList(),
+        equals(
+          const [
+            'Push',
+            'Pull',
+            'Legs',
+          ],
+        ),
+      );
+    });
+
+    test('keeps the stable 4-day template without focus', () {
+      final splits = planner.plan(
+        workoutDays: 4,
+        experience: ExperienceLevel.intermediate,
+        focusMuscles: const [],
+      );
+
+      expect(
+        splits.map((split) => split.name).toList(),
+        equals(
+          const [
+            'Chest & Triceps',
+            'Back & Biceps',
+            'Legs',
+            'Shoulders & Core',
+          ],
+        ),
+      );
+    });
+
+    test('keeps the stable 5-day template without focus', () {
+      final splits = planner.plan(
+        workoutDays: 5,
+        experience: ExperienceLevel.intermediate,
+        focusMuscles: const [],
+      );
+
+      expect(
+        splits.map((split) => split.name).toList(),
+        equals(
+          const [
+            'Chest',
+            'Back',
+            'Legs',
+            'Arms',
+            'Shoulders & Core',
+          ],
+        ),
+      );
+    });
+
+    test('broad hypertrophy focus keeps the predefined 4-day structure', () {
       final splits = planner.plan(
         workoutDays: 4,
         experience: ExperienceLevel.intermediate,
         focusMuscles: ProfileCoherence.defaultFocusAreas(
           FitnessGoal.buildMuscle,
         ),
-        goal: FitnessGoal.buildMuscle,
       );
 
       expect(splits.length, 4);
+
       expect(
-        splits.where((split) => split.name == 'Push' || split.name == 'Pull'),
-        isNotEmpty,
+        splits.map((split) => split.name).toList(),
+        equals(
+          const [
+            'Chest & Triceps',
+            'Back & Biceps',
+            'Legs',
+            'Shoulders & Core',
+          ],
+        ),
       );
+    });
+
+    test('single abs/core focus creates a specialized 3-day split', () {
+      final splits = planner.plan(
+        workoutDays: 3,
+        experience: ExperienceLevel.intermediate,
+        focusMuscles: const [
+          MuscleGroup.absCore,
+        ],
+      );
+
+      expect(splits.length, 3);
+
+      expect(
+        splits.every(
+          (split) =>
+              split.muscles.length == 1 &&
+              split.muscles.contains(MuscleGroup.absCore),
+        ),
+        isTrue,
+      );
+    });
+
+    test('single glutes focus creates a specialized 3-day split', () {
+      final splits = planner.plan(
+        workoutDays: 3,
+        experience: ExperienceLevel.intermediate,
+        focusMuscles: const [
+          MuscleGroup.glutes,
+        ],
+      );
+
+      expect(splits.length, 3);
+
+      expect(
+        splits.every(
+          (split) =>
+              split.muscles.length == 1 &&
+              split.muscles.contains(MuscleGroup.glutes),
+        ),
+        isTrue,
+      );
+    });
+
+    test('glutes and abs/core focus stays restricted to selected muscles', () {
+      final splits = planner.plan(
+        workoutDays: 3,
+        experience: ExperienceLevel.intermediate,
+        focusMuscles: const [
+          MuscleGroup.glutes,
+          MuscleGroup.absCore,
+        ],
+      );
+
+      expect(splits.length, 3);
+
+      for (final split in splits) {
+        expect(
+          split.muscles.toSet(),
+          equals(
+            const {
+              MuscleGroup.glutes,
+              MuscleGroup.absCore,
+            },
+          ),
+        );
+      }
     });
   });
 
@@ -189,21 +438,42 @@ void main() {
         0,
         activityLevel: ActivityLevel.sedentary,
       );
+
       final veryActive = VolumeCalculator.exerciseCountForSession(
         'standard_60',
         0,
         activityLevel: ActivityLevel.veryActive,
       );
+
       expect(sedentary, lessThan(veryActive));
       expect(sedentary, greaterThanOrEqualTo(3));
       expect(veryActive, lessThanOrEqualTo(9));
     });
   });
 
-  group('Pull bodyweight pool depth', () {
-    test('has enough home-friendly pull options without a bar', () {
+  group('SplitCatalog', () {
+    test('contains the historical five-day chest/back/legs/arms structure', () {
+      final template = SplitCatalog.templateForDays(5);
+
+      expect(
+        template.map((split) => split.name).toList(),
+        equals(
+          const [
+            'Chest',
+            'Back',
+            'Legs',
+            'Arms',
+            'Shoulders & Core',
+          ],
+        ),
+      );
+    });
+
+    test('finds the Pull split by name', () {
       final pullSplit = SplitCatalog.byName('Pull');
+
       expect(pullSplit, isNotNull);
+      expect(pullSplit!.name, 'Pull');
     });
   });
 }

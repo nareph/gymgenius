@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
 import 'package:gymgenius/core/logger/logger_service.dart';
 import 'package:gymgenius/di/injection.dart';
-import 'package:gymgenius/domain/entities/health_profile.dart';
 import 'package:gymgenius/domain/repositories/auth_repository.dart';
 import 'package:gymgenius/presentation/blocs/signup/signup_bloc.dart';
 import 'package:gymgenius/presentation/validators/form_validators.dart';
 
+/// Screen for creating a new account.
+///
+/// After successful sign‑up, the user is authenticated but does NOT have
+/// a HealthProfile yet — the flow will redirect to CompleteProfile.
 class SignUpScreen extends StatelessWidget {
-  final HealthProfile? profile;
   final VoidCallback? onLoginRequested;
 
   const SignUpScreen({
     super.key,
-    this.profile,
     this.onLoginRequested,
   });
 
@@ -28,10 +30,18 @@ class SignUpScreen extends StatelessWidget {
           if (state.status == SignUpStatus.failure) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(state.errorMessage ?? 'Sign up failed'),
+                content: Text(
+                  state.errorMessage ?? 'Sign up failed',
+                ),
                 backgroundColor: Theme.of(context).colorScheme.error,
               ),
             );
+          }
+
+          if (state.status == SignUpStatus.success) {
+            Log.debug('SignUpScreen: Account created successfully');
+            // No HealthProfile is created here — the AuthBloc will detect
+            // the missing profile and trigger CompleteProfile.
           }
         },
         child: Scaffold(
@@ -40,7 +50,6 @@ class SignUpScreen extends StatelessWidget {
             automaticallyImplyLeading: false,
           ),
           body: _SignUpForm(
-            profile: profile,
             onLoginRequested: onLoginRequested,
           ),
         ),
@@ -49,11 +58,16 @@ class SignUpScreen extends StatelessWidget {
   }
 }
 
+// ---------------------------------------------------------------------
+// Internal form widget
+// ---------------------------------------------------------------------
+
 class _SignUpForm extends StatefulWidget {
-  final HealthProfile? profile;
   final VoidCallback? onLoginRequested;
 
-  const _SignUpForm({this.profile, this.onLoginRequested});
+  const _SignUpForm({
+    this.onLoginRequested,
+  });
 
   @override
   State<_SignUpForm> createState() => _SignUpFormState();
@@ -71,27 +85,49 @@ class _SignUpFormState extends State<_SignUpForm> {
     super.dispose();
   }
 
+  void _submit(BuildContext context) {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    context.read<SignUpBloc>().add(
+          SignUpSubmitted(
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+          ),
+        );
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<SignUpBloc, SignUpState>(
       builder: (context, state) {
-        return SingleChildScrollView(
+        final isLoading = state.status == SignUpStatus.loading;
+
+        return Padding(
           padding: const EdgeInsets.all(24.0),
           child: Form(
             key: _formKey,
-            autovalidateMode: AutovalidateMode.always,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                // Email field
                 TextFormField(
                   controller: _emailController,
+                  enabled: !isLoading,
                   decoration: const InputDecoration(
                     labelText: 'Email',
                     prefixIcon: Icon(Icons.email),
                   ),
                   keyboardType: TextInputType.emailAddress,
-                  onChanged: (value) =>
-                      context.read<SignUpBloc>().add(SignUpEmailChanged(value)),
+                  textInputAction: TextInputAction.next,
+                  onChanged: (value) {
+                    context.read<SignUpBloc>().add(
+                          SignUpEmailChanged(value),
+                        );
+                  },
                   validator: (value) {
                     final email = Email.dirty(value ?? '');
                     if (!email.isValid) {
@@ -101,16 +137,27 @@ class _SignUpFormState extends State<_SignUpForm> {
                   },
                 ),
                 const SizedBox(height: 16),
+
+                // Password field
                 TextFormField(
                   controller: _passwordController,
+                  enabled: !isLoading,
                   decoration: const InputDecoration(
                     labelText: 'Password',
                     prefixIcon: Icon(Icons.lock),
                   ),
                   obscureText: true,
-                  onChanged: (value) => context
-                      .read<SignUpBloc>()
-                      .add(SignUpPasswordChanged(value)),
+                  textInputAction: TextInputAction.done,
+                  onChanged: (value) {
+                    context.read<SignUpBloc>().add(
+                          SignUpPasswordChanged(value),
+                        );
+                  },
+                  onFieldSubmitted: (_) {
+                    if (!isLoading) {
+                      _submit(context);
+                    }
+                  },
                   validator: (value) {
                     final password = Password.dirty(value ?? '');
                     if (!password.isValid) {
@@ -123,34 +170,35 @@ class _SignUpFormState extends State<_SignUpForm> {
                   },
                 ),
                 const SizedBox(height: 24),
+
+                // Submit button
                 ElevatedButton(
-                  onPressed: state.status == SignUpStatus.loading
-                      ? null
-                      : () {
-                          if (_formKey.currentState!.validate()) {
-                            Log.debug(
-                                'SignUpScreen: Creating account with profile');
-                            context.read<SignUpBloc>().add(
-                                  SignUpSubmitted(profile: widget.profile),
-                                );
-                          }
-                        },
-                  child: state.status == SignUpStatus.loading
+                  onPressed: isLoading ? null : () => _submit(context),
+                  child: isLoading
                       ? const SizedBox(
                           height: 20,
                           width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                          ),
                         )
                       : const Text('CREATE ACCOUNT'),
                 ),
                 const SizedBox(height: 16),
+
+                // Login link (conditional)
                 if (widget.onLoginRequested != null)
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Text('Already have an account? '),
                       TextButton(
-                        onPressed: widget.onLoginRequested,
+                        onPressed: isLoading ? null : widget.onLoginRequested,
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          minimumSize: const Size(50, 30),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
                         child: const Text('Log In'),
                       ),
                     ],

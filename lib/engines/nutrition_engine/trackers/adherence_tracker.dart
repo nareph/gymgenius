@@ -1,11 +1,14 @@
-/// Minimal adherence tracker placeholder for Phase 3.
-///
-/// Full logging UI arrives in a later milestone.
-class AdherenceTracker {
-  const AdherenceTracker();
+import 'package:gymgenius/domain/entities/nutrition_log.dart';
+import 'package:gymgenius/domain/value_objects/macro_targets.dart';
+import 'package:gymgenius/engines/nutrition_engine/builders/meal_log_builder.dart';
 
-  /// Placeholder score until meal logging exists.
-  double placeholderScore() => 0.0;
+/// Tracks nutritional adherence from logged meals vs daily targets.
+class AdherenceTracker {
+  final MealLogBuilder _logBuilder;
+
+  const AdherenceTracker({
+    MealLogBuilder logBuilder = const MealLogBuilder(),
+  }) : _logBuilder = logBuilder;
 
   /// Estimates adherence from logged vs target calories when available.
   double scoreFromCalories({
@@ -19,4 +22,21 @@ class AdherenceTracker {
     if (ratio >= 0.7 && ratio <= 1.3) return 0.4;
     return 0.2;
   }
+
+  /// Computes adherence from a day's nutrition logs.
+  double scoreFromLogs({
+    required int targetCalories,
+    required List<NutritionLog> logs,
+  }) {
+    if (logs.isEmpty) return 0;
+    final logged = _logBuilder.sumLoggedMacros(logs).calories;
+    return scoreFromCalories(
+      targetCalories: targetCalories,
+      loggedCalories: logged,
+    );
+  }
+
+  /// Total macros logged for a day.
+  MacroTargets loggedTotals(List<NutritionLog> logs) =>
+      _logBuilder.sumLoggedMacros(logs);
 }
