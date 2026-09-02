@@ -1,3 +1,4 @@
+// lib/engines/ai_coach/providers/local_coach_provider.dart
 import 'dart:convert';
 
 import 'package:gymgenius/engines/ai_coach/models/coach_context.dart';
@@ -43,6 +44,7 @@ class LocalCoachProvider implements AIProvider {
     });
   }
 
+  /// Builds a daily coaching response locally (without network).
   CoachResponse buildDaily(CoachContext context) {
     final buffer = StringBuffer();
     if (context.isRestDay) {
@@ -104,6 +106,7 @@ class LocalCoachProvider implements AIProvider {
                   : 'Complete the planned session as written.',
           reason: context.healthReason ?? 'Decision Engine plan',
           alignsWithDecision: true,
+          // ✅ Use the static method correctly
           actionTag: CoachResponseValidator.fallbackActionTag(context),
         ),
       ],
@@ -114,6 +117,7 @@ class LocalCoachProvider implements AIProvider {
     );
   }
 
+  /// Builds a weekly summary coaching response locally.
   CoachResponse buildWeekly({
     required CoachContext context,
     required Map<String, dynamic> weeklyReport,
@@ -122,7 +126,8 @@ class LocalCoachProvider implements AIProvider {
     final planned = weeklyReport['workoutsPlanned'];
     final consistency = weeklyReport['consistencyScore'];
     final weightChange = weeklyReport['weightChangeKg'];
-    final positives = (weeklyReport['positives'] as List?)?.cast<String>() ?? [];
+    final positives =
+        (weeklyReport['positives'] as List?)?.cast<String>() ?? [];
     final improvements =
         (weeklyReport['improvements'] as List?)?.cast<String>() ?? [];
 
@@ -170,6 +175,7 @@ class LocalCoachProvider implements AIProvider {
     );
   }
 
+  /// Builds a chat response locally.
   CoachResponse buildChat({
     required CoachContext context,
     required String question,

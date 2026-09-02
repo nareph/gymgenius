@@ -11,6 +11,7 @@ import 'package:gymgenius/engines/workout_engine/models/workout_days_result.dart
 import 'package:gymgenius/engines/workout_engine/planner/split_planner.dart';
 import 'package:gymgenius/engines/workout_engine/planner/workout_frequency_planner.dart';
 import 'package:gymgenius/engines/workout_engine/services/generation_service.dart';
+import 'package:gymgenius/engines/workout_engine/shared/profile_coherence.dart';
 import 'package:gymgenius/engines/workout_engine/shared/workout_constants.dart';
 
 /// Handles program regeneration with specific options.
@@ -80,6 +81,7 @@ class RegenerationService {
           '— returning program unchanged.',
           tag: _tag,
         );
+
         return previousProgram;
       }
 
@@ -101,6 +103,7 @@ class RegenerationService {
           '— returning program unchanged.',
           tag: _tag,
         );
+
         return previousProgram;
       }
 
@@ -146,8 +149,31 @@ class RegenerationService {
         '— nothing to regenerate, returning the program unchanged.',
         tag: _tag,
       );
+
       return previousProgram;
     }
+
+    //-----------------------------------------------------------------------
+    // Keep all exercise IDs from the other days.
+    //-----------------------------------------------------------------------
+
+    final weeklyUsedExerciseIds = <String>{};
+
+    for (final entry in previousProgram.weeklySchedule.entries) {
+      if (entry.key == targetDay) {
+        continue;
+      }
+
+      for (final exercise in entry.value) {
+        weeklyUsedExerciseIds.add(
+          exercise.id,
+        );
+      }
+    }
+
+    //-----------------------------------------------------------------------
+    // Regenerate only the requested day.
+    //-----------------------------------------------------------------------
 
     final newDayExercises = _dayGenerator.generate(
       split: split,
@@ -155,6 +181,7 @@ class RegenerationService {
       previousProgram: previousProgram,
       excludeMuscles: _parseExcludeMuscles(options),
       intensityOverride: _intensityString(options),
+      weeklyUsedExerciseIds: weeklyUsedExerciseIds,
     );
 
     final updatedSchedule = Map<String, List<Exercise>>.from(
@@ -194,6 +221,7 @@ class RegenerationService {
         '— returning program unchanged.',
         tag: _tag,
       );
+
       return previousProgram;
     }
 
@@ -208,6 +236,7 @@ class RegenerationService {
         '— returning program unchanged.',
         tag: _tag,
       );
+
       return previousProgram;
     }
 
@@ -227,8 +256,35 @@ class RegenerationService {
         '— returning program unchanged.',
         tag: _tag,
       );
+
       return previousProgram;
     }
+
+    //-----------------------------------------------------------------------
+    // Collect every exercise ID already present in the program.
+    //-----------------------------------------------------------------------
+
+    final weeklyUsedExerciseIds = <String>{};
+
+    for (final entry in previousProgram.weeklySchedule.entries) {
+      for (final exercise in entry.value) {
+        weeklyUsedExerciseIds.add(
+          exercise.id,
+        );
+      }
+    }
+
+    //-----------------------------------------------------------------------
+    // Remove the exercise currently being replaced.
+    //-----------------------------------------------------------------------
+
+    weeklyUsedExerciseIds.remove(
+      targetExerciseId,
+    );
+
+    //-----------------------------------------------------------------------
+    // Generate one replacement.
+    //-----------------------------------------------------------------------
 
     final replacementDay = _dayGenerator.generate(
       split: split,
@@ -237,6 +293,7 @@ class RegenerationService {
       excludeMuscles: _parseExcludeMuscles(options),
       intensityOverride: _intensityString(options),
       desiredCountOverride: 1,
+      weeklyUsedExerciseIds: weeklyUsedExerciseIds,
     );
 
     if (replacementDay.isEmpty) {
@@ -246,10 +303,13 @@ class RegenerationService {
         '— returning program unchanged.',
         tag: _tag,
       );
+
       return previousProgram;
     }
 
-    final updatedDayExercises = List<Exercise>.from(dayExercises);
+    final updatedDayExercises = List<Exercise>.from(
+      dayExercises,
+    );
 
     updatedDayExercises[targetIndex] = replacementDay.first;
 
@@ -276,6 +336,10 @@ class RegenerationService {
     List<Exercise> dayExercises,
     String targetExerciseId,
   ) {
+    //-----------------------------------------------------------------------
+    // Primary lookup: canonical exercise ID.
+    //-----------------------------------------------------------------------
+
     final byId = dayExercises.indexWhere(
       (exercise) => exercise.id == targetExerciseId,
     );
@@ -283,6 +347,10 @@ class RegenerationService {
     if (byId != -1) {
       return byId;
     }
+
+    //-----------------------------------------------------------------------
+    // Backward-compatible fallback.
+    //-----------------------------------------------------------------------
 
     final match = RegExp(r'^exercise_(\d+)$').firstMatch(
       targetExerciseId,
@@ -347,9 +415,17 @@ class RegenerationService {
     required TrainingProgram previousProgram,
     required Map<String, dynamic> options,
   }) async {
+    //-----------------------------------------------------------------------
+    // Preserve the actual workout days from the previous program.
+    //-----------------------------------------------------------------------
+
     final workoutDays = previousProgram.weeklySchedule.entries
-        .where((entry) => entry.value.isNotEmpty)
-        .map((entry) => entry.key)
+        .where(
+          (entry) => entry.value.isNotEmpty,
+        )
+        .map(
+          (entry) => entry.key,
+        )
         .toList();
 
     if (workoutDays.isEmpty) {
@@ -366,16 +442,19 @@ class RegenerationService {
       );
     }
 
+    //-----------------------------------------------------------------------
+    // Re-plan the split structure using the current profile.
+    //-----------------------------------------------------------------------
+
     final selectedSplit = _planSplitsForWorkoutDays(
       profile: profile,
       workoutDayCount: workoutDays.length,
     );
 
-    if (selectedSplit.length < workoutDays.length) {
+    if (selectedSplit.length != workoutDays.length) {
       Log.warning(
-        'SplitPlanner returned fewer splits '
-        '(${selectedSplit.length}) than workout days '
-        '(${workoutDays.length}) '
+        'SplitPlanner returned ${selectedSplit.length} splits for '
+        '${workoutDays.length} workout days '
         '— falling back to from-scratch generation.',
         tag: _tag,
       );
@@ -387,6 +466,10 @@ class RegenerationService {
       );
     }
 
+    //-----------------------------------------------------------------------
+    // Initialize schedule.
+    //-----------------------------------------------------------------------
+
     final updatedSchedule = <String, List<Exercise>>{
       for (final day in WorkoutConstants.daysOfWeek) day: <Exercise>[],
     };
@@ -394,6 +477,16 @@ class RegenerationService {
     final excludeMuscles = _parseExcludeMuscles(options);
 
     final intensityOverride = _intensityString(options);
+
+    //-----------------------------------------------------------------------
+    // Track newly generated exercise IDs across the entire regenerated week.
+    //-----------------------------------------------------------------------
+
+    final weeklyUsedExerciseIds = <String>{};
+
+    //-----------------------------------------------------------------------
+    // Regenerate each scheduled day.
+    //-----------------------------------------------------------------------
 
     for (var i = 0; i < workoutDays.length && i < selectedSplit.length; i++) {
       final day = workoutDays[i];
@@ -403,14 +496,27 @@ class RegenerationService {
 
       final desiredCount = previousExercises.length;
 
-      updatedSchedule[day] = _dayGenerator.generate(
+      final dayExercises = _dayGenerator.generate(
         split: selectedSplit[i],
         profile: profile,
         previousProgram: previousProgram,
         excludeMuscles: excludeMuscles,
         intensityOverride: intensityOverride,
         desiredCountOverride: desiredCount,
+        weeklyUsedExerciseIds: weeklyUsedExerciseIds,
       );
+
+      updatedSchedule[day] = dayExercises;
+
+      //---------------------------------------------------------------------
+      // Register selected canonical exercise IDs.
+      //---------------------------------------------------------------------
+
+      for (final exercise in dayExercises) {
+        weeklyUsedExerciseIds.add(
+          exercise.id,
+        );
+      }
     }
 
     Log.debug(
@@ -425,14 +531,17 @@ class RegenerationService {
   }
 
   //===========================================================================
-  // Split resolution
+  // Split planning
   //===========================================================================
 
   List<MuscleSplit> _planSplitsForWorkoutDays({
     required HealthProfile profile,
     required int workoutDayCount,
   }) {
-    final focusMuscles = profile.training.focusAreas;
+    final focusMuscles = ProfileCoherence.resolveFocusAreas(
+      goal: profile.training.goal,
+      userFocusAreas: profile.training.focusAreas,
+    );
 
     return _splitPlanner.plan(
       workoutDays: workoutDayCount,
@@ -442,14 +551,9 @@ class RegenerationService {
   }
 
   //===========================================================================
-  // Shared helpers
+  // Split resolution for one day
   //===========================================================================
 
-  /// Returns the final [MuscleSplit] assigned to [targetDay].
-  ///
-  /// The same planner used during normal generation is used here so a
-  /// regeneration remains consistent with the current profile and its
-  /// strict focus areas.
   MuscleSplit? _findSplitForDay(
     HealthProfile profile,
     String targetDay,
@@ -458,7 +562,11 @@ class RegenerationService {
 
     final daysResult = _frequencyPlanner.calculateWorkoutDays(
       frequency: training.frequency,
-      preferredDays: training.preferredDays.map((day) => day.value).toList(),
+      preferredDays: training.preferredDays
+          .map(
+            (day) => day.value,
+          )
+          .toList(),
     );
 
     final workoutDays = _resolveWorkoutDays(
@@ -466,14 +574,25 @@ class RegenerationService {
       daysResult: daysResult,
     );
 
+    final focusMuscles = ProfileCoherence.resolveFocusAreas(
+      goal: training.goal,
+      userFocusAreas: training.focusAreas,
+    );
+
     final selectedSplit = _splitPlanner.plan(
       workoutDays: workoutDays.length,
       experience: training.experience,
-      focusMuscles: training.focusAreas,
+      focusMuscles: focusMuscles,
     );
 
-    final dayIndex = workoutDays.indexOf(
-      targetDay.toLowerCase(),
+    if (selectedSplit.length != workoutDays.length) {
+      return null;
+    }
+
+    final normalizedTargetDay = targetDay.trim().toLowerCase();
+
+    final dayIndex = workoutDays.indexWhere(
+      (day) => day.trim().toLowerCase() == normalizedTargetDay,
     );
 
     if (dayIndex == -1 || dayIndex >= selectedSplit.length) {
@@ -490,13 +609,22 @@ class RegenerationService {
     final training = profile.training;
 
     if (daysResult.useSpecifiedDays && training.preferredDays.isNotEmpty) {
-      return training.preferredDays.map((day) => day.value).take(7).toList();
+      return training.preferredDays
+          .map(
+            (day) => day.value,
+          )
+          .take(7)
+          .toList();
     }
 
     return WorkoutConstants.defaultWorkoutDays(
       daysResult.count.clamp(1, 7),
     );
   }
+
+  //===========================================================================
+  // Profile adjustments
+  //===========================================================================
 
   HealthProfile _profileWithAdjustments(
     HealthProfile profile,
@@ -508,12 +636,7 @@ class RegenerationService {
     //-----------------------------------------------------------------------
     // Focus muscles
     //
-    // Explicit regeneration focus options replace the current focus selection.
-    // This is important for strict-focus semantics:
-    //
-    //     focusAreas = "only these muscles"
-    //
-    // We do not merge them with the old selection anymore.
+    // Explicit regeneration focus options REPLACE the existing selection.
     //-----------------------------------------------------------------------
 
     final focusRaw = options['focusMuscles'];
@@ -552,7 +675,9 @@ class RegenerationService {
         newEquipment,
       );
 
-      if (!training.equipment.contains(equipment)) {
+      if (!training.equipment.contains(
+        equipment,
+      )) {
         training = training.copyWith(
           equipment: [
             ...training.equipment,
@@ -597,6 +722,10 @@ class RegenerationService {
       }
     }
 
+    //-----------------------------------------------------------------------
+    // Return original profile when nothing changed.
+    //-----------------------------------------------------------------------
+
     if (!changed) {
       return profile;
     }
@@ -605,6 +734,10 @@ class RegenerationService {
       training: training,
     );
   }
+
+  //===========================================================================
+  // Option parsing
+  //===========================================================================
 
   List<MuscleGroup>? _parseExcludeMuscles(
     Map<String, dynamic> options,
@@ -633,11 +766,18 @@ class RegenerationService {
     return options['intensity'] as String?;
   }
 
+  //===========================================================================
+  // Utilities
+  //===========================================================================
+
   bool _sameMuscleList(
     List<MuscleGroup> first,
     List<MuscleGroup> second,
   ) {
-    return first.toSet().containsAll(second) &&
-        second.toSet().containsAll(first);
+    final firstSet = first.toSet();
+    final secondSet = second.toSet();
+
+    return firstSet.length == secondSet.length &&
+        firstSet.containsAll(secondSet);
   }
 }

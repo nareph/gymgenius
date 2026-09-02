@@ -104,4 +104,48 @@ const List<ExercisePoolEntry> legsResistanceBandsExercises = [
         '1. Anchor a band, lie face down, loop band around ankles.\n'
         '2. Curl your heels towards your glutes.',
   ),
+  ExercisePoolEntry(
+    id: 'legs_band_calf_raises',
+    name: 'Resistance Band Calf Raises',
+    category: ExerciseCategory.isolation,
+    difficulty: ExerciseDifficulty.beginner,
+    equipmentType: EquipmentType.resistanceBands,
+    targetMuscles: [
+      MuscleGroup.calves,
+    ],
+    secondaryMuscles: [],
+    usesWeight: true,
+    weightSuggestion: 'Light',
+    movementPattern: MovementPattern.push,
+    mechanics: Mechanics.closedChain,
+    forceType: ForceType.push,
+    laterality: Laterality.bilateral,
+    planeOfMotion: PlaneOfMotion.sagittal,
+    description: '**Target: Calves**\n\n'
+        '1. Stand on the middle of a resistance band and hold the ends at shoulder height.\n'
+        '2. Raise your heels as high as possible against the band tension.\n'
+        '3. Lower slowly and repeat.',
+  ),
+  ExercisePoolEntry(
+    id: 'legs_band_single_leg_calf_raises',
+    name: 'Single-Leg Band Calf Raises',
+    category: ExerciseCategory.isolation,
+    difficulty: ExerciseDifficulty.intermediate,
+    equipmentType: EquipmentType.resistanceBands,
+    targetMuscles: [
+      MuscleGroup.calves,
+    ],
+    secondaryMuscles: [],
+    usesWeight: true,
+    weightSuggestion: 'Light',
+    movementPattern: MovementPattern.push,
+    mechanics: Mechanics.closedChain,
+    forceType: ForceType.push,
+    laterality: Laterality.unilateral,
+    planeOfMotion: PlaneOfMotion.sagittal,
+    description: '**Target: Calves (unilateral)**\n\n'
+        '1. Stand on one foot on the resistance band.\n'
+        '2. Hold the band securely and raise your heel against resistance.\n'
+        '3. Lower slowly and repeat before switching sides.',
+  ),
 ];

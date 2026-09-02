@@ -7,10 +7,6 @@ import 'package:gymgenius/engines/workout_engine/models/focus_plan.dart';
 import 'package:gymgenius/engines/workout_engine/models/muscle_split.dart';
 
 /// Computes focus quotas for a single workout session.
-///
-/// Focus muscles are treated as primary user intent.
-/// Secondary focus muscles are derived from the current split and are
-/// available to the selector when filling non-reserved exercise slots.
 class FocusQuotaPlanner {
   const FocusQuotaPlanner();
 
@@ -30,7 +26,7 @@ class FocusQuotaPlanner {
       primaryFocusMuscles: normalizedFocus,
     );
 
-    if (normalizedFocus.isEmpty) {
+    if (desiredExerciseCount <= 0) {
       return FocusPlan(
         quotas: const {},
         reservedExercises: 0,
@@ -40,23 +36,27 @@ class FocusQuotaPlanner {
 
     final reserved = min(
       _reservedFocusExercises(desiredExerciseCount),
-      max(0, desiredExerciseCount),
+      desiredExerciseCount,
     );
 
     final quotas = <MuscleGroup, int>{};
 
     // -----------------------------------------------------------------------
-    // Strict/specialized split
+    // Strict split:
     //
-    // When the split itself contains only the selected focus muscles,
-    // those muscles can receive the complete reserved quota.
+    // The split itself contains only the user's selected focus muscles.
+    // In that situation every exercise slot is allowed to contribute to
+    // those selected muscles. The quota is distributed across the whole
+    // split instead of privileging only the first muscle.
     // -----------------------------------------------------------------------
 
     final nativeFocus =
         normalizedFocus.where(split.targets).toList(growable: false);
 
-    if (nativeFocus.length == normalizedFocus.length &&
-        split.muscles.every(normalizedFocus.contains)) {
+    final strictFocus = nativeFocus.length == normalizedFocus.length &&
+        split.muscles.every(normalizedFocus.contains);
+
+    if (strictFocus) {
       quotas.addAll(
         _quotaForMultipleFocusesWithinSplit(
           split: split,
@@ -73,19 +73,15 @@ class FocusQuotaPlanner {
     }
 
     // -----------------------------------------------------------------------
-    // One primary focus
+    // One focus:
+    // keep the explicit focus concentrated.
     // -----------------------------------------------------------------------
 
     if (normalizedFocus.length == 1) {
       final muscle = normalizedFocus.first;
 
       if (split.targets(muscle)) {
-        quotas.addAll(
-          _quotaForSingleFocus(
-            muscle: muscle,
-            reserved: reserved,
-          ),
-        );
+        quotas[muscle] = reserved;
       }
 
       return FocusPlan(
@@ -96,7 +92,8 @@ class FocusQuotaPlanner {
     }
 
     // -----------------------------------------------------------------------
-    // Two primary focuses
+    // Two focuses:
+    // distribute the reserved quota between the native muscles.
     // -----------------------------------------------------------------------
 
     if (normalizedFocus.length == 2) {
@@ -116,7 +113,9 @@ class FocusQuotaPlanner {
     }
 
     // -----------------------------------------------------------------------
-    // Three or more primary focuses
+    // Broad focus:
+    // only the focus muscles that actually belong to the split receive
+    // mandatory quotas.
     // -----------------------------------------------------------------------
 
     quotas.addAll(
@@ -138,9 +137,7 @@ class FocusQuotaPlanner {
   // Reserved exercises
   //===========================================================================
 
-  int _reservedFocusExercises(
-    int desiredExerciseCount,
-  ) {
+  int _reservedFocusExercises(int desiredExerciseCount) {
     if (desiredExerciseCount <= 0) {
       return 0;
     }
@@ -154,25 +151,6 @@ class FocusQuotaPlanner {
     }
 
     return 3;
-  }
-
-  //===========================================================================
-  // One focus
-  //===========================================================================
-
-  Map<MuscleGroup, int> _quotaForSingleFocus({
-    required MuscleGroup muscle,
-    required int reserved,
-  }) {
-    if (reserved <= 0) {
-      return {
-        muscle: 0,
-      };
-    }
-
-    return {
-      muscle: reserved,
-    };
   }
 
   //===========================================================================
@@ -194,34 +172,22 @@ class FocusQuotaPlanner {
       return quotas;
     }
 
-    if (reserved == 1) {
-      quotas[native.first] = 1;
-      return quotas;
-    }
-
-    if (reserved == 2) {
-      if (native.length >= 2) {
-        quotas[native[0]] = 1;
-        quotas[native[1]] = 1;
-      } else {
-        quotas[native.first] = 2;
-      }
-
-      return quotas;
-    }
-
-    if (native.length >= 2) {
-      quotas[native[0]] = 2;
-      quotas[native[1]] = 1;
-    } else {
+    if (native.length == 1) {
       quotas[native.first] = reserved;
+      return quotas;
     }
+
+    final first = (reserved + 1) ~/ 2;
+    final second = reserved ~/ 2;
+
+    quotas[native.first] = first;
+    quotas[native.last] = second;
 
     return quotas;
   }
 
   //===========================================================================
-  // Three or more focuses
+  // Multiple focuses
   //===========================================================================
 
   Map<MuscleGroup, int> _quotaForMultipleFocusesWithinSplit({
@@ -233,15 +199,19 @@ class FocusQuotaPlanner {
       for (final muscle in muscles) muscle: 0,
     };
 
+    if (reserved <= 0) {
+      return quotas;
+    }
+
     final native = muscles.where(split.targets).toList(growable: false);
 
-    if (native.isEmpty || reserved <= 0) {
+    if (native.isEmpty) {
       return quotas;
     }
 
     var remaining = reserved;
 
-    // First give one quota to each native focus muscle.
+    // First pass: guarantee one exercise for every native focus muscle.
     for (final muscle in native) {
       if (remaining == 0) {
         break;
@@ -251,10 +221,24 @@ class FocusQuotaPlanner {
       remaining--;
     }
 
-    // Then distribute remaining quota among native focus muscles.
+    // Second pass: distribute remaining quota cyclically across the native
+    // focus muscles. This keeps multi-muscle splits balanced.
+    //
+    // Example:
+    // Arms + 8 exercises
+    //   Biceps    -> 3
+    //   Triceps   -> 3
+    //   Forearms  -> 2
+    //
+    // Legs + 8 exercises
+    //   Quadriceps -> 2
+    //   Hamstrings -> 2
+    //   Glutes     -> 2
+    //   Calves     -> 2
+    //
     var index = 0;
 
-    while (remaining > 0 && native.isNotEmpty) {
+    while (remaining > 0) {
       final muscle = native[index % native.length];
       quotas[muscle] = quotas[muscle]! + 1;
       remaining--;

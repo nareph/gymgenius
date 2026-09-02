@@ -1,28 +1,23 @@
 import 'package:gymgenius/domain/enums/equipment_type.dart';
 import 'package:gymgenius/domain/enums/muscle_group.dart';
+import 'package:gymgenius/engines/workout_engine/models/muscle_split.dart';
+import 'package:gymgenius/engines/workout_engine/planner/split_catalog.dart';
 import 'package:gymgenius/engines/workout_engine/shared/exercise_pool_entry.dart';
 
-import 'splits/exports.dart';
+import 'catalog/exercise_catalog.dart';
 
-/// Central repository of exercises, aggregated from individual split files.
+/// Central repository of canonical exercises.
 ///
-/// IMPORTANT:
+/// ExercisePool does not own exercise definitions.
+/// It only queries and filters [ExerciseCatalog].
 ///
-/// - [allowedEquipment] is a HARD constraint.
-/// - [excludeMuscles] is a HARD constraint.
-/// - A normal split uses its dedicated exercise pool.
-/// - A specialized "Focused: ..." split uses only exercises whose PRIMARY
-///   target muscles belong to the requested focus scope.
+/// Split applicability is determined by:
+/// - [ExercisePoolEntry.compatibleSplits] for standard splits.
+/// - Target muscles for custom/focused splits.
+/// - Muscle-based applicability for aggregate splits such as Full Body and
+///   Shoulders & Core.
 ///
-/// This allows the Workout Engine to support both:
-///
-///   Push / Pull / Legs / Chest / ...
-///
-/// and strict focus programs such as:
-///
-///   Focused: Abs / Core Day 1
-///   Focused: Glutes Day 2
-///   Focused: Glutes & Abs / Core Day 3
+/// The old split-specific exercise pools are intentionally not used here.
 class ExercisePool {
   ExercisePool._();
 
@@ -35,41 +30,159 @@ class ExercisePool {
     required List<EquipmentType> allowedEquipment,
     List<MuscleGroup>? focusMuscles,
     List<MuscleGroup>? excludeMuscles,
+    MuscleSplit? split,
+  }) {
+    final effectiveSplit = _resolveSplit(
+      splitName,
+      split,
+      focusMuscles,
+    );
+
+    if (effectiveSplit == null || effectiveSplit.muscles.isEmpty) {
+      return const <ExercisePoolEntry>[];
+    }
+
+    final catalogExercises = _getExercisesFromCatalog(
+      splitName: splitName,
+      split: effectiveSplit,
+      allowedEquipment: allowedEquipment,
+    );
+
+    return _applyFilters(
+      catalogExercises,
+      excludeMuscles,
+      focusMuscles,
+    );
+  }
+
+  // ============================================================
+  // Canonical catalog filtering
+  // ============================================================
+
+  static List<ExercisePoolEntry> _getExercisesFromCatalog({
+    required String splitName,
+    required MuscleSplit split,
+    required List<EquipmentType> allowedEquipment,
   }) {
     final normalizedSplitName = splitName.trim();
+    final splitMuscles = split.muscles.toSet();
 
-    final isFocusedSplit = _isFocusedSplit(normalizedSplitName);
+    final applicabilityMode = _resolveApplicabilityMode(
+      splitName: normalizedSplitName,
+      split: split,
+    );
 
-    final sourcePool = isFocusedSplit
-        ? _focusedExercisePool(normalizedSplitName)
-        : (_exercisePools[normalizedSplitName] ?? _exercisePools['Push']!);
+    return ExerciseCatalog.getAll().where((entry) {
+      if (!allowedEquipment.contains(entry.equipmentType)) {
+        return false;
+      }
 
-    var filtered = sourcePool
-        .where(
-          (entry) => allowedEquipment.contains(entry.equipmentType),
-        )
-        .toList();
+      switch (applicabilityMode) {
+        case _ApplicabilityMode.compatibleSplit:
+          return entry.compatibleSplits.contains(
+            normalizedSplitName,
+          );
 
-    // ------------------------------------------------------------
-    // Avoided muscles
-    // ------------------------------------------------------------
+        case _ApplicabilityMode.strictMuscles:
+          return _isMuscleCompatible(
+            entry,
+            splitMuscles,
+            strict: true,
+          );
+
+        case _ApplicabilityMode.permissiveMuscles:
+          return _isMuscleCompatible(
+            entry,
+            splitMuscles,
+            strict: false,
+          );
+      }
+    }).toList();
+  }
+
+  /// Determines how an exercise is matched against a split.
+  ///
+  /// Standard splits use [ExercisePoolEntry.compatibleSplits].
+  ///
+  /// Focused/custom splits use strict target-muscle matching so unrelated
+  /// primary muscles do not leak into a specialized program.
+  ///
+  /// Aggregate splits use muscle-based matching because their exact
+  /// applicability is derived from multiple standard muscle groups.
+  static _ApplicabilityMode _resolveApplicabilityMode({
+    required String splitName,
+    required MuscleSplit split,
+  }) {
+    final normalized = splitName.trim().toLowerCase();
+
+    if (normalized.startsWith('focused:')) {
+      return _ApplicabilityMode.strictMuscles;
+    }
+
+    final isKnownStandardSplit = SplitCatalog.byName(splitName.trim()) != null;
+
+    if (!isKnownStandardSplit) {
+      return _ApplicabilityMode.strictMuscles;
+    }
+
+    if (normalized == 'full body') {
+      return _ApplicabilityMode.permissiveMuscles;
+    }
+
+    if (normalized == 'shoulders & core') {
+      return _ApplicabilityMode.permissiveMuscles;
+    }
+
+    return _ApplicabilityMode.compatibleSplit;
+  }
+
+  /// Tests whether the primary target muscles are compatible with a split.
+  ///
+  /// Strict mode:
+  /// every primary target muscle must belong to the split.
+  ///
+  /// Permissive mode:
+  /// at least one primary target muscle must belong to the split.
+  static bool _isMuscleCompatible(
+    ExercisePoolEntry entry,
+    Set<MuscleGroup> splitMuscles, {
+    required bool strict,
+  }) {
+    if (entry.targetMuscles.isEmpty) {
+      return false;
+    }
+
+    if (strict) {
+      return entry.targetMuscles.every(
+        splitMuscles.contains,
+      );
+    }
+
+    return entry.targetMuscles.any(
+      splitMuscles.contains,
+    );
+  }
+
+  // ============================================================
+  // Additional filters
+  // ============================================================
+
+  static List<ExercisePoolEntry> _applyFilters(
+    List<ExercisePoolEntry> exercises,
+    List<MuscleGroup>? excludeMuscles,
+    List<MuscleGroup>? focusMuscles,
+  ) {
+    var filtered = exercises;
 
     if (excludeMuscles != null && excludeMuscles.isNotEmpty) {
+      final excludedSet = excludeMuscles.toSet();
+
       filtered = filtered.where((entry) {
         return !entry.targetMuscles.any(
-          excludeMuscles.contains,
+          excludedSet.contains,
         );
       }).toList();
     }
-
-    // ------------------------------------------------------------
-    // Explicit focus preference
-    //
-    // For standard splits this remains a SOFT preference.
-    //
-    // Focused splits are already HARD-scoped by _focusedExercisePool(),
-    // therefore we only use this sorting step here.
-    // ------------------------------------------------------------
 
     if (focusMuscles != null && focusMuscles.isNotEmpty) {
       final focusSet = focusMuscles.toSet();
@@ -78,13 +191,13 @@ class ExercisePool {
         final scoreA = _focusScore(
           entry: a,
           focusMuscles: focusSet,
-          strict: isFocusedSplit,
+          strict: false,
         );
 
         final scoreB = _focusScore(
           entry: b,
           focusMuscles: focusSet,
-          strict: isFocusedSplit,
+          strict: false,
         );
 
         return scoreB.compareTo(scoreA);
@@ -95,150 +208,71 @@ class ExercisePool {
   }
 
   // ============================================================
-  // Exercise lookup
+  // Split resolution
   // ============================================================
 
-  static ExercisePoolEntry? findByName(
-    String name, {
-    required List<EquipmentType> allowedEquipment,
-  }) {
-    final normalized = name.trim().toLowerCase();
+  static MuscleSplit? _resolveSplit(
+    String splitName,
+    MuscleSplit? providedSplit,
+    List<MuscleGroup>? focusMuscles,
+  ) {
+    if (providedSplit != null) {
+      return providedSplit;
+    }
+
+    final normalized = splitName.trim();
 
     if (normalized.isEmpty) {
       return null;
     }
 
-    for (final entries in _exercisePools.values) {
-      for (final entry in entries) {
-        if (entry.name.toLowerCase() == normalized &&
-            allowedEquipment.contains(entry.equipmentType)) {
-          return entry;
-        }
+    if (_isFocusedSplit(normalized)) {
+      final focusSet = _parseFocusedMuscles(normalized);
+
+      if (focusSet.isEmpty) {
+        return null;
       }
+
+      return MuscleSplit(
+        name: normalized,
+        theme: 'Focused',
+        muscles: focusSet,
+        recoveryCost: 1,
+        isFullBody: false,
+      );
+    }
+
+    final catalogSplit = SplitCatalog.byName(
+      normalized,
+    );
+
+    if (catalogSplit != null) {
+      return catalogSplit;
+    }
+
+    if (focusMuscles != null && focusMuscles.isNotEmpty) {
+      return MuscleSplit(
+        name: normalized,
+        theme: 'Custom Focus',
+        muscles: List<MuscleGroup>.unmodifiable(
+          focusMuscles,
+        ),
+        recoveryCost: 1,
+        isFullBody: false,
+      );
     }
 
     return null;
   }
 
-  static ExercisePoolEntry? findAlternative({
-    required List<MuscleGroup> targetMuscles,
-    required List<EquipmentType> allowedEquipment,
-    Set<String> excludeNames = const {},
-    List<MuscleGroup> excludeMuscles = const [],
-  }) {
-    ExercisePoolEntry? bestCandidate;
-    var bestScore = -1;
-
-    final targetSet = targetMuscles.toSet();
-
-    for (final entries in _exercisePools.values) {
-      for (final entry in entries) {
-        if (!allowedEquipment.contains(entry.equipmentType)) {
-          continue;
-        }
-
-        if (excludeNames.contains(entry.name)) {
-          continue;
-        }
-
-        if (excludeMuscles.isNotEmpty &&
-            entry.targetMuscles.any(excludeMuscles.contains)) {
-          continue;
-        }
-
-        final score = entry.targetMuscles.where(targetSet.contains).length;
-
-        if (score == 0) {
-          continue;
-        }
-
-        if (score > bestScore) {
-          bestScore = score;
-          bestCandidate = entry;
-        }
-      }
-    }
-
-    return bestCandidate;
-  }
-
   // ============================================================
-  // Focused split support
+  // Focused split helpers
   // ============================================================
 
-  /// Returns true when the split name was generated by FocusSplitFactory.
-  ///
-  /// Expected format:
-  ///
-  ///   Focused: Abs / Core Day 1
-  ///   Focused: Glutes Day 2
-  ///   Focused: Glutes & Abs / Core Day 3
-  static bool _isFocusedSplit(
-    String splitName,
-  ) {
+  static bool _isFocusedSplit(String splitName) {
     return splitName.toLowerCase().startsWith('focused:');
   }
 
-  /// Builds the exercise pool for a strict focus split.
-  ///
-  /// Only exercises whose PRIMARY target muscles are entirely contained in
-  /// the requested focus scope are accepted.
-  ///
-  /// This is intentionally stricter than ordinary split filtering.
-  static List<ExercisePoolEntry> _focusedExercisePool(
-    String splitName,
-  ) {
-    final focusMuscles = _parseFocusedMuscles(splitName);
-
-    if (focusMuscles.isEmpty) {
-      return const [];
-    }
-
-    final focusSet = focusMuscles.toSet();
-
-    final allEntries = <ExercisePoolEntry>[];
-
-    for (final entries in _exercisePools.values) {
-      allEntries.addAll(entries);
-    }
-
-    return _dedupeByName(
-      allEntries.where((entry) {
-        if (entry.targetMuscles.isEmpty) {
-          return false;
-        }
-
-        // Strict mode:
-        //
-        // every PRIMARY target must belong to the selected focus scope.
-        //
-        // Example:
-        //
-        // Focus = [Abs/Core]
-        //
-        // Crunch
-        //   targetMuscles = [Abs/Core]        -> allowed
-        //
-        // Squat
-        //   targetMuscles = [Quadriceps,
-        //                    Glutes]           -> rejected
-        //
-        // This prevents unrelated primary muscles from entering a
-        // specialized program.
-        return entry.targetMuscles.every(
-          focusSet.contains,
-        );
-      }).toList(),
-    );
-  }
-
-  /// Parses focus muscles from names generated by FocusSplitFactory.
-  ///
-  /// Examples:
-  ///
-  ///   Focused: Abs / Core Day 1
-  ///   Focused: Glutes Day 2
-  ///   Focused: Glutes & Abs / Core Day 3
   static List<MuscleGroup> _parseFocusedMuscles(
     String splitName,
   ) {
@@ -255,7 +289,10 @@ class ExercisePool {
     final dayIndex = value.toLowerCase().lastIndexOf(' day ');
 
     if (dayIndex != -1) {
-      value = value.substring(0, dayIndex);
+      value = value.substring(
+        0,
+        dayIndex,
+      );
     }
 
     value = value.trim();
@@ -266,14 +303,15 @@ class ExercisePool {
 
     final result = <MuscleGroup>[];
 
-    // FocusSplitFactory joins muscles with " & ".
     final parts = value
         .split(RegExp(r'\s*&\s*'))
         .map((part) => part.trim())
         .where((part) => part.isNotEmpty);
 
     for (final part in parts) {
-      final muscle = _muscleFromDisplayName(part);
+      final muscle = _muscleFromDisplayName(
+        part,
+      );
 
       if (muscle != null && !result.contains(muscle)) {
         result.add(muscle);
@@ -311,6 +349,10 @@ class ExercisePool {
     return null;
   }
 
+  // ============================================================
+  // Focus scoring
+  // ============================================================
+
   static int _focusScore({
     required ExercisePoolEntry entry,
     required Set<MuscleGroup> focusMuscles,
@@ -324,62 +366,115 @@ class ExercisePool {
     }
 
     final allPrimaryMatch = entry.targetMuscles.isNotEmpty &&
-        entry.targetMuscles.every(focusMuscles.contains);
+        entry.targetMuscles.every(
+          focusMuscles.contains,
+        );
 
     return allPrimaryMatch ? matchingPrimary : 0;
   }
 
   // ============================================================
-  // Combined pools
+  // Convenience methods
   // ============================================================
 
-  /// Pool for the 'Shoulders & Core' split – combines shoulder + core.
-  static final List<ExercisePoolEntry> _shouldersAndCoreExercises =
-      _dedupeByName([
-    ...shouldersExercises,
-    ...coreExercises,
-  ]);
+  static List<ExercisePoolEntry> getAllExercises() {
+    return ExerciseCatalog.getAll();
+  }
 
-  /// 'Full Body' split composition.
-  static final List<ExercisePoolEntry> _fullBodyExercises = _dedupeByName([
-    ...pushExercises,
-    ...pullExercises,
-    ...legsExercises,
-    ...shouldersExercises,
-    ...coreExercises,
-  ]);
-
-  static List<ExercisePoolEntry> _dedupeByName(
-    List<ExercisePoolEntry> entries,
+  static ExercisePoolEntry? findById(
+    String id,
   ) {
-    final seenNames = <String>{};
-    final result = <ExercisePoolEntry>[];
+    final normalized = id.trim();
 
-    for (final entry in entries) {
-      if (seenNames.add(entry.name)) {
-        result.add(entry);
+    if (normalized.isEmpty) {
+      return null;
+    }
+
+    return ExerciseCatalog.findById(
+      normalized,
+    );
+  }
+
+  static ExercisePoolEntry? findByName(
+    String name, {
+    required List<EquipmentType> allowedEquipment,
+  }) {
+    final normalized = name.trim().toLowerCase();
+
+    if (normalized.isEmpty) {
+      return null;
+    }
+
+    for (final entry in ExerciseCatalog.getAll()) {
+      if (!allowedEquipment.contains(
+        entry.equipmentType,
+      )) {
+        continue;
+      }
+
+      if (entry.name.trim().toLowerCase() == normalized) {
+        return entry;
       }
     }
 
-    return result;
+    return null;
   }
 
-  // ============================================================
-  // Main mapping
-  // ============================================================
+  static ExercisePoolEntry? findAlternative({
+    required List<MuscleGroup> targetMuscles,
+    required List<EquipmentType> allowedEquipment,
+    Set<String> excludeNames = const {},
+    List<MuscleGroup> excludeMuscles = const [],
+  }) {
+    ExercisePoolEntry? bestCandidate;
+    var bestScore = -1;
 
-  static final Map<String, List<ExercisePoolEntry>> _exercisePools = {
-    'Push': pushExercises,
-    'Pull': pullExercises,
-    'Legs': legsExercises,
-    'Chest': chestExercises,
-    'Back': backExercises,
-    'Arms': armsExercises,
-    'Chest & Triceps': chestTricepsExercises,
-    'Back & Biceps': backBicepsExercises,
-    'Shoulders & Core': _shouldersAndCoreExercises,
-    'Upper Body': upperBodyExercises,
-    'Lower Body': lowerBodyExercises,
-    'Full Body': _fullBodyExercises,
-  };
+    final targetSet = targetMuscles.toSet();
+
+    final normalizedExcludedNames = excludeNames
+        .map(
+          (name) => name.trim().toLowerCase(),
+        )
+        .toSet();
+
+    for (final entry in ExerciseCatalog.getAll()) {
+      if (!allowedEquipment.contains(
+        entry.equipmentType,
+      )) {
+        continue;
+      }
+
+      if (normalizedExcludedNames.contains(
+        entry.name.trim().toLowerCase(),
+      )) {
+        continue;
+      }
+
+      if (excludeMuscles.isNotEmpty &&
+          entry.targetMuscles.any(
+            excludeMuscles.contains,
+          )) {
+        continue;
+      }
+
+      final score = entry.targetMuscles.where(targetSet.contains).length;
+
+      if (score == 0) {
+        continue;
+      }
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestCandidate = entry;
+      }
+    }
+
+    return bestCandidate;
+  }
+}
+
+enum _ApplicabilityMode {
+  compatibleSplit,
+  strictMuscles,
+  permissiveMuscles,
 }

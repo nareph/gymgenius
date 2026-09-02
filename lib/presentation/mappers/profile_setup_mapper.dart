@@ -42,8 +42,22 @@ class ProfileSetupMapper {
 
     final workoutDaysRaw =
         (answers['workout_days'] as List?)?.cast<String>() ?? [];
-    final preferredDays =
-        workoutDaysRaw.map(WorkoutDayExtension.fromValue).toList();
+    // IMPORTANT: sort into calendar (Monday->Sunday) order. The raw list
+    // comes from a Set built as the user taps checkboxes in QuestionView
+    // — Set.toList() preserves INSERTION order, not weekday order. If
+    // someone taps e.g. Friday before Thursday, `preferredDays` used to
+    // stay in that tap order, and GenerationService zips it index-for-
+    // index against the split template ([chest, back, legs, arms,
+    // shouldersAndCore]) — so Friday silently got the "arms" split and
+    // Thursday got "shoulders & core", the reverse of what the calendar
+    // order would predict. Sorting once here fixes every downstream
+    // consumer (WorkoutFrequencyPlanner, ProgramGenerator,
+    // RegenerationService, etc.) without needing to remember to sort in
+    // each of them separately.
+    final preferredDays = workoutDaysRaw
+        .map(WorkoutDayExtension.fromValue)
+        .toList()
+      ..sort((a, b) => a.index.compareTo(b.index));
 
     final equipmentRaw = (answers['equipment'] as List?)?.cast<String>() ?? [];
     final equipment =
@@ -96,8 +110,6 @@ class ProfileSetupMapper {
       foodRestrictions: foodRestrictions,
     );
 
-    // --- Track which questions were actually answered by the user ---
-    // Use the new method that considers ALL questions (including optional ones).
     final answeredQuestionIds =
         ProfileCompleteness.getAnsweredQuestionIds(answers);
 

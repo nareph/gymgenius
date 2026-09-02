@@ -2,10 +2,14 @@
 
 import 'package:bloc/bloc.dart';
 import 'package:gymgenius/engines/workout_engine/shared/exercise_pool_entry.dart';
-import 'package:gymgenius/engines/workout_engine/shared/exercises/splits/exports.dart';
+import 'package:gymgenius/engines/workout_engine/shared/exercises/exercise_pool.dart';
 import 'package:gymgenius/presentation/blocs/exercise_library/exercise_library_event.dart';
 import 'package:gymgenius/presentation/blocs/exercise_library/exercise_library_state.dart';
 
+/// BLoC that manages the state of the Exercise Library.
+///
+/// It loads exercises from the canonical [ExercisePool] and applies
+/// filters for search, muscle group, equipment, and category.
 class ExerciseLibraryBloc
     extends Bloc<ExerciseLibraryEvent, ExerciseLibraryState> {
   ExerciseLibraryBloc() : super(const ExerciseLibraryState()) {
@@ -24,7 +28,8 @@ class ExerciseLibraryBloc
     emit(state.copyWith(isLoading: true));
 
     try {
-      final allExercises = _loadAllExercises();
+      // Load all exercises from the canonical ExercisePool.
+      final allExercises = ExercisePool.getAllExercises();
       emit(state.copyWith(
         allExercises: allExercises,
         filteredExercises: allExercises,
@@ -37,23 +42,6 @@ class ExerciseLibraryBloc
         error: 'Failed to load exercises: $e',
       ));
     }
-  }
-
-  List<ExercisePoolEntry> _loadAllExercises() {
-    return [
-      ...chestExercises,
-      ...backExercises,
-      ...legsExercises,
-      ...armsExercises,
-      ...shouldersExercises,
-      ...pullExercises,
-      ...pushExercises,
-      ...chestTricepsExercises,
-      ...backBicepsExercises,
-      ...upperBodyExercises,
-      ...lowerBodyExercises,
-      ...coreExercises,
-    ];
   }
 
   void _onSearchChanged(

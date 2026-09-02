@@ -25,12 +25,11 @@ import 'package:gymgenius/engines/workout_engine/shared/workout_constants.dart';
 /// The generator does NOT decide which split should be used.
 /// That responsibility belongs to the planner layer.
 ///
-/// The generator receives the final validated split structure and simply
-/// maps each split to the corresponding workout day.
+/// The generator receives the final validated split structure and maps each
+/// split to the corresponding workout day.
 ///
 /// Exercise selection and workout composition remain delegated to
 /// [WorkoutDayGenerator].
-/// ---------------------------------------------------------------------------
 class ProgramGenerator {
   ProgramGenerator({
     WorkoutDayGenerator? dayGenerator,
@@ -63,18 +62,42 @@ class ProgramGenerator {
       useSpecifiedDays: useSpecifiedDays,
     );
 
+    if (workoutDays.isEmpty) {
+      return _buildProgram(
+        profile: profile,
+        training: training,
+        workoutDays: const [],
+        splits: const [],
+        weeklySchedule: {
+          for (final day in WorkoutConstants.daysOfWeek) day: <Exercise>[],
+        },
+      );
+    }
+
     //-----------------------------------------------------------------------
-    // Normalize the final split list
+    // Validate split/day cardinality
     //
-    // The planner is responsible for producing a coherent list, but this
-    // guard prevents an invalid list length from causing silent generation
-    // gaps.
+    // The planner is responsible for generating exactly one split per workout
+    // day. We do not silently recycle an existing split when the lengths do
+    // not match.
     //-----------------------------------------------------------------------
 
     final normalizedSplits = _normalizeSplits(
       selectedSplit,
       workoutDays.length,
     );
+
+    if (normalizedSplits.isEmpty) {
+      return _buildProgram(
+        profile: profile,
+        training: training,
+        workoutDays: workoutDays,
+        splits: const [],
+        weeklySchedule: {
+          for (final day in WorkoutConstants.daysOfWeek) day: <Exercise>[],
+        },
+      );
+    }
 
     //-----------------------------------------------------------------------
     // Initialize weekly schedule
@@ -83,6 +106,20 @@ class ProgramGenerator {
     final weeklySchedule = <String, List<Exercise>>{
       for (final day in WorkoutConstants.daysOfWeek) day: <Exercise>[],
     };
+
+    //-----------------------------------------------------------------------
+    // Track used canonical exercise IDs across the complete week.
+    //
+    // This prevents:
+    //
+    // Monday    -> exercise A
+    // Tuesday   -> exercise B
+    // Wednesday -> exercise A
+    //
+    // whenever another suitable candidate exists.
+    //-----------------------------------------------------------------------
+
+    final weeklyUsedExerciseIds = <String>{};
 
     //-----------------------------------------------------------------------
     // Generate each workout day
@@ -94,48 +131,34 @@ class ProgramGenerator {
       final day = workoutDays[i];
       final split = normalizedSplits[i];
 
-      weeklySchedule[day] = _dayGenerator.generate(
+      final dayExercises = _dayGenerator.generate(
         split: split,
         profile: profile,
         previousProgram: previousProgram,
         excludeMuscles: excludeMuscles,
         intensityOverride: intensityOverride,
+        weeklyUsedExerciseIds: weeklyUsedExerciseIds,
       );
+
+      weeklySchedule[day] = dayExercises;
+
+      //---------------------------------------------------------------------
+      // Register canonical exercise IDs for subsequent days.
+      //---------------------------------------------------------------------
+
+      for (final exercise in dayExercises) {
+        weeklyUsedExerciseIds.add(
+          exercise.id,
+        );
+      }
     }
 
-    //-----------------------------------------------------------------------
-    // Program duration
-    //-----------------------------------------------------------------------
-
-    final durationWeeks = OverloadRules.programDurationWeeks(
-      training.experience.name,
-      0,
-    );
-
-    //-----------------------------------------------------------------------
-    // Program metadata
-    //-----------------------------------------------------------------------
-
-    final now = DateTime.now();
-
-    return TrainingProgram(
-      id: '',
-      userId: profile.userId,
-      name: _programName(
-        workoutDays: workoutDays.length,
-        splits: normalizedSplits,
-      ),
-      goal: training.goal,
-      split: _splitType(normalizedSplits),
-      experience: training.experience,
-      durationWeeks: durationWeeks,
+    return _buildProgram(
+      profile: profile,
+      training: training,
+      workoutDays: workoutDays,
+      splits: normalizedSplits,
       weeklySchedule: weeklySchedule,
-      generatorType: GeneratorType.local,
-      generatorVersion: '3.1.0',
-      createdAt: now,
-      expiresAt: now.add(
-        Duration(days: durationWeeks * 7),
-      ),
     );
   }
 
@@ -151,7 +174,9 @@ class ProgramGenerator {
     if (useSpecifiedDays && training.preferredDays.isNotEmpty) {
       final preferredDays = training.preferredDays
           .map((day) => day.name)
-          .where(WorkoutConstants.daysOfWeek.contains)
+          .where(
+            WorkoutConstants.daysOfWeek.contains,
+          )
           .toList();
 
       if (preferredDays.isNotEmpty) {
@@ -159,38 +184,87 @@ class ProgramGenerator {
       }
     }
 
+    final count = workoutDaysCount.clamp(1, 7);
+
     return WorkoutConstants.defaultWorkoutDays(
-      workoutDaysCount.clamp(1, 7),
+      count,
     );
   }
 
   //===========================================================================
-  // Split normalization
+  // Split normalization / validation
   //===========================================================================
 
-  /// Ensures the final split list contains exactly one split per generated
-  /// workout day.
+  /// Validates the split list against the number of workout days.
   ///
-  /// In normal operation the planner already guarantees this. This method
-  /// exists as a defensive boundary so the generator never silently creates
-  /// empty workout days because the planner returned too few splits.
+  /// The planner should always return exactly one split per workout day.
+  ///
+  /// We intentionally do NOT recycle splits with modulo because doing so can
+  /// silently transform:
+  ///
+  ///     6 splits / 7 days
+  ///
+  /// into:
+  ///
+  ///     split1 / split2 / ... / split6 / split1
+  ///
+  /// which would hide a planner bug.
   List<MuscleSplit> _normalizeSplits(
     List<MuscleSplit> splits,
     int workoutDays,
   ) {
-    if (workoutDays <= 0 || splits.isEmpty) {
+    if (workoutDays <= 0) {
       return const [];
     }
 
-    final result = <MuscleSplit>[];
-
-    for (var i = 0; i < workoutDays; i++) {
-      result.add(
-        splits[i % splits.length],
-      );
+    if (splits.length != workoutDays) {
+      return const [];
     }
 
-    return result;
+    return List<MuscleSplit>.unmodifiable(
+      splits,
+    );
+  }
+
+  //===========================================================================
+  // Program construction
+  //===========================================================================
+
+  TrainingProgram _buildProgram({
+    required HealthProfile profile,
+    required WorkoutPreferences training,
+    required List<String> workoutDays,
+    required List<MuscleSplit> splits,
+    required Map<String, List<Exercise>> weeklySchedule,
+  }) {
+    final durationWeeks = OverloadRules.programDurationWeeks(
+      training.experience.name,
+      0,
+    );
+
+    final now = DateTime.now();
+
+    return TrainingProgram(
+      id: '',
+      userId: profile.userId,
+      name: _programName(
+        workoutDays: workoutDays.length,
+        splits: splits,
+      ),
+      goal: training.goal,
+      split: _splitType(splits),
+      experience: training.experience,
+      durationWeeks: durationWeeks,
+      weeklySchedule: weeklySchedule,
+      generatorType: GeneratorType.local,
+      generatorVersion: '3.1.0',
+      createdAt: now,
+      expiresAt: now.add(
+        Duration(
+          days: durationWeeks * 7,
+        ),
+      ),
+    );
   }
 
   //===========================================================================
@@ -204,14 +278,20 @@ class ProgramGenerator {
       return SplitType.custom;
     }
 
-    final names = splits.map((split) => split.name.toLowerCase()).join(' ');
+    final normalizedNames = splits
+        .map(
+          (split) => split.name.toLowerCase(),
+        )
+        .toList();
+
+    final names = normalizedNames.join(' ');
 
     //-----------------------------------------------------------------------
-    // Specialized focus split
+    // Focused / specialized program
     //-----------------------------------------------------------------------
 
     if (splits.every(
-      (split) => split.name.startsWith('Focused:'),
+      (split) => split.name.toLowerCase().startsWith('focused:'),
     )) {
       return SplitType.custom;
     }
@@ -259,8 +339,12 @@ class ProgramGenerator {
       return '$workoutDays-Day Custom Split';
     }
 
-    final splitNames =
-        splits.take(workoutDays).map((split) => split.name).join('/');
+    final splitNames = splits
+        .take(workoutDays)
+        .map(
+          (split) => split.name,
+        )
+        .join('/');
 
     return '$workoutDays-Day $splitNames Split';
   }

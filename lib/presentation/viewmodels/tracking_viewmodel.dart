@@ -27,6 +27,8 @@ class TrackingViewModel extends ChangeNotifier {
   StreamSubscription? _programSubscription;
   StreamSubscription? _logsSubscription;
 
+  bool _isDisposed = false;
+
   TrackingViewModel({
     required WorkoutRepository workoutRepository,
     required TrackingRepository trackingRepository,
@@ -90,6 +92,7 @@ class TrackingViewModel extends ChangeNotifier {
   ProgressPeriod get progressPeriod => _progressPeriod;
 
   Future<void> _loadInitialData() async {
+    if (_isDisposed) return;
     Log.info("TrackingViewModel: Loading initial data...");
     _setState(TrackingState.loading);
 
@@ -100,7 +103,9 @@ class TrackingViewModel extends ChangeNotifier {
       await _loadHealthPlatformData();
       await _loadLogsForDay(_selectedDay);
       _setupDataListeners();
-      _setState(TrackingState.loaded);
+      if (!_isDisposed) {
+        _setState(TrackingState.loaded);
+      }
       Log.info("TrackingViewModel: Initial data loaded successfully");
     } catch (error, stackTrace) {
       _handleError(error, stackTrace);
@@ -108,11 +113,13 @@ class TrackingViewModel extends ChangeNotifier {
   }
 
   Future<void> _loadProgramData() async {
+    if (_isDisposed) return;
     Log.info("TrackingViewModel: Loading program data...");
     try {
       final user = await _userRepository.getCurrentUser();
       if (user == null) {
         _plannedEvents = {};
+        if (!_isDisposed) notifyListeners();
         return;
       }
       final program = await _workoutRepository.getCurrentProgram(user.id);
@@ -132,18 +139,19 @@ class TrackingViewModel extends ChangeNotifier {
         _plannedEvents = {};
         Log.info("TrackingViewModel: No valid program found");
       }
-      notifyListeners();
+      if (!_isDisposed) notifyListeners();
     } catch (error, stackTrace) {
       Log.error("TrackingViewModel: Error loading program data",
           error: error, stackTrace: stackTrace);
       _plannedEvents = {};
-      notifyListeners();
+      if (!_isDisposed) notifyListeners();
     }
   }
 
   Future<void> _loadProgressData() async {
+    if (_isDisposed) return;
     _isLoadingProgress = true;
-    notifyListeners();
+    if (!_isDisposed) notifyListeners();
 
     try {
       final user = await _userRepository.getCurrentUser();
@@ -164,43 +172,52 @@ class TrackingViewModel extends ChangeNotifier {
       _progressSnapshot = null;
       _weeklyReport = null;
     } finally {
-      _isLoadingProgress = false;
-      notifyListeners();
+      if (!_isDisposed) {
+        _isLoadingProgress = false;
+        notifyListeners();
+      }
     }
   }
 
   Future<void> setProgressPeriod(ProgressPeriod period) async {
+    if (_isDisposed) return;
     if (_progressPeriod == period) return;
     _progressPeriod = period;
     await _loadProgressData();
   }
 
   Future<void> _loadHealthPlatformData() async {
+    if (_isDisposed) return;
     _isLoadingHealth = true;
-    notifyListeners();
+    if (!_isDisposed) notifyListeners();
     try {
       final user = await _userRepository.getCurrentUser();
       if (user == null) {
         _healthSnapshot = null;
         return;
       }
-      _healthSnapshot = await _healthPlatformRepository.computeSnapshot(user.id);
+      _healthSnapshot =
+          await _healthPlatformRepository.computeSnapshot(user.id);
     } catch (error, stackTrace) {
       Log.error('TrackingViewModel: Error loading health platform',
           error: error, stackTrace: stackTrace);
       _healthSnapshot = null;
     } finally {
-      _isLoadingHealth = false;
-      notifyListeners();
+      if (!_isDisposed) {
+        _isLoadingHealth = false;
+        notifyListeners();
+      }
     }
   }
 
   Future<void> _loadCompletedWorkouts() async {
+    if (_isDisposed) return;
     Log.info("TrackingViewModel: Loading completed workouts...");
     try {
       final user = await _userRepository.getCurrentUser();
       if (user == null) {
         _completedWorkoutDates = {};
+        if (!_isDisposed) notifyListeners();
         return;
       }
       final logs = await _workoutRepository.getWorkoutLogs(user.id);
@@ -212,16 +229,17 @@ class TrackingViewModel extends ChangeNotifier {
       _completedWorkoutDates = newCompletedDates;
       Log.info(
           "TrackingViewModel: Completed dates: ${_completedWorkoutDates.length}");
-      notifyListeners();
+      if (!_isDisposed) notifyListeners();
     } catch (error, stackTrace) {
       Log.error("TrackingViewModel: Error loading completed workouts",
           error: error, stackTrace: stackTrace);
       _completedWorkoutDates = {};
-      notifyListeners();
+      if (!_isDisposed) notifyListeners();
     }
   }
 
   void _setupDataListeners() {
+    if (_isDisposed) return;
     Log.info("TrackingViewModel: Setting up data listeners...");
     _programSubscription?.cancel();
     _logsSubscription?.cancel();
@@ -231,6 +249,7 @@ class TrackingViewModel extends ChangeNotifier {
   }
 
   void _generatePlannedEventsForProgram(TrainingProgram program) {
+    if (_isDisposed) return;
     final newEvents = <DateTime, List<String>>{};
 
     if (program.durationWeeks <= 0 || program.weeklySchedule.isEmpty) {
@@ -268,9 +287,10 @@ class TrackingViewModel extends ChangeNotifier {
   }
 
   Future<void> _loadLogsForDay(DateTime day) async {
+    if (_isDisposed) return;
     Log.info("TrackingViewModel: Loading logs for day: $day");
     _isLoadingDayDetails = true;
-    notifyListeners();
+    if (!_isDisposed) notifyListeners();
 
     try {
       _selectedDayLogs = await _trackingRepository.getLogsForDay(day);
@@ -281,12 +301,15 @@ class TrackingViewModel extends ChangeNotifier {
           error: e, stackTrace: s);
       _selectedDayLogs = [];
     } finally {
-      _isLoadingDayDetails = false;
-      notifyListeners();
+      if (!_isDisposed) {
+        _isLoadingDayDetails = false;
+        notifyListeners();
+      }
     }
   }
 
   void selectDay(DateTime day, {DateTime? focusedDay}) {
+    if (_isDisposed) return;
     final normalizedDay = DateTime(day.year, day.month, day.day);
     Log.info("TrackingViewModel: Selecting day: $normalizedDay");
 
@@ -295,16 +318,18 @@ class TrackingViewModel extends ChangeNotifier {
       _focusedDay = focusedDay ?? normalizedDay;
       _selectedDayLogs = [];
       _loadLogsForDay(normalizedDay);
-      notifyListeners();
+      if (!_isDisposed) notifyListeners();
     }
   }
 
   void changeFocusedDay(DateTime day) {
+    if (_isDisposed) return;
     _focusedDay = day;
-    notifyListeners();
+    if (!_isDisposed) notifyListeners();
   }
 
   List<String> getEventsForDay(DateTime day) {
+    if (_isDisposed) return [];
     final dateOnly = DateTime(day.year, day.month, day.day);
     if (_completedWorkoutDates.contains(dateOnly)) return ['Completed'];
     if (_plannedEvents[dateOnly]?.isNotEmpty ?? false) return ['Planned'];
@@ -312,18 +337,21 @@ class TrackingViewModel extends ChangeNotifier {
   }
 
   void _handleError(Object error, StackTrace stack) {
+    if (_isDisposed) return;
     Log.error("TrackingViewModel Error", error: error, stackTrace: stack);
     _errorMessage = "Failed to load tracking data.";
     _setState(TrackingState.error);
   }
 
   void _setState(TrackingState newState) {
+    if (_isDisposed) return;
     Log.info("TrackingViewModel: State changing from $_state to $newState");
     _state = newState;
     notifyListeners();
   }
 
   Future<void> refresh() async {
+    if (_isDisposed) return;
     Log.info("TrackingViewModel: Manual refresh requested");
     await _loadInitialData();
   }
@@ -331,6 +359,7 @@ class TrackingViewModel extends ChangeNotifier {
   @override
   void dispose() {
     Log.info("TrackingViewModel: Disposing");
+    _isDisposed = true;
     _programSubscription?.cancel();
     _logsSubscription?.cancel();
     super.dispose();

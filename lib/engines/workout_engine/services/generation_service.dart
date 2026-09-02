@@ -1,17 +1,14 @@
-import 'package:gymgenius/core/logger/logger_service.dart';
+// lib/engines/workout_engine/services/generation_service.dart
 
+import 'package:gymgenius/core/logger/logger_service.dart';
 import 'package:gymgenius/domain/entities/health_profile.dart';
 import 'package:gymgenius/domain/entities/training_program.dart';
-
 import 'package:gymgenius/engines/workout_engine/models/muscle_split.dart';
 import 'package:gymgenius/engines/workout_engine/models/workout_days_result.dart';
-
 import 'package:gymgenius/engines/workout_engine/optimizers/local_program_optimizer.dart';
 import 'package:gymgenius/engines/workout_engine/optimizers/program_optimizer.dart';
-
 import 'package:gymgenius/engines/workout_engine/planner/split_planner.dart';
 import 'package:gymgenius/engines/workout_engine/planner/workout_frequency_planner.dart';
-
 import 'package:gymgenius/engines/workout_engine/program_generator.dart';
 import 'package:gymgenius/engines/workout_engine/shared/profile_coherence.dart';
 import 'package:gymgenius/engines/workout_engine/validators/program_validator.dart';
@@ -19,32 +16,11 @@ import 'package:gymgenius/engines/workout_engine/validators/program_validator.da
 import '../../../domain/enums/exports.dart';
 
 /// Orchestrates the complete Workout Engine generation pipeline.
-///
-/// Pipeline
-///
-/// WorkoutFrequencyPlanner
-///          ↓
-/// SplitPlanner
-///          ↓
-/// ProgramGenerator
-///          ↓
-/// LocalProgramOptimizer(s)
-///          ↓
-/// ProgramValidator
-///
-/// SplitPlanner now starts from the stable predefined v1/v2 weekly
-/// structure and validates/adapts it according to the user's focus areas.
-///
-/// AI never decides the workout structure.
-/// AI may only explain or suggest improvements.
 class GenerationService {
   final ProgramGenerator _generator;
-
   final WorkoutFrequencyPlanner _frequencyPlanner;
   final SplitPlanner _splitPlanner;
-
   final List<ProgramOptimizer> _optimizers;
-
   final ProgramValidator _validator;
 
   static const _tag = 'GenerationService';
@@ -74,9 +50,7 @@ class GenerationService {
       tag: _tag,
     );
 
-    //------------------------------------------------------------
-    // Workout frequency
-    //------------------------------------------------------------
+    _logProfile(profile);
 
     final daysResult = _calculateWorkoutDays(profile);
 
@@ -85,10 +59,6 @@ class GenerationService {
       'useSpecifiedDays = ${daysResult.useSpecifiedDays}',
       tag: _tag,
     );
-
-    //------------------------------------------------------------
-    // Split selection
-    //------------------------------------------------------------
 
     final selectedSplit = _determineSplit(
       daysResult.count,
@@ -100,10 +70,6 @@ class GenerationService {
       '${selectedSplit.map((split) => split.name).join(' → ')}',
       tag: _tag,
     );
-
-    //------------------------------------------------------------
-    // Initial deterministic generation
-    //------------------------------------------------------------
 
     var program = _generator.generate(
       profile: profile,
@@ -120,13 +86,15 @@ class GenerationService {
 
     Log.debug(
       'GenerationService: Local program generated '
-      '(${program.weeklySchedule.length} days)',
+      '(${daysResult.count} workout days / '
+      '${program.weeklySchedule.length} calendar days)',
       tag: _tag,
     );
 
-    //------------------------------------------------------------
-    // Optimizers
-    //------------------------------------------------------------
+    _logGeneratedProgram(
+      profile: profile,
+      program: program,
+    );
 
     for (final optimizer in _optimizers) {
       if (!optimizer.isAvailable) {
@@ -146,17 +114,18 @@ class GenerationService {
         );
       } catch (e) {
         Log.warning(
-          'GenerationService: Optimizer '
-          '${optimizer.runtimeType} failed',
+          'GenerationService: Optimizer ${optimizer.runtimeType} failed',
           tag: _tag,
           error: e,
         );
       }
     }
 
-    //------------------------------------------------------------
-    // Validation
-    //------------------------------------------------------------
+    _logGeneratedProgram(
+      profile: profile,
+      program: program,
+      stage: 'after-optimization',
+    );
 
     final valid = _validator.validate(program);
 
@@ -176,7 +145,7 @@ class GenerationService {
   }
 
   //==============================================================
-  // Private helpers
+  // Workout frequency
   //==============================================================
 
   WorkoutDaysResult _calculateWorkoutDays(
@@ -188,6 +157,10 @@ class GenerationService {
           profile.training.preferredDays.map((d) => d.value).toList(),
     );
   }
+
+  //==============================================================
+  // Split
+  //==============================================================
 
   List<MuscleSplit> _determineSplit(
     int workoutDays,
@@ -204,6 +177,89 @@ class GenerationService {
       focusMuscles: focusMuscles,
     );
   }
+
+  //==============================================================
+  // Debug logging
+  //==============================================================
+
+  void _logProfile(HealthProfile profile) {
+    final training = profile.training;
+
+    Log.debug(
+      '''
+GenerationService: User profile
+--------------------------------
+userId: ${profile.userId}
+goal: ${training.goal.value}
+experience: ${training.experience.name}
+activityLevel: ${training.activityLevel.name}
+frequency: ${training.frequency.name}
+sessionDuration: ${training.sessionDuration.name}
+preferredDays: ${training.preferredDays.map((d) => d.value).join(', ')}
+equipment: ${training.equipment.map((e) => e.displayName).join(', ')}
+focusAreas: ${training.focusAreas.map((m) => m.displayName).join(', ')}
+avoidedMuscles: ${training.avoidedMuscles.map((m) => m.displayName).join(', ')}
+country: ${profile.country}
+--------------------------------
+''',
+      tag: _tag,
+    );
+  }
+
+  void _logGeneratedProgram({
+    required HealthProfile profile,
+    required TrainingProgram program,
+    String stage = 'after-local-generation',
+  }) {
+    final lines = <String>[
+      '',
+      'GenerationService: Generated program [$stage]',
+      '============================================================',
+      'Program ID: ${program.id}',
+      'User ID: ${program.userId}',
+      'Name: ${program.name}',
+      'Goal: ${program.goal.value}',
+      'Experience: ${program.experience.name}',
+      'Duration: ${program.durationWeeks} weeks',
+      'Generator: ${program.generatorType.name}',
+      'Version: ${program.generatorVersion}',
+      '------------------------------------------------------------',
+    ];
+
+    for (final day in program.weeklySchedule.entries) {
+      if (day.value.isEmpty) {
+        lines.add('${day.key}: REST');
+
+        continue;
+      }
+
+      lines.add('${day.key.toUpperCase()}:');
+
+      for (var i = 0; i < day.value.length; i++) {
+        final exercise = day.value[i];
+
+        lines.add(
+          '  ${i + 1}. ${exercise.name} '
+          '[sets=${exercise.sets}, reps=${exercise.reps}]',
+        );
+      }
+
+      lines.add('');
+    }
+
+    lines.add(
+      '============================================================',
+    );
+
+    Log.debug(
+      lines.join('\n'),
+      tag: _tag,
+    );
+  }
+
+  //==============================================================
+  // Options
+  //==============================================================
 
   List<MuscleGroup>? _parseExcludeMuscles(
     Map<String, dynamic>? options,

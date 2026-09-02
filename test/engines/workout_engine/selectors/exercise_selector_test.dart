@@ -1,11 +1,15 @@
 // test/engines/workout_engine/selectors/exercise_selector_test.dart
+
 import 'dart:math';
+
 import 'package:flutter_test/flutter_test.dart';
+
 import 'package:gymgenius/domain/entities/health_profile.dart';
 import 'package:gymgenius/domain/enums/exports.dart';
 import 'package:gymgenius/domain/value_objects/body_measurements.dart';
 import 'package:gymgenius/domain/value_objects/lifestyle_preferences.dart';
 import 'package:gymgenius/domain/value_objects/workout_preferences.dart';
+
 import 'package:gymgenius/engines/workout_engine/models/muscle_split.dart';
 import 'package:gymgenius/engines/workout_engine/selectors/exercise_selector.dart';
 
@@ -16,15 +20,18 @@ void main() {
     late HealthProfile profile;
 
     setUp(() {
-      selector = ExerciseSelector(random: Random(42));
+      selector = ExerciseSelector(
+        random: Random(42),
+      );
+
       pushSplit = const MuscleSplit(
         name: 'Push',
-        theme: '',
+        theme: 'Chest • Shoulders • Triceps',
         muscles: [
           MuscleGroup.chest,
           MuscleGroup.shoulders,
           MuscleGroup.triceps,
-          MuscleGroup.absCore
+          MuscleGroup.absCore,
         ],
         recoveryCost: 2,
         isUpperBody: true,
@@ -37,6 +44,7 @@ void main() {
         currentWeightKg: 80,
         targetWeightKg: 82,
       );
+
       final training = WorkoutPreferences(
         goal: FitnessGoal.buildMuscle,
         experience: ExperienceLevel.intermediate,
@@ -46,15 +54,17 @@ void main() {
         equipment: const [
           EquipmentType.bodyweight,
           EquipmentType.barbellAndPlates,
-          EquipmentType.dumbbells
+          EquipmentType.dumbbells,
         ],
         focusAreas: const [],
         activityLevel: ActivityLevel.sedentary,
       );
+
       final lifestyle = LifestylePreferences(
         country: 'FR',
         budget: BudgetLevel.medium,
       );
+
       profile = HealthProfile(
         userId: 'test_user',
         body: body,
@@ -66,12 +76,17 @@ void main() {
       );
     });
 
+    //=======================================================================
+    // Basic selection behavior
+    //=======================================================================
+
     test('returns desired number of exercises', () {
       final exercises = selector.select(
         split: pushSplit,
         profile: profile,
         desiredCount: 5,
       );
+
       expect(exercises.length, 5);
     });
 
@@ -81,9 +96,49 @@ void main() {
         profile: profile,
         desiredCount: 6,
       );
+
       final names = exercises.map((e) => e.name).toSet();
+
       expect(names.length, exercises.length);
     });
+
+    test('never returns more than desired count', () {
+      final exercises = selector.select(
+        split: pushSplit,
+        profile: profile,
+        desiredCount: 5,
+      );
+
+      expect(
+        exercises.length,
+        lessThanOrEqualTo(5),
+      );
+    });
+
+    test('returns fewer exercises when pool is exhausted', () {
+      final bodyweightProfile = profile.copyWith(
+        training: profile.training.copyWith(
+          equipment: const [
+            EquipmentType.bodyweight,
+          ],
+        ),
+      );
+
+      final exercises = selector.select(
+        split: pushSplit,
+        profile: bodyweightProfile,
+        desiredCount: 20,
+      );
+
+      expect(
+        exercises.length,
+        lessThanOrEqualTo(20),
+      );
+    });
+
+    //=======================================================================
+    // Equipment
+    //=======================================================================
 
     test('respects available equipment', () {
       final exercises = selector.select(
@@ -91,98 +146,521 @@ void main() {
         profile: profile,
         desiredCount: 6,
       );
+
       expect(
-        exercises
-            .every((e) => profile.training.equipment.contains(e.equipmentType)),
+        exercises.every(
+          (e) => profile.training.equipment.contains(e.equipmentType),
+        ),
         isTrue,
       );
     });
 
     test('bodyweight-only profile still generates workout', () {
       final bodyweightTraining = profile.training.copyWith(
-        equipment: const [EquipmentType.bodyweight],
+        equipment: const [
+          EquipmentType.bodyweight,
+        ],
       );
-      final bodyweightProfile = profile.copyWith(training: bodyweightTraining);
+
+      final bodyweightProfile = profile.copyWith(
+        training: bodyweightTraining,
+      );
+
       final exercises = selector.select(
         split: pushSplit,
         profile: bodyweightProfile,
         desiredCount: 5,
       );
-      expect(exercises, isNotEmpty);
+
       expect(
-          exercises.every((e) => e.equipmentType == EquipmentType.bodyweight),
-          isTrue);
+        exercises,
+        isNotEmpty,
+      );
+
+      expect(
+        exercises.every(
+          (e) => e.equipmentType == EquipmentType.bodyweight,
+        ),
+        isTrue,
+      );
     });
+
+    //=======================================================================
+    // Focus behavior
+    //=======================================================================
 
     test('focus muscle appears in workout', () {
       final focusedTraining = profile.training.copyWith(
-        focusAreas: const [MuscleGroup.chest],
+        focusAreas: const [
+          MuscleGroup.chest,
+        ],
       );
-      final focusedProfile = profile.copyWith(training: focusedTraining);
+
+      final focusedProfile = profile.copyWith(
+        training: focusedTraining,
+      );
+
       final exercises = selector.select(
         split: pushSplit,
         profile: focusedProfile,
         desiredCount: 6,
       );
+
       final chestExercises = exercises.where(
         (e) => e.targetMuscles.contains(MuscleGroup.chest),
       );
-      expect(chestExercises.length, greaterThanOrEqualTo(2));
+
+      expect(
+        chestExercises.length,
+        greaterThanOrEqualTo(2),
+      );
     });
 
     test('multiple focus muscles are represented', () {
       final focusedTraining = profile.training.copyWith(
-        focusAreas: const [MuscleGroup.chest, MuscleGroup.triceps],
+        focusAreas: const [
+          MuscleGroup.chest,
+          MuscleGroup.triceps,
+        ],
       );
-      final focusedProfile = profile.copyWith(training: focusedTraining);
+
+      final focusedProfile = profile.copyWith(
+        training: focusedTraining,
+      );
+
       final exercises = selector.select(
         split: pushSplit,
         profile: focusedProfile,
         desiredCount: 6,
       );
+
       expect(
-        exercises.any((e) => e.targetMuscles.contains(MuscleGroup.chest)),
+        exercises.any(
+          (e) => e.targetMuscles.contains(MuscleGroup.chest),
+        ),
         isTrue,
       );
+
       expect(
-        exercises.any((e) => e.targetMuscles.contains(MuscleGroup.triceps)),
+        exercises.any(
+          (e) => e.targetMuscles.contains(MuscleGroup.triceps),
+        ),
         isTrue,
       );
     });
 
-    test('focus does not eliminate split muscles', () {
+    test('secondary split muscles can still be selected', () {
       final focusedTraining = profile.training.copyWith(
-        focusAreas: const [MuscleGroup.chest],
+        focusAreas: const [
+          MuscleGroup.chest,
+        ],
       );
-      final focusedProfile = profile.copyWith(training: focusedTraining);
+
+      final focusedProfile = profile.copyWith(
+        training: focusedTraining,
+      );
+
       final exercises = selector.select(
         split: pushSplit,
         profile: focusedProfile,
         desiredCount: 6,
       );
+
       expect(
-        exercises.any((e) => e.targetMuscles.contains(MuscleGroup.shoulders)),
+        exercises.any(
+          (e) => e.targetMuscles.contains(MuscleGroup.shoulders),
+        ),
         isTrue,
       );
+
       expect(
-        exercises.any((e) => e.targetMuscles.contains(MuscleGroup.triceps)),
+        exercises.any(
+          (e) => e.targetMuscles.contains(MuscleGroup.triceps),
+        ),
         isTrue,
       );
     });
+
+    //=======================================================================
+    // Strict specialized split behavior
+    //=======================================================================
+
+    test('specialized single-muscle split does not introduce unrelated muscles',
+        () {
+      const absSplit = MuscleSplit(
+        name: 'Abs/Core Focus',
+        theme: 'Abs/Core',
+        muscles: [
+          MuscleGroup.absCore,
+        ],
+        recoveryCost: 1,
+      );
+
+      final focusedProfile = profile.copyWith(
+        training: profile.training.copyWith(
+          focusAreas: const [
+            MuscleGroup.absCore,
+          ],
+        ),
+      );
+
+      final exercises = selector.select(
+        split: absSplit,
+        profile: focusedProfile,
+        desiredCount: 6,
+      );
+
+      expect(
+        exercises,
+        isNotEmpty,
+      );
+
+      expect(
+        exercises.every(
+          (e) => e.targetMuscles.every(
+            absSplit.muscles.contains,
+          ),
+        ),
+        isTrue,
+      );
+
+      expect(
+        exercises.every(
+          (e) => !e.targetMuscles.contains(MuscleGroup.chest),
+        ),
+        isTrue,
+      );
+
+      expect(
+        exercises.every(
+          (e) => !e.targetMuscles.contains(MuscleGroup.back),
+        ),
+        isTrue,
+      );
+
+      expect(
+        exercises.every(
+          (e) => !e.targetMuscles.contains(MuscleGroup.quadriceps),
+        ),
+        isTrue,
+      );
+    });
+
+    test(
+        'specialized glutes and abs/core split remains restricted to its muscles',
+        () {
+      const focusSplit = MuscleSplit(
+        name: 'Glutes & Core',
+        theme: 'Glutes & Core',
+        muscles: [
+          MuscleGroup.glutes,
+          MuscleGroup.absCore,
+        ],
+        recoveryCost: 2,
+        isLowerBody: true,
+      );
+
+      final focusedProfile = profile.copyWith(
+        training: profile.training.copyWith(
+          focusAreas: const [
+            MuscleGroup.glutes,
+            MuscleGroup.absCore,
+          ],
+        ),
+      );
+
+      final exercises = selector.select(
+        split: focusSplit,
+        profile: focusedProfile,
+        desiredCount: 6,
+      );
+
+      expect(
+        exercises,
+        isNotEmpty,
+      );
+
+      expect(
+        exercises.every(
+          (e) => e.targetMuscles.every(
+            focusSplit.muscles.contains,
+          ),
+        ),
+        isTrue,
+      );
+
+      expect(
+        exercises.any(
+          (e) => e.targetMuscles.contains(MuscleGroup.glutes),
+        ),
+        isTrue,
+      );
+
+      expect(
+        exercises.any(
+          (e) => e.targetMuscles.contains(MuscleGroup.absCore),
+        ),
+        isTrue,
+      );
+    });
+
+    //=======================================================================
+    // Legs coverage
+    //=======================================================================
+
+    test('legs workout covers all required leg muscles when pool allows', () {
+      const legsSplit = MuscleSplit(
+        name: 'Legs',
+        theme: 'Legs • Glutes • Adductors',
+        muscles: [
+          MuscleGroup.quadriceps,
+          MuscleGroup.hamstrings,
+          MuscleGroup.glutes,
+          MuscleGroup.adductors,
+          MuscleGroup.calves,
+        ],
+        recoveryCost: 3,
+        isLowerBody: true,
+      );
+
+      final legsProfile = profile.copyWith(
+        training: profile.training.copyWith(
+          equipment: const [
+            EquipmentType.bodyweight,
+            EquipmentType.resistanceBands,
+          ],
+        ),
+      );
+
+      final exercises = selector.select(
+        split: legsSplit,
+        profile: legsProfile,
+        desiredCount: 8,
+      );
+
+      expect(
+        exercises,
+        isNotEmpty,
+      );
+
+      expect(
+        exercises.any(
+          (e) => e.targetMuscles.contains(MuscleGroup.quadriceps),
+        ),
+        isTrue,
+      );
+
+      expect(
+        exercises.any(
+          (e) => e.targetMuscles.contains(MuscleGroup.hamstrings),
+        ),
+        isTrue,
+      );
+
+      expect(
+        exercises.any(
+          (e) => e.targetMuscles.contains(MuscleGroup.glutes),
+        ),
+        isTrue,
+      );
+
+      expect(
+        exercises.any(
+          (e) => e.targetMuscles.contains(MuscleGroup.adductors),
+        ),
+        isTrue,
+      );
+
+      expect(
+        exercises.any(
+          (e) => e.targetMuscles.contains(MuscleGroup.calves),
+        ),
+        isTrue,
+      );
+    });
+
+    test('legs workout must not silently omit calves', () {
+      const legsSplit = MuscleSplit(
+        name: 'Legs',
+        theme: 'Legs',
+        muscles: [
+          MuscleGroup.quadriceps,
+          MuscleGroup.hamstrings,
+          MuscleGroup.glutes,
+          MuscleGroup.adductors,
+          MuscleGroup.calves,
+        ],
+        recoveryCost: 3,
+        isLowerBody: true,
+      );
+
+      final legsProfile = profile.copyWith(
+        training: profile.training.copyWith(
+          equipment: const [
+            EquipmentType.bodyweight,
+            EquipmentType.resistanceBands,
+          ],
+        ),
+      );
+
+      final exercises = selector.select(
+        split: legsSplit,
+        profile: legsProfile,
+        desiredCount: 8,
+      );
+
+      expect(
+        exercises.any(
+          (e) => e.targetMuscles.contains(MuscleGroup.calves),
+        ),
+        isTrue,
+      );
+    });
+
+    //=======================================================================
+    // Arms coverage
+    //=======================================================================
+
+    test('arms workout covers biceps, triceps and forearms', () {
+      const armsSplit = MuscleSplit(
+        name: 'Arms',
+        theme: 'Arms Focus',
+        muscles: [
+          MuscleGroup.biceps,
+          MuscleGroup.triceps,
+          MuscleGroup.forearms,
+        ],
+        recoveryCost: 1,
+        isUpperBody: true,
+      );
+
+      final armsProfile = profile.copyWith(
+        training: profile.training.copyWith(
+          equipment: const [
+            EquipmentType.bodyweight,
+            EquipmentType.resistanceBands,
+          ],
+        ),
+      );
+
+      final exercises = selector.select(
+        split: armsSplit,
+        profile: armsProfile,
+        desiredCount: 8,
+      );
+
+      expect(
+        exercises,
+        isNotEmpty,
+      );
+
+      expect(
+        exercises.any(
+          (e) => e.targetMuscles.contains(MuscleGroup.biceps),
+        ),
+        isTrue,
+      );
+
+      expect(
+        exercises.any(
+          (e) => e.targetMuscles.contains(MuscleGroup.triceps),
+        ),
+        isTrue,
+      );
+
+      expect(
+        exercises.any(
+          (e) => e.targetMuscles.contains(MuscleGroup.forearms),
+        ),
+        isTrue,
+      );
+    });
+
+    //=======================================================================
+    // Shoulders & Core coverage
+    //=======================================================================
+
+    test(
+      'shoulders and core workout covers shoulders, traps and abs/core',
+      () {
+        const split = MuscleSplit(
+          name: 'Shoulders & Core',
+          theme: 'Shoulders & Core',
+          muscles: [
+            MuscleGroup.shoulders,
+            MuscleGroup.traps,
+            MuscleGroup.absCore,
+          ],
+          recoveryCost: 1,
+          isUpperBody: true,
+        );
+
+        final shouldersProfile = profile.copyWith(
+          training: profile.training.copyWith(
+            equipment: const [
+              EquipmentType.bodyweight,
+              EquipmentType.resistanceBands,
+            ],
+          ),
+        );
+
+        final exercises = selector.select(
+          split: split,
+          profile: shouldersProfile,
+          desiredCount: 8,
+        );
+
+        expect(
+          exercises,
+          isNotEmpty,
+        );
+
+        expect(
+          exercises.any(
+            (e) => e.targetMuscles.contains(MuscleGroup.shoulders),
+          ),
+          isTrue,
+        );
+
+        expect(
+          exercises.any(
+            (e) => e.targetMuscles.contains(MuscleGroup.traps),
+          ),
+          isTrue,
+        );
+
+        expect(
+          exercises.any(
+            (e) => e.targetMuscles.contains(MuscleGroup.absCore),
+          ),
+          isTrue,
+        );
+      },
+    );
+
+    //=======================================================================
+    // Avoided / excluded muscles
+    //=======================================================================
 
     test('profile avoided muscles are never selected', () {
       final restricted = profile.copyWith(
         training: profile.training.copyWith(
-          avoidedMuscles: const [MuscleGroup.triceps],
+          avoidedMuscles: const [
+            MuscleGroup.triceps,
+          ],
         ),
       );
+
       final exercises = selector.select(
         split: pushSplit,
         profile: restricted,
         desiredCount: 6,
       );
+
       expect(
-        exercises.every((e) => !e.targetMuscles.contains(MuscleGroup.triceps)),
+        exercises.every(
+          (e) => !e.targetMuscles.contains(MuscleGroup.triceps),
+        ),
         isTrue,
       );
     });
@@ -192,35 +670,43 @@ void main() {
         split: pushSplit,
         profile: profile,
         desiredCount: 6,
-        excludeMuscles: const [MuscleGroup.triceps],
+        excludeMuscles: const [
+          MuscleGroup.triceps,
+        ],
       );
+
       expect(
-        exercises.every((e) => !e.targetMuscles.contains(MuscleGroup.triceps)),
+        exercises.every(
+          (e) => !e.targetMuscles.contains(MuscleGroup.triceps),
+        ),
         isTrue,
       );
     });
 
-    test('returns fewer exercises when pool is exhausted', () {
-      final bodyweightProfile = profile.copyWith(
-        training: profile.training.copyWith(
-          equipment: const [EquipmentType.bodyweight],
-        ),
-      );
-      final exercises = selector.select(
-        split: pushSplit,
-        profile: bodyweightProfile,
-        desiredCount: 20,
-      );
-      expect(exercises.length, lessThanOrEqualTo(20));
-    });
-
-    test('never returns more than desired count', () {
+    test('multiple excluded muscles are never selected', () {
       final exercises = selector.select(
         split: pushSplit,
         profile: profile,
-        desiredCount: 5,
+        desiredCount: 6,
+        excludeMuscles: const [
+          MuscleGroup.triceps,
+          MuscleGroup.shoulders,
+        ],
       );
-      expect(exercises.length, lessThanOrEqualTo(5));
+
+      expect(
+        exercises.every(
+          (e) => !e.targetMuscles.contains(MuscleGroup.triceps),
+        ),
+        isTrue,
+      );
+
+      expect(
+        exercises.every(
+          (e) => !e.targetMuscles.contains(MuscleGroup.shoulders),
+        ),
+        isTrue,
+      );
     });
   });
 }

@@ -17,7 +17,8 @@ class WorkoutSessionManager with ChangeNotifier {
     WorkoutAudioService? audioService,
     WorkoutTimerNotificationService? notificationService,
   })  : _audio = audioService ?? WorkoutAudioService(),
-        _notifications = notificationService ?? WorkoutTimerNotificationService();
+        _notifications =
+            notificationService ?? WorkoutTimerNotificationService();
 
   final WorkoutAudioService _audio;
   final WorkoutTimerNotificationService _notifications;
@@ -30,6 +31,7 @@ class WorkoutSessionManager with ChangeNotifier {
   Timer? _sessionDurationTimer;
   Duration _currentWorkoutDuration = Duration.zero;
   String _currentWorkoutName = "";
+  String? _currentUserId;
   String? _currentProgramId;
   String? _currentDayKey;
   List<Exercise> _plannedExercises = [];
@@ -151,12 +153,9 @@ class WorkoutSessionManager with ChangeNotifier {
     await _notifications.cancelAll();
   }
 
+  /// ✅ Wakelock désormais activé pendant toute la session active
   Future<void> _syncWakelock() async {
-    if (!_isWorkoutActive) {
-      await _disableWakelock();
-      return;
-    }
-    if (_isResting || _isExerciseTimerActive) {
+    if (_isWorkoutActive) {
       await _enableWakelock();
     } else {
       await _disableWakelock();
@@ -179,9 +178,53 @@ class WorkoutSessionManager with ChangeNotifier {
     }
   }
 
+  // ============================================================
+  // Démarrer une session (avec userId)
+  // ============================================================
+
+  bool startWorkoutIfNoSession(
+    List<Exercise> exercisesForSession, {
+    String workoutName = "Workout Session",
+    String? userId,
+    String? programId,
+    String? dayKey,
+  }) {
+    if (_isWorkoutActive) return false;
+    _startWorkoutInternal(
+      exercisesForSession,
+      workoutName: workoutName,
+      userId: userId,
+      programId: programId,
+      dayKey: dayKey,
+    );
+    notifyListeners();
+    return true;
+  }
+
+  void forceStartNewWorkout(
+    List<Exercise> exercisesForSession, {
+    String workoutName = "Workout Session",
+    String? userId,
+    String? programId,
+    String? dayKey,
+  }) {
+    if (_isWorkoutActive) {
+      _resetSessionState(notify: false);
+    }
+    _startWorkoutInternal(
+      exercisesForSession,
+      workoutName: workoutName,
+      userId: userId,
+      programId: programId,
+      dayKey: dayKey,
+    );
+    notifyListeners();
+  }
+
   void _startWorkoutInternal(
     List<Exercise> exercisesForSession, {
     String workoutName = "Workout Session",
+    String? userId,
     String? programId,
     String? dayKey,
   }) {
@@ -189,6 +232,7 @@ class WorkoutSessionManager with ChangeNotifier {
     _workoutStartTime = DateTime.now();
     _currentWorkoutDuration = Duration.zero;
     _currentWorkoutName = workoutName;
+    _currentUserId = userId;
     _currentProgramId = programId;
     _currentDayKey = dayKey;
     _plannedExercises = List.from(exercisesForSession);
@@ -217,36 +261,16 @@ class WorkoutSessionManager with ChangeNotifier {
       notifyListeners();
     });
 
+    // ✅ Activer le wakelock au démarrage
+    unawaited(_syncWakelock());
+
     Log.debug(
         "Workout '$workoutName' started. CurrentExIndex: $_currentExerciseIndex.");
   }
 
-  bool startWorkoutIfNoSession(
-    List<Exercise> exercisesForSession, {
-    String workoutName = "Workout Session",
-    String? programId,
-    String? dayKey,
-  }) {
-    if (_isWorkoutActive) return false;
-    _startWorkoutInternal(exercisesForSession,
-        workoutName: workoutName, programId: programId, dayKey: dayKey);
-    notifyListeners();
-    return true;
-  }
-
-  void forceStartNewWorkout(
-    List<Exercise> exercisesForSession, {
-    String workoutName = "Workout Session",
-    String? programId,
-    String? dayKey,
-  }) {
-    if (_isWorkoutActive) {
-      _resetSessionState(notify: false);
-    }
-    _startWorkoutInternal(exercisesForSession,
-        workoutName: workoutName, programId: programId, dayKey: dayKey);
-    notifyListeners();
-  }
+  // ============================================================
+  // Logique de repos (inchangée, mais le wakelock reste activé)
+  // ============================================================
 
   void logSetForCurrentExercise(String reps, String weight) {
     if (currentExercise == null || currentLoggedExerciseData == null) {
@@ -433,6 +457,10 @@ class WorkoutSessionManager with ChangeNotifier {
     return true;
   }
 
+  // ============================================================
+  // Terminer la session (userId maintenant correct)
+  // ============================================================
+
   WorkoutLog? endWorkout() {
     if (!_isWorkoutActive) return null;
 
@@ -454,7 +482,7 @@ class WorkoutSessionManager with ChangeNotifier {
 
     final workoutLog = WorkoutLog(
       id: _uuid.v4(),
-      userId: '',
+      userId: _currentUserId ?? '',
       programId: _currentProgramId ?? '',
       week: 1,
       day: _currentDayKey ?? 'unknown',
@@ -475,6 +503,10 @@ class WorkoutSessionManager with ChangeNotifier {
     return workoutLog;
   }
 
+  // ============================================================
+  // Réinitialisation
+  // ============================================================
+
   void _resetSessionState({bool notify = true}) {
     unawaited(_disableWakelock());
     unawaited(_notifications.cancelAll());
@@ -484,6 +516,7 @@ class WorkoutSessionManager with ChangeNotifier {
     _workoutStartTime = null;
     _currentWorkoutDuration = Duration.zero;
     _currentWorkoutName = "";
+    _currentUserId = null;
     _currentProgramId = null;
     _currentDayKey = null;
     _plannedExercises = [];

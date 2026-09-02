@@ -39,6 +39,7 @@ class SplitCatalog {
       MuscleGroup.quadriceps,
       MuscleGroup.hamstrings,
       MuscleGroup.glutes,
+      MuscleGroup.adductors,
       MuscleGroup.calves,
       MuscleGroup.absCore,
     ],
@@ -74,13 +75,13 @@ class SplitCatalog {
 
   static const MuscleSplit legs = MuscleSplit(
     name: 'Legs',
-    theme: 'Legs • Glutes',
+    theme: 'Legs • Glutes • Adductors',
     muscles: [
       MuscleGroup.quadriceps,
       MuscleGroup.hamstrings,
       MuscleGroup.glutes,
+      MuscleGroup.adductors,
       MuscleGroup.calves,
-      MuscleGroup.absCore,
     ],
     recoveryCost: 3,
     isLowerBody: true,
@@ -169,6 +170,7 @@ class SplitCatalog {
       MuscleGroup.quadriceps,
       MuscleGroup.hamstrings,
       MuscleGroup.glutes,
+      MuscleGroup.adductors,
       MuscleGroup.calves,
       MuscleGroup.absCore,
     ],

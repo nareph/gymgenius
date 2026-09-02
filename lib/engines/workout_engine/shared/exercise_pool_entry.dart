@@ -22,6 +22,12 @@ class ExercisePoolEntry {
   /// Secondary muscles.
   final List<MuscleGroup> secondaryMuscles;
 
+  /// Splits in which this exercise can be used.
+  ///
+  /// This is applicability metadata, not a second exercise definition.
+  /// One canonical exercise may belong to multiple splits.
+  final Set<String> compatibleSplits;
+
   /// Suggested weight.
   final String? weightSuggestion;
 
@@ -49,6 +55,7 @@ class ExercisePoolEntry {
     required this.equipmentType,
     required this.targetMuscles,
     this.secondaryMuscles = const [],
+    this.compatibleSplits = const {},
     this.weightSuggestion,
     this.usesWeight = false,
     this.isTimed = false,
@@ -64,6 +71,11 @@ class ExercisePoolEntry {
 
   bool get isIsolation => category == ExerciseCategory.isolation;
 
+  /// Returns true when this exercise can be used for the given split.
+  bool isCompatibleWithSplit(String splitName) {
+    return compatibleSplits.contains(splitName);
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -73,6 +85,7 @@ class ExercisePoolEntry {
       'equipmentType': equipmentType.name,
       'targetMuscles': targetMuscles.map((e) => e.name).toList(),
       'secondaryMuscles': secondaryMuscles.map((e) => e.name).toList(),
+      'compatibleSplits': compatibleSplits.toList(),
       if (weightSuggestion != null) 'weightSuggestion': weightSuggestion,
       'usesWeight': usesWeight,
       'isTimed': isTimed,

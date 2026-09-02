@@ -38,7 +38,6 @@ class ProgramDashboardView extends StatelessWidget {
 
   String capitalize(String s) {
     if (s.isEmpty) return s;
-
     return s[0].toUpperCase() + s.substring(1);
   }
 
@@ -89,16 +88,16 @@ class ProgramDashboardView extends StatelessWidget {
       context,
       listen: false,
     );
-
     final theme = Theme.of(context);
+    final sessionName = "${capitalize(program.name)} - ${capitalize(dayKey)}";
 
-    final sessionName = "${capitalize(program.name)} - "
-        "${capitalize(dayKey)}";
+    final userId = context.read<AuthBloc>().state.user?.id;
 
     void initiateAndNavigate() {
       workoutManager.forceStartNewWorkout(
         exercises,
         workoutName: sessionName,
+        userId: userId,
         programId: program.id,
         dayKey: dayKey.toLowerCase(),
       );
@@ -113,9 +112,7 @@ class ProgramDashboardView extends StatelessWidget {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text(
-              "Failed to start the workout.",
-            ),
+            content: const Text("Failed to start the workout."),
             backgroundColor: theme.colorScheme.error,
           ),
         );
@@ -126,18 +123,14 @@ class ProgramDashboardView extends StatelessWidget {
       showDialog(
         context: context,
         builder: (dialogCtx) => AlertDialog(
-          title: const Text(
-            "Workout in Progress",
-          ),
+          title: const Text("Workout in Progress"),
           content: const Text(
-            "A workout session is currently active. "
-            "What would you like to do?",
+            "A workout session is currently active. What would you like to do?",
           ),
           actions: <Widget>[
             TextButton(
               onPressed: () {
                 Navigator.of(dialogCtx).pop();
-
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -160,9 +153,7 @@ class ProgramDashboardView extends StatelessWidget {
               },
               child: Text(
                 "End & Start New",
-                style: TextStyle(
-                  color: theme.colorScheme.error,
-                ),
+                style: TextStyle(color: theme.colorScheme.error),
               ),
             ),
             TextButton(
@@ -178,13 +169,10 @@ class ProgramDashboardView extends StatelessWidget {
   }
 
   @override
-  Widget build(
-    BuildContext context,
-  ) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
-
     final today = DateTime.now();
 
     const daysOfWeek = [
@@ -198,36 +186,26 @@ class ProgramDashboardView extends StatelessWidget {
     ];
 
     final todayDayKey = daysOfWeek[today.weekday - 1];
-
     final todaysExercises = dailyPlan.todayWorkout.finalExercises;
-
     final splitDisplayName = dailyPlan.todayWorkout.splitDisplayName;
-
     final user = context.read<AuthBloc>().state.user;
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         Text(
-          "Your Current Program: "
-          "${program.name}",
+          "Your Current Program: ${program.name}",
           style: textTheme.headlineSmall,
         ),
         Text(
-          "Duration: "
-          "${program.durationWeeks} weeks. "
-          "Expires: "
-          "${DateFormat.yMMMd().add_jm().format(
-                program.expiresAt.toLocal(),
-              )}",
+          "Duration: ${program.durationWeeks} weeks. "
+          "Expires: ${DateFormat.yMMMd().add_jm().format(program.expiresAt.toLocal())}",
           style: textTheme.bodySmall?.copyWith(
             color: colorScheme.onSurfaceVariant,
           ),
         ),
         Text(
-          "Week "
-          "${dailyPlan.programProgress.currentWeek} "
-          "of ${program.durationWeeks}",
+          "Week ${dailyPlan.programProgress.currentWeek} of ${program.durationWeeks}",
           style: textTheme.bodySmall?.copyWith(
             color: colorScheme.primary,
           ),
@@ -240,10 +218,7 @@ class ProgramDashboardView extends StatelessWidget {
 
         if (todaysExercises.isNotEmpty && !program.isExpired)
           Card(
-            color: _getSplitColor(
-              splitDisplayName,
-              colorScheme,
-            ).withAlpha(178),
+            color: _getSplitColor(splitDisplayName, colorScheme).withAlpha(178),
             elevation: 2,
             child: ListTile(
               contentPadding: const EdgeInsets.symmetric(
@@ -266,8 +241,7 @@ class ProgramDashboardView extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "${todaysExercises.length} "
-                    "exercises planned",
+                    "${todaysExercises.length} exercises planned",
                     style: textTheme.bodyMedium?.copyWith(
                       color: colorScheme.onPrimaryContainer.withAlpha(204),
                     ),
@@ -275,8 +249,7 @@ class ProgramDashboardView extends StatelessWidget {
                   if (splitDisplayName != 'Rest' &&
                       splitDisplayName != 'Workout')
                     Text(
-                      "Split: "
-                      "$splitDisplayName",
+                      "Split: $splitDisplayName",
                       style: textTheme.bodySmall?.copyWith(
                         color: colorScheme.onPrimaryContainer.withAlpha(180),
                         fontStyle: FontStyle.italic,
@@ -285,10 +258,7 @@ class ProgramDashboardView extends StatelessWidget {
                 ],
               ),
               trailing: ElevatedButton.icon(
-                icon: const Icon(
-                  Icons.play_arrow_rounded,
-                  size: 20,
-                ),
+                icon: const Icon(Icons.play_arrow_rounded, size: 20),
                 label: const Text("START"),
                 onPressed: () => _startTodaysWorkout(
                   context,
@@ -324,16 +294,14 @@ class ProgramDashboardView extends StatelessWidget {
                 size: 30,
               ),
               title: Text(
-                "${capitalize(todayDayKey)} "
-                "(Rest Day)",
+                "${capitalize(todayDayKey)} (Rest Day)",
                 style: textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: colorScheme.onSurfaceVariant,
                 ),
               ),
               subtitle: Text(
-                "Enjoy your recovery, "
-                "${user?.displayName?.split(' ')[0] ?? 'User'}.",
+                "Enjoy your recovery, ${user?.displayName?.split(' ')[0] ?? 'User'}.",
                 style: textTheme.bodyMedium?.copyWith(
                   color: colorScheme.onSurfaceVariant.withAlpha(204),
                 ),
@@ -350,9 +318,7 @@ class ProgramDashboardView extends StatelessWidget {
             final homeVm = context.watch<HomeViewModel>();
 
             return Padding(
-              padding: const EdgeInsets.only(
-                top: 16,
-              ),
+              padding: const EdgeInsets.only(top: 16),
               child: CoachHomeCard(
                 response: homeVm.dailyCoaching,
                 isLoading: homeVm.isLoadingCoaching,
@@ -369,9 +335,7 @@ class ProgramDashboardView extends StatelessWidget {
 
         if (dailyPlan.healthPlatformSnapshot != null)
           Padding(
-            padding: const EdgeInsets.only(
-              top: 16,
-            ),
+            padding: const EdgeInsets.only(top: 16),
             child: HomeHealthPlatformCard(
               snapshot: dailyPlan.healthPlatformSnapshot!,
             ),
@@ -383,9 +347,7 @@ class ProgramDashboardView extends StatelessWidget {
 
         if (dailyPlan.finalDecision.requiresAdaptation) ...[
           const SizedBox(height: 16),
-          WorkoutAdaptationBanner(
-            decision: dailyPlan.finalDecision,
-          ),
+          WorkoutAdaptationBanner(decision: dailyPlan.finalDecision),
         ],
 
         // ==========================================================
@@ -394,23 +356,16 @@ class ProgramDashboardView extends StatelessWidget {
 
         if (dailyPlan.healthDecision != null) ...[
           const SizedBox(height: 16),
-          HealthDecisionCard(
-            decision: dailyPlan.healthDecision!,
-          ),
+          HealthDecisionCard(decision: dailyPlan.healthDecision!),
         ],
 
         // ==========================================================
         // Recovery
-        //
-        // CRITICAL:
-        // No DailyCheckIn -> no RecoveryStatus -> no card.
         // ==========================================================
 
         if (dailyPlan.recoveryStatus != null) ...[
           const SizedBox(height: 16),
-          RecoverySummaryCard(
-            status: dailyPlan.recoveryStatus!,
-          ),
+          RecoverySummaryCard(status: dailyPlan.recoveryStatus!),
         ],
 
         // ==========================================================
@@ -419,9 +374,7 @@ class ProgramDashboardView extends StatelessWidget {
 
         if (dailyPlan.nutritionPlan != null) ...[
           const SizedBox(height: 16),
-          NutritionSummaryCard(
-            plan: dailyPlan.nutritionPlan!,
-          ),
+          NutritionSummaryCard(plan: dailyPlan.nutritionPlan!),
         ],
 
         // ==========================================================
@@ -430,9 +383,7 @@ class ProgramDashboardView extends StatelessWidget {
 
         if (dailyPlan.progressSnapshot != null) ...[
           const SizedBox(height: 16),
-          HomeProgressSummaryCard(
-            snapshot: dailyPlan.progressSnapshot!,
-          ),
+          HomeProgressSummaryCard(snapshot: dailyPlan.progressSnapshot!),
         ],
 
         const SizedBox(height: 24),
@@ -451,21 +402,12 @@ class ProgramDashboardView extends StatelessWidget {
                 ),
               );
             },
-            icon: const Icon(
-              Icons.calendar_view_week_rounded,
-            ),
-            label: const Text(
-              'View Weekly Training Schedule',
-            ),
+            icon: const Icon(Icons.calendar_view_week_rounded),
+            label: const Text('View Weekly Training Schedule'),
             style: OutlinedButton.styleFrom(
-              minimumSize: const Size.fromHeight(
-                48,
-              ),
+              minimumSize: const Size.fromHeight(48),
               alignment: Alignment.centerLeft,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 12,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
           ),
         ],

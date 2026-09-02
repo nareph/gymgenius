@@ -74,7 +74,7 @@ class AIConfig {
 
   static const int coachMaxHistoryMessages = 20;
 
-  static const int coachMaxOutputTokens = 1024;
+  static const int coachMaxOutputTokens = 2048;
 
   static const Duration coachTimeout = Duration(seconds: 30);
 
@@ -91,7 +91,7 @@ class AIConfig {
 
   static const int maxInputTokens = 6000;
 
-  static const int maxOutputTokens = 8192;
+  static const int maxOutputTokens = 16384;
 
   static const Duration retryDelay = Duration(seconds: 5);
 

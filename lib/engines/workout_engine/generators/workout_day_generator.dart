@@ -1,3 +1,5 @@
+// lib/engines/workout_engine/generators/workout_day_generator.dart
+
 import 'dart:math';
 
 import 'package:gymgenius/domain/entities/exercise.dart';
@@ -10,6 +12,10 @@ import 'package:gymgenius/engines/workout_engine/models/muscle_split.dart';
 import 'package:gymgenius/engines/workout_engine/selectors/exercise_selector.dart';
 import 'package:gymgenius/engines/workout_engine/volume_calculator.dart';
 
+/// Generates the list of exercises for a single workout day.
+///
+/// It uses the [ExerciseSelector] to select exercises from the canonical pool,
+/// and then builds domain [Exercise] objects from the selected entries.
 class WorkoutDayGenerator {
   final Random _random;
   final ExerciseSelector _selector;
@@ -18,10 +24,13 @@ class WorkoutDayGenerator {
       : _random = random ?? Random(),
         _selector = ExerciseSelector(random: random);
 
-  /// [desiredCountOverride], when provided, replaces the session-duration
-  /// based exercise count — used by RegenerationService's single-exercise
-  /// path (asks for exactly 1 replacement) and keepStructure path (asks
-  /// for exactly as many exercises as the day previously had).
+  /// Generates exercises for one workout day.
+  ///
+  /// [desiredCountOverride] can be used to force a specific number of exercises
+  /// (used by regeneration when preserving structure).
+  ///
+  /// [weeklyUsedExerciseIds] is a set of exercise IDs already used in other
+  /// days of the same week; the selector will avoid reusing them.
   List<Exercise> generate({
     required MuscleSplit split,
     required HealthProfile profile,
@@ -29,6 +38,7 @@ class WorkoutDayGenerator {
     List<MuscleGroup>? excludeMuscles,
     String? intensityOverride,
     int? desiredCountOverride,
+    Set<String> weeklyUsedExerciseIds = const {},
   }) {
     final desiredCount = desiredCountOverride ??
         VolumeCalculator.exerciseCountForSession(
@@ -45,6 +55,7 @@ class WorkoutDayGenerator {
       desiredCount: desiredCount,
       previousProgram: previousProgram,
       excludeMuscles: excludeMuscles,
+      weeklyUsedExerciseIds: weeklyUsedExerciseIds,
     );
 
     final builder = const ExerciseBuilder();

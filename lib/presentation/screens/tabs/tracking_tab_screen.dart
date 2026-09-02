@@ -14,8 +14,8 @@ class TrackingTabScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) => context.read<TrackingViewModel>(),
+    return ChangeNotifierProvider.value(
+      value: context.read<TrackingViewModel>(),
       child: const TrackingView(),
     );
   }
