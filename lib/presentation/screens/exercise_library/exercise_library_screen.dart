@@ -26,9 +26,21 @@ class ExerciseLibraryScreen extends StatefulWidget {
   State<ExerciseLibraryScreen> createState() => _ExerciseLibraryScreenState();
 }
 
-class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
+// AutomaticKeepAliveClientMixin: the only one of the 4 tabs whose state
+// (search query, active filters, scroll position) lives purely in a
+// local Bloc created in initState() rather than in a ViewModel injected
+// from above the tab PageView — so unlike Home/Tracking/Profile, if
+// this widget is ever torn down and recreated by the PageView, filters
+// and scroll position would silently reset. wantKeepAlive: true tells
+// the PageView to keep this page's State alive even while scrolled
+// off-screen instead of disposing it.
+class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen>
+    with AutomaticKeepAliveClientMixin<ExerciseLibraryScreen> {
   late final ExerciseLibraryBloc _bloc;
   bool _showFilters = false;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -44,8 +56,10 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Required by AutomaticKeepAliveClientMixin.
+    super.build(context);
+
     final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
       appBar: AppBar(
@@ -205,45 +219,34 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
                   ),
                   const SizedBox(height: 16),
                   Expanded(
-                    child: ListView.builder(
-                      controller: scrollController,
-                      itemCount: items.length + 1,
-                      itemBuilder: (context, index) {
-                        // "All" option (null)
-                        if (index == 0) {
-                          // Use a special sentinel for "All" – we'll pass null as T
-                          // Since T may be non-nullable, we need to handle it.
-                          // We'll use a custom approach: store the selected value as a nullable.
-                          // But to avoid type issues, we'll manage a nullable selected internally.
-                          // Actually the selected type is T, and "All" should be null.
-                          // We can use a separate variable: final T? selectedValue = selected is Null ? null : selected;
-                          // But we can't pass null for non-nullable T. So we treat T as nullable.
-                          // Since we call this with T = MuscleGroup? etc., it's fine.
-                          // We'll cast: T? selectedValue = selected as T?.
-                          // Then for "All", we set selectedValue = null.
-                          // We'll keep the selected parameter as T (which is nullable type).
-                          // We'll represent "All" as null.
-                          return RadioListTile<T>(
-                            value: null as T,
-                            title: const Text('All'),
-                            groupValue: selected,
-                            onChanged: (newValue) {
-                              onSelected(newValue as T);
-                              Navigator.pop(context);
-                            },
-                          );
-                        }
-                        final item = items[index - 1];
-                        return RadioListTile<T>(
-                          value: item,
-                          title: Text(displayName(item)),
-                          groupValue: selected,
-                          onChanged: (newValue) {
-                            onSelected(newValue as T);
-                            Navigator.pop(context);
-                          },
-                        );
+                    // RadioGroup<T> replaces the deprecated per-tile
+                    // groupValue/onChanged (removed after Flutter
+                    // 3.32.0-0.0.pre) — one ancestor now owns the
+                    // selection state and change callback for every
+                    // RadioListTile<T> beneath it.
+                    child: RadioGroup<T>(
+                      groupValue: selected,
+                      onChanged: (newValue) {
+                        onSelected(newValue as T);
+                        Navigator.pop(context);
                       },
+                      child: ListView.builder(
+                        controller: scrollController,
+                        itemCount: items.length + 1,
+                        itemBuilder: (context, index) {
+                          if (index == 0) {
+                            return RadioListTile<T>(
+                              value: null as T,
+                              title: const Text('All'),
+                            );
+                          }
+                          final item = items[index - 1];
+                          return RadioListTile<T>(
+                            value: item,
+                            title: Text(displayName(item)),
+                          );
+                        },
+                      ),
                     ),
                   ),
                 ],

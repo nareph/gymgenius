@@ -22,13 +22,50 @@ class HomeTabScreen extends StatefulWidget {
 }
 
 class _HomeTabScreenState extends State<HomeTabScreen> {
+  // Guards against calling triggerCheckInIfNeeded() more than once per
+  // State lifetime — HomeViewModel.notifyListeners() can fire many
+  // times while state stays HomeState.loaded (pull-to-refresh,
+  // _applyCheckIn() re-loading, etc.) and we only want to attempt the
+  // prompt once data first becomes ready. The ViewModel itself is the
+  // authority on whether the check-in was already answered/skipped
+  // today (via RecoveryRepository) — this flag only stops THIS widget
+  // instance from re-asking it repeatedly.
+  bool _checkInTriggered = false;
+  HomeViewModel? _viewModel;
+
   @override
   void initState() {
     super.initState();
+    // Previously this called triggerCheckInIfNeeded() exactly once,
+    // right after the first frame — which usually ran BEFORE
+    // HomeViewModel._loadData() (several chained async calls) had
+    // finished, so healthProfile was still null and the check-in
+    // silently never fired. Listening for the ViewModel to actually
+    // reach HomeState.loaded — rather than guessing when that
+    // happens — fixes it regardless of load timing.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      context.read<HomeViewModel>().triggerCheckInIfNeeded(context);
+      final viewModel = context.read<HomeViewModel>();
+      _viewModel = viewModel;
+      viewModel.addListener(_maybeTriggerCheckIn);
+      _maybeTriggerCheckIn();
     });
+  }
+
+  void _maybeTriggerCheckIn() {
+    if (_checkInTriggered || !mounted) return;
+
+    final viewModel = _viewModel;
+    if (viewModel == null || viewModel.state != HomeState.loaded) return;
+
+    _checkInTriggered = true;
+    viewModel.triggerCheckInIfNeeded(context);
+  }
+
+  @override
+  void dispose() {
+    _viewModel?.removeListener(_maybeTriggerCheckIn);
+    super.dispose();
   }
 
   Future<void> _completeProfile(

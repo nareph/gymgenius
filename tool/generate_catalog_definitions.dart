@@ -57,11 +57,24 @@ void main() {
   print('📦 Generated $total canonical exercise definitions.');
 }
 
-/// Builds one canonical entry per exercise ID.
+/// Builds one canonical entry per DISTINCT EXERCISE.
 ///
-/// When the same ID is present in several legacy split pools, the exercise
-/// is kept only once and all source split names are merged into
-/// [compatibleSplits].
+/// Previously deduped by `entry.id` — but the same move is frequently
+/// authored under different ids in different split-specific source
+/// files (e.g. 'arms_bw_plank_shoulder_taps' vs
+/// 'upper_bw_plank_shoulder_taps' for the identical "Plank Shoulder
+/// Taps" exercise, or 'chest_chair_incline_pushup' vs
+/// 'chest_triceps_chair_incline_push_ups' for "Incline Push-Up").
+/// Deduping by id let these slip through as separate entries, which a
+/// later `deduplicate_exercises.dart` script tried to catch by
+/// re-parsing the GENERATED .dart source as text — fragile hand-rolled
+/// parsing (brace/string counting) that's easy to get subtly wrong,
+/// and running a second time after the fact.
+///
+/// Deduping by normalized NAME here instead — on the real typed
+/// objects, before anything is written to disk — is simpler, can't
+/// have parser bugs, and means `deduplicate_exercises.dart` is no
+/// longer needed at all; delete it once this is in place.
 List<ExercisePoolEntry> _getCanonicalExercisesWithSplits() {
   final canonical = <String, _CanonicalExercise>{};
 
@@ -118,10 +131,11 @@ List<ExercisePoolEntry> _getCanonicalExercisesWithSplits() {
 
   for (final source in sources) {
     for (final entry in source.exercises) {
-      final existing = canonical[entry.id];
+      final key = _normalizeName(entry.name);
+      final existing = canonical[key];
 
       if (existing == null) {
-        canonical[entry.id] = _CanonicalExercise(
+        canonical[key] = _CanonicalExercise(
           entry: entry,
           compatibleSplits: {
             source.splitName,
@@ -129,6 +143,14 @@ List<ExercisePoolEntry> _getCanonicalExercisesWithSplits() {
         );
       } else {
         existing.compatibleSplits.add(source.splitName);
+
+        // Keep the alphabetically-first id as canonical so the id
+        // (and therefore the file's contents) stay stable across
+        // regenerations, regardless of the order `sources` is
+        // iterated in.
+        if (entry.id.compareTo(existing.entry.id) < 0) {
+          existing.entry = entry;
+        }
       }
     }
   }
@@ -141,6 +163,28 @@ List<ExercisePoolEntry> _getCanonicalExercisesWithSplits() {
         ),
       )
       .toList();
+}
+
+/// Normalizes an exercise name for duplicate detection: strips
+/// parenthetical/bracketed qualifiers and punctuation, collapses
+/// whitespace, lowercases.
+///
+/// Deliberately does NOT strip generic movement words (close/grip/
+/// wide/narrow/curl/etc. — as a since-removed version of this script
+/// once did) — doing so would conflate genuinely different exercises,
+/// e.g. "Close-Grip Bench Press" and "Wide-Grip Bench Press" would
+/// normalize to nearly the same string and wrongly merge. Two entries
+/// are only treated as the same exercise when their full name matches
+/// after this light normalization — same standard used for the
+/// generated file's per-file dedup at the id level, applied globally.
+String _normalizeName(String name) {
+  return name
+      .replaceAll(RegExp(r'\([^)]*\)'), '')
+      .replaceAll(RegExp(r'\[[^\]]*\]'), '')
+      .replaceAll(RegExp(r'[^a-zA-Z0-9\s]'), ' ')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim()
+      .toLowerCase();
 }
 
 /// Creates a new immutable [ExercisePoolEntry] containing the merged
@@ -335,12 +379,6 @@ void _writeExercise(
 }
 
 /// Safely generates a single-quoted Dart string.
-///
-/// Escapes characters that could otherwise break the generated source:
-/// - backslash
-/// - single quote
-/// - dollar sign interpolation
-/// - common control characters
 String _dartString(String value) {
   final escaped = value
       .replaceAll(r'\', r'\\')
@@ -387,6 +425,8 @@ class _CanonicalExercise {
     required Set<String> compatibleSplits,
   }) : compatibleSplits = {...compatibleSplits};
 
-  final ExercisePoolEntry entry;
+  /// Mutable — reassigned when a later duplicate wins the
+  /// alphabetically-first-id tiebreak (see _getCanonicalExercisesWithSplits).
+  ExercisePoolEntry entry;
   final Set<String> compatibleSplits;
 }
