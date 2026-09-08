@@ -12,7 +12,7 @@ import 'package:gymgenius/engines/workout_engine/shared/exercise_pool_entry.dart
 const List<ExercisePoolEntry> lowerBodyResistanceBandsExercises = [
   ExercisePoolEntry(
     id: 'lower_band_squats',
-    name: 'Band Squats',
+    name: 'Resistance Band Squats',
     category: ExerciseCategory.compound,
     difficulty: ExerciseDifficulty.beginner,
     equipmentType: EquipmentType.resistanceBands,
@@ -22,16 +22,18 @@ const List<ExercisePoolEntry> lowerBodyResistanceBandsExercises = [
       MuscleGroup.hamstrings
     ],
     secondaryMuscles: [],
-    usesWeight: true,
+    usesWeight: false,
     movementPattern: MovementPattern.squat,
     mechanics: Mechanics.closedChain,
     forceType: ForceType.push,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Quadriceps, Glutes, Hamstrings**\n\n'
-        '1. Stand on band, hold handles at shoulders.\n'
-        '2. Squat down with band tension.\n'
-        '3. Stand up.',
+        '1. Stand on a resistance band with feet shoulder‑width apart, holding the handles at shoulder height.\n'
+        '2. Perform a squat, keeping your chest up and core tight, while maintaining tension on the band.\n'
+        '3. Descend until your thighs are parallel to the floor.\n'
+        '4. Drive through your heels to stand back up, keeping the band under tension.\n'
+        '5. This adds resistance without heavy weights.',
   ),
   ExercisePoolEntry(
     id: 'lower_band_glute_bridges',
@@ -41,16 +43,18 @@ const List<ExercisePoolEntry> lowerBodyResistanceBandsExercises = [
     equipmentType: EquipmentType.resistanceBands,
     targetMuscles: [MuscleGroup.glutes],
     secondaryMuscles: [MuscleGroup.hamstrings],
-    usesWeight: true,
+    usesWeight: false,
     movementPattern: MovementPattern.hinge,
     mechanics: Mechanics.closedChain,
     forceType: ForceType.push,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Glutes**\n\n'
-        '1. Place band above knees.\n'
-        '2. Perform glute bridges.\n'
-        '3. Push knees apart against band.',
+        '1. Place a resistance band just above your knees, and lie on your back with knees bent, feet flat.\n'
+        '2. Drive through your heels to lift your hips, squeezing your glutes at the top.\n'
+        '3. Push your knees apart against the band to increase glute activation.\n'
+        '4. Lower your hips back down with control.\n'
+        '5. This variation adds extra resistance to the standard glute bridge.',
   ),
   ExercisePoolEntry(
     id: 'lower_band_lateral_walks',
@@ -60,16 +64,18 @@ const List<ExercisePoolEntry> lowerBodyResistanceBandsExercises = [
     equipmentType: EquipmentType.resistanceBands,
     targetMuscles: [MuscleGroup.glutes, MuscleGroup.adductors],
     secondaryMuscles: [],
-    usesWeight: true,
+    usesWeight: false,
     movementPattern: MovementPattern.core,
     mechanics: Mechanics.closedChain,
     forceType: ForceType.push,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.frontal,
     description: '**Target: Glutes, Adductors**\n\n'
-        '1. Place band above knees.\n'
-        '2. Step sideways, keeping tension.\n'
-        '3. Repeat in both directions.',
+        '1. Place a band just above your knees, stand with feet shoulder‑width apart.\n'
+        '2. Take small steps sideways, keeping tension on the band and maintaining a slight squat position.\n'
+        '3. Move 10–15 steps in one direction, then return.\n'
+        '4. Keep your chest up and core tight.\n'
+        '5. This is an excellent warm‑up or activation exercise.',
   ),
   ExercisePoolEntry(
     id: 'lower_band_clamshells',
@@ -79,17 +85,18 @@ const List<ExercisePoolEntry> lowerBodyResistanceBandsExercises = [
     equipmentType: EquipmentType.resistanceBands,
     targetMuscles: [MuscleGroup.glutes],
     secondaryMuscles: [],
-    usesWeight: true,
+    usesWeight: false,
     movementPattern: MovementPattern.core,
     mechanics: Mechanics.openChain,
     forceType: ForceType.push,
     laterality: Laterality.unilateral,
     planeOfMotion: PlaneOfMotion.frontal,
-    description: '**Target: Glutes**\n\n'
-        '1. Lie on side, band above knees.\n'
-        '2. Open knees like clamshell.\n'
-        '3. Squeeze glute, lower.\n'
-        '4. Switch sides.',
+    description: '**Target: Glutes (Medius)**\n\n'
+        '1. Lie on your side with knees bent at 90°, a band just above your knees.\n'
+        '2. Keeping your feet together, open your knees like a clamshell, squeezing your glutes.\n'
+        '3. Hold for a second at the top, then lower with control.\n'
+        '4. Complete all reps on one side before switching.\n'
+        '5. This targets the glute medius and is great for warm‑up.',
   ),
   ExercisePoolEntry(
     id: 'lower_band_leg_curls',
@@ -99,15 +106,17 @@ const List<ExercisePoolEntry> lowerBodyResistanceBandsExercises = [
     equipmentType: EquipmentType.resistanceBands,
     targetMuscles: [MuscleGroup.hamstrings],
     secondaryMuscles: [],
-    usesWeight: true,
+    usesWeight: false,
     movementPattern: MovementPattern.hinge,
     mechanics: Mechanics.openChain,
     forceType: ForceType.pull,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Hamstrings**\n\n'
-        '1. Anchor band at floor level.\n'
-        '2. Lie face down, loop band around ankles.\n'
-        '3. Curl heels towards glutes.',
+        '1. Anchor a resistance band at floor level behind you.\n'
+        '2. Lie face down, loop the band around your ankles.\n'
+        '3. Curl your heels towards your glutes, squeezing your hamstrings.\n'
+        '4. Return slowly, resisting the band.\n'
+        '5. This is a great home alternative to the leg curl machine.',
   ),
 ];

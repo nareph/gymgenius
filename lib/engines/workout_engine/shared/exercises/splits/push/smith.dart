@@ -30,9 +30,11 @@ const List<ExercisePoolEntry> pushSmithExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Chest, Shoulders, Triceps**\n\n'
-        '1. Lie on a flat bench under the Smith machine bar.\n'
-        '2. Unrack and lower the bar to your chest.\n'
-        '3. Press back up to full extension along the fixed path.',
+        '1. Place a flat bench under the Smith machine bar, align it so the bar lowers to your mid‑chest.\n'
+        '2. Lie back, grip the bar slightly wider than shoulder‑width, and unrack it.\n'
+        '3. Lower the bar to your chest, keeping your elbows at about 75°.\n'
+        '4. Press back up along the fixed path, squeezing your chest at the top.\n'
+        '5. The Smith machine provides stability, great for beginners or when going heavy.',
   ),
   ExercisePoolEntry(
     id: 'push_smith_incline_press',
@@ -50,8 +52,10 @@ const List<ExercisePoolEntry> pushSmithExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Upper Chest, Shoulders**\n\n'
-        '1. Set an incline bench under the Smith machine.\n'
-        '2. Press the bar up and down along the fixed path.',
+        '1. Set an incline bench (30–45°) under the Smith bar.\n'
+        '2. Lie back and grip the bar, lower it to your upper chest.\n'
+        '3. Press the bar up, focusing on the upper pectoral contraction.\n'
+        '4. Return with control along the fixed bar path.',
   ),
   ExercisePoolEntry(
     id: 'push_smith_decline_press',
@@ -69,8 +73,10 @@ const List<ExercisePoolEntry> pushSmithExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Lower Chest, Triceps**\n\n'
-        '1. Set a decline bench under the Smith machine.\n'
-        '2. Press the bar to your lower chest.',
+        '1. Set a decline bench under the Smith bar, secure your feet.\n'
+        '2. Lower the bar to your lower chest, keeping elbows tucked.\n'
+        '3. Press back up, squeezing your lower pecs.\n'
+        '4. The fixed path reduces shoulder stress.',
   ),
   ExercisePoolEntry(
     id: 'push_smith_shoulder_press',
@@ -88,8 +94,10 @@ const List<ExercisePoolEntry> pushSmithExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Shoulders, Triceps**\n\n'
-        '1. Sit on a bench under the Smith bar.\n'
-        '2. Press the bar overhead along the fixed path.',
+        '1. Place a bench (flat or with back support) under the Smith bar.\n'
+        '2. Sit with the bar at shoulder height, grip it shoulder‑width apart.\n'
+        '3. Press the bar overhead until your arms are fully extended.\n'
+        '4. Lower back to shoulder height with control.',
   ),
   ExercisePoolEntry(
     id: 'push_smith_close_grip_press',
@@ -107,7 +115,9 @@ const List<ExercisePoolEntry> pushSmithExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Triceps, Chest**\n\n'
-        '1. Grip the Smith bar with hands shoulder-width apart.\n'
-        '2. Perform a press with elbows tucked.',
+        '1. Use a flat bench, grip the Smith bar with hands shoulder‑width apart or slightly narrower.\n'
+        '2. Lower the bar to your lower chest, keeping your elbows tucked in.\n'
+        '3. Press back up, focusing on triceps and inner chest.\n'
+        '4. The fixed path helps maintain proper form.',
   ),
 ];

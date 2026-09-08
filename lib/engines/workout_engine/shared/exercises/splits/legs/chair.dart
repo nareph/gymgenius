@@ -25,9 +25,11 @@ const List<ExercisePoolEntry> legsChairExercises = [
     laterality: Laterality.unilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Quadriceps, Glutes**\n\n'
-        '1. Stand a couple of feet in front of a bench, resting one foot behind you on it.\n'
-        '2. Lower your back knee towards the floor by bending your front leg.\n'
-        '3. Push through your front heel to return to standing.',
+        '1. Stand about two feet in front of a sturdy chair or bench, with your back to it.\n'
+        '2. Place the top of your right foot on the bench, laces down.\n'
+        '3. Lower your hips by bending your left knee until your right knee nearly touches the floor.\n'
+        '4. Push through your left heel to return to the starting position.\n'
+        '5. Complete all reps on one side before switching.',
   ),
   ExercisePoolEntry(
     id: 'legs_chair_hip_thrusts',
@@ -44,9 +46,11 @@ const List<ExercisePoolEntry> legsChairExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Glutes, Hamstrings**\n\n'
-        '1. Sit with your upper back against a bench, knees bent, feet flat.\n'
-        '2. Drive your hips up towards the ceiling, squeezing your glutes.\n'
-        '3. Lower back down with control.',
+        '1. Sit on the floor with your upper back leaning against the edge of a chair or bench, knees bent, feet flat.\n'
+        '2. Place your arms on the chair for support, keep your chin tucked.\n'
+        '3. Drive through your heels to lift your hips up until your body forms a straight line from shoulders to knees.\n'
+        '4. Squeeze your glutes at the top, hold for a second.\n'
+        '5. Lower your hips back down with control.',
   ),
   ExercisePoolEntry(
     id: 'legs_chair_step_ups',
@@ -63,9 +67,11 @@ const List<ExercisePoolEntry> legsChairExercises = [
     laterality: Laterality.unilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Quadriceps, Glutes**\n\n'
-        '1. Stand in front of a sturdy elevated platform (chair/bench).\n'
-        '2. Step up with one foot, driving through the heel to stand on top.\n'
-        '3. Step back down with control and repeat.',
+        '1. Stand in front of a sturdy chair or step (height about 12–18 inches).\n'
+        '2. Place your right foot on the chair, drive through your heel to step up and bring your left foot to meet it.\n'
+        '3. Step back down with your right foot first, then the left.\n'
+        '4. Alternate the lead leg with each set.\n'
+        '5. Keep your chest up and core engaged throughout.',
   ),
   ExercisePoolEntry(
     id: 'legs_chair_single_leg_step_ups',
@@ -82,9 +88,11 @@ const List<ExercisePoolEntry> legsChairExercises = [
     laterality: Laterality.unilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Quadriceps, Glutes**\n\n'
-        '1. Stand on one leg on the bench, the other foot hovering.\n'
-        '2. Lower yourself by bending the standing leg until the heel of the hovering foot touches the floor.\n'
-        '3. Drive back up to standing on the bench.',
+        '1. Stand on the chair with your right foot, with the left foot hanging off the edge.\n'
+        '2. Slowly lower your body by bending your right knee until your left heel lightly touches the floor.\n'
+        '3. Drive through your right heel to return to the standing position on the chair.\n'
+        '4. Perform all reps on one leg before switching.\n'
+        '5. Keep your core tight and avoid using momentum.',
   ),
   ExercisePoolEntry(
     id: 'legs_chair_deep_squat_holds',
@@ -101,8 +109,10 @@ const List<ExercisePoolEntry> legsChairExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Quadriceps, Glutes**\n\n'
-        '1. Stand in front of a chair and squat down until you lightly touch the seat.\n'
-        '2. Hold for 2 seconds, then stand back up.\n'
-        '3. Focus on control and depth.',
+        '1. Stand in front of a chair (or bench) with feet shoulder‑width apart.\n'
+        '2. Squat down slowly until your glutes just barely touch the seat, then hold that position for 2–3 seconds.\n'
+        '3. Drive through your heels to stand back up.\n'
+        '4. This helps build control and depth in the squat.\n'
+        '5. Focus on keeping your chest up and knees tracking over your toes.',
   ),
 ];

@@ -16,7 +16,12 @@ const List<ExercisePoolEntry> chestTricepsHomemadeExercises = [
     forceType: ForceType.push,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: 'Press weights up from chest.',
+    description: '**Target: Chest**\n\n'
+        '1. Hold two homemade weights (e.g., sandbags, water jugs, backpacks) at shoulder level.\n'
+        '2. Lie on a flat surface (floor, bench, or bed).\n'
+        '3. Press the weights upward over your chest, keeping them stable.\n'
+        '4. Lower with control to the sides of your chest, then press back up.\n'
+        '5. Ensure the weights are secure to avoid dropping them.',
   ),
   ExercisePoolEntry(
     id: 'chesttri_homemade_tricep_extension',
@@ -32,7 +37,11 @@ const List<ExercisePoolEntry> chestTricepsHomemadeExercises = [
     forceType: ForceType.push,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: 'Extend arms overhead with weight.',
+    description: '**Target: Triceps**\n\n'
+        '1. Hold a single homemade weight with both hands overhead, arms straight.\n'
+        '2. Bend your elbows to lower the weight behind your head.\n'
+        '3. Extend your arms back up, squeezing your triceps.\n'
+        '4. Keep your elbows stationary and close to your head.',
   ),
   ExercisePoolEntry(
     id: 'chesttri_homemade_fly',
@@ -48,7 +57,12 @@ const List<ExercisePoolEntry> chestTricepsHomemadeExercises = [
     forceType: ForceType.push,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.transverse,
-    description: 'Arms extended, bring weights together in an arc.',
+    description: '**Target: Chest (Stretch & Isolation)**\n\n'
+        '1. Lie on your back, arms extended above your chest with homemade weights.\n'
+        '2. Keep a slight bend in your elbows.\n'
+        '3. Lower the weights out to the sides in a wide arc, feeling a stretch.\n'
+        '4. Bring them back together, squeezing your chest at the top.\n'
+        '5. Move slowly to avoid overextension.',
   ),
   ExercisePoolEntry(
     id: 'chesttri_homemade_skull_crusher',
@@ -64,7 +78,11 @@ const List<ExercisePoolEntry> chestTricepsHomemadeExercises = [
     forceType: ForceType.push,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: 'Lie on back, lower weights toward forehead, extend back up.',
+    description: '**Target: Triceps**\n\n'
+        '1. Lie on your back holding a homemade weight with both hands, arms extended above your chest.\n'
+        '2. Keeping your upper arms fixed, lower the weight towards your forehead by bending your elbows.\n'
+        '3. Extend your arms back up to the starting position.\n'
+        '4. Keep your elbows stationary to isolate the triceps.',
   ),
   ExercisePoolEntry(
     id: 'chesttri_homemade_diamond_push_press',
@@ -80,6 +98,10 @@ const List<ExercisePoolEntry> chestTricepsHomemadeExercises = [
     forceType: ForceType.push,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: 'Close-grip press for triceps and inner chest.',
+    description: '**Target: Chest, Triceps**\n\n'
+        '1. Hold two homemade weights close together, with palms facing each other (diamond grip).\n'
+        '2. Lie on a flat surface and press the weights upward from chest level.\n'
+        '3. Keep the weights pressed together throughout the movement to increase chest activation.\n'
+        '4. Lower with control and press back up.',
   ),
 ];

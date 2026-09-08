@@ -30,9 +30,12 @@ const List<ExercisePoolEntry> pushBarbellExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Chest, Shoulders, Triceps**\n\n'
-        '1. Lie on a flat bench, grip the barbell slightly wider than shoulder-width.\n'
-        '2. Unrack the bar and lower it to your mid-chest.\n'
-        '3. Press the bar back up to full extension.',
+        '1. Lie on a flat bench with your eyes directly under the bar.\n'
+        '2. Grip the barbell slightly wider than shoulder‑width, wrap your thumbs around.\n'
+        '3. Unrack the bar and hold it above your chest with arms fully extended.\n'
+        '4. Lower the bar to your mid‑chest, keeping your elbows at about 75°.\n'
+        '5. Drive the bar back up explosively, squeezing your chest at the top.\n'
+        '6. Keep your feet planted and your back slightly arched.',
   ),
   ExercisePoolEntry(
     id: 'push_bb_close_grip_bench_press',
@@ -50,9 +53,11 @@ const List<ExercisePoolEntry> pushBarbellExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Triceps, Chest**\n\n'
-        '1. Lie on a flat bench, grip the bar with hands shoulder-width apart.\n'
-        '2. Lower the bar to your lower chest, keeping elbows tucked in.\n'
-        '3. Press back up focusing on triceps.',
+        '1. Lie on a flat bench with your hands placed shoulder‑width apart or slightly narrower.\n'
+        '2. Grip the bar with a shoulder‑width grip, keeping your elbows tucked close to your body.\n'
+        '3. Lower the bar to your lower chest, just below the sternum.\n'
+        '4. Press back up, focusing on the triceps and inner chest contraction.\n'
+        '5. Keep your wrists straight and the bar over your wrists.',
   ),
   ExercisePoolEntry(
     id: 'push_bb_decline_barbell_bench_press',
@@ -70,13 +75,15 @@ const List<ExercisePoolEntry> pushBarbellExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Lower Chest, Triceps**\n\n'
-        '1. Lie on a decline bench, feet secured.\n'
-        '2. Lower the bar to your lower chest.\n'
-        '3. Press back up to full extension.',
+        '1. Set a decline bench and secure your feet under the pads.\n'
+        '2. Lie back and grip the bar slightly wider than shoulder‑width.\n'
+        '3. Unrack the bar and lower it to your lower chest, keeping your elbows at a comfortable angle.\n'
+        '4. Press the bar back up to full extension, squeezing your lower pectorals.\n'
+        '5. Control the descent and avoid bouncing the bar off your chest.',
   ),
   ExercisePoolEntry(
     id: 'push_bb_overhead_barbell_press',
-    name: 'Overhead Barbell Press',
+    name: 'Military Press',
     category: ExerciseCategory.compound,
     difficulty: ExerciseDifficulty.intermediate,
     equipmentType: EquipmentType.barbellAndPlates,
@@ -90,9 +97,10 @@ const List<ExercisePoolEntry> pushBarbellExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Shoulders, Triceps**\n\n'
-        '1. Stand holding a barbell at shoulder height, hands just outside shoulders.\n'
-        '2. Press the bar overhead until arms are fully extended.\n'
-        '3. Lower back to shoulder height with control.',
+        '1. Stand with feet shoulder‑width apart, holding the bar at shoulder height with an overhand grip, hands just outside your shoulders.\n'
+        '2. Keep your core tight and press the bar overhead until your arms are fully extended.\n'
+        '3. Pause briefly at the top, then lower the bar back to shoulder height with control.\n'
+        '4. Avoid arching your back excessively; keep the bar path vertical.',
   ),
   ExercisePoolEntry(
     id: 'push_bb_skull_crushers',
@@ -110,8 +118,9 @@ const List<ExercisePoolEntry> pushBarbellExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Triceps**\n\n'
-        '1. Lie on a bench holding a barbell above your chest.\n'
-        '2. Bend your elbows to lower the bar towards your forehead.\n'
-        '3. Extend back up without moving your upper arms.',
+        '1. Lie on a flat bench holding a barbell with an overhand grip, arms extended above your chest.\n'
+        '2. Keeping your upper arms fixed, bend your elbows to lower the bar towards your forehead (or just behind it).\n'
+        '3. Lower until the bar nearly touches your forehead, then extend your arms back to the starting position.\n'
+        '4. Keep your elbows stationary throughout the movement to isolate the triceps.',
   ),
 ];

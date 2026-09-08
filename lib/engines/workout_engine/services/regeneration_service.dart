@@ -1,3 +1,5 @@
+// lib/engines/workout_engine/services/regeneration_service.dart
+
 import 'package:gymgenius/core/logger/logger_service.dart';
 
 import 'package:gymgenius/domain/entities/exercise.dart';
@@ -68,8 +70,23 @@ class RegenerationService {
     final type = options['type'] as String?;
 
     Log.debug(
-      'regenerate() dispatching on type="$type", options: $options',
+      '''
+============================================================
+RegenerationService: START
+============================================================
+type: $type
+userId: ${profile.userId}
+previousProgramId: ${previousProgram.id}
+previousProgramName: ${previousProgram.name}
+options: $options
+============================================================
+''',
       tag: _tag,
+    );
+
+    _logProgramSnapshot(
+      program: previousProgram,
+      stage: 'BEFORE-REGENERATION',
     );
 
     if (type == 'specificDay') {
@@ -133,6 +150,17 @@ class RegenerationService {
     required String targetDay,
     required Map<String, dynamic> options,
   }) async {
+    Log.debug(
+      '''
+------------------------------------------------------------
+RegenerationService: SPECIFIC DAY
+------------------------------------------------------------
+targetDay: $targetDay
+------------------------------------------------------------
+''',
+      tag: _tag,
+    );
+
     final adjustedProfile = _profileWithAdjustments(
       profile,
       options,
@@ -153,9 +181,14 @@ class RegenerationService {
       return previousProgram;
     }
 
-    //-----------------------------------------------------------------------
+    Log.debug(
+      'Target day split: ${split.name}',
+      tag: _tag,
+    );
+
+    //--------------------------------------------------------------------------
     // Keep all exercise IDs from the other days.
-    //-----------------------------------------------------------------------
+    //--------------------------------------------------------------------------
 
     final weeklyUsedExerciseIds = <String>{};
 
@@ -165,15 +198,28 @@ class RegenerationService {
       }
 
       for (final exercise in entry.value) {
-        weeklyUsedExerciseIds.add(
-          exercise.id,
-        );
+        weeklyUsedExerciseIds.add(exercise.id);
       }
     }
 
-    //-----------------------------------------------------------------------
+    _logWeeklyUsedIds(
+      day: targetDay,
+      weeklyUsedExerciseIds: weeklyUsedExerciseIds,
+      context: 'BEFORE SPECIFIC-DAY GENERATION',
+    );
+
+    final previousDayExercises =
+        previousProgram.weeklySchedule[targetDay] ?? const <Exercise>[];
+
+    _logDayExercises(
+      day: targetDay,
+      exercises: previousDayExercises,
+      context: 'PREVIOUS DAY',
+    );
+
+    //--------------------------------------------------------------------------
     // Regenerate only the requested day.
-    //-----------------------------------------------------------------------
+    //--------------------------------------------------------------------------
 
     final newDayExercises = _dayGenerator.generate(
       split: split,
@@ -184,22 +230,48 @@ class RegenerationService {
       weeklyUsedExerciseIds: weeklyUsedExerciseIds,
     );
 
+    _logDayExercises(
+      day: targetDay,
+      exercises: newDayExercises,
+      context: 'NEW DAY AFTER GENERATION',
+    );
+
+    _logDuplicateIds(
+      exercises: newDayExercises,
+      context: 'SPECIFIC-DAY RESULT',
+    );
+
     final updatedSchedule = Map<String, List<Exercise>>.from(
       previousProgram.weeklySchedule,
     );
 
     updatedSchedule[targetDay] = newDayExercises;
 
+    final updatedProgram = previousProgram.copyWith(
+      weeklySchedule: updatedSchedule,
+    );
+
+    _logProgramSnapshot(
+      program: updatedProgram,
+      stage: 'AFTER-SPECIFIC-DAY-REGENERATION',
+    );
+
+    _logWeeklyDuplicateIds(
+      program: updatedProgram,
+      context: 'AFTER SPECIFIC-DAY REGENERATION',
+    );
+
     Log.debug(
-      'Regenerated only "$targetDay" '
-      '(${newDayExercises.length} exercises), '
-      'all other days kept as-is.',
+      '''
+RegenerationService: END SPECIFIC DAY
+day=$targetDay
+oldCount=${previousDayExercises.length}
+newCount=${newDayExercises.length}
+''',
       tag: _tag,
     );
 
-    return previousProgram.copyWith(
-      weeklySchedule: updatedSchedule,
-    );
+    return updatedProgram;
   }
 
   //===========================================================================
@@ -213,6 +285,18 @@ class RegenerationService {
     required String targetExerciseId,
     required Map<String, dynamic> options,
   }) async {
+    Log.debug(
+      '''
+------------------------------------------------------------
+RegenerationService: SINGLE EXERCISE
+------------------------------------------------------------
+targetDay: $targetDay
+targetExerciseId: $targetExerciseId
+------------------------------------------------------------
+''',
+      tag: _tag,
+    );
+
     final dayExercises = previousProgram.weeklySchedule[targetDay];
 
     if (dayExercises == null || dayExercises.isEmpty) {
@@ -240,6 +324,18 @@ class RegenerationService {
       return previousProgram;
     }
 
+    final targetExercise = dayExercises[targetIndex];
+
+    Log.debug(
+      '''
+Target exercise found:
+index: $targetIndex
+name: ${targetExercise.name}
+id: ${targetExercise.id}
+''',
+      tag: _tag,
+    );
+
     final adjustedProfile = _profileWithAdjustments(
       profile,
       options,
@@ -260,31 +356,52 @@ class RegenerationService {
       return previousProgram;
     }
 
-    //-----------------------------------------------------------------------
+    Log.debug(
+      'Target day split: ${split.name}',
+      tag: _tag,
+    );
+
+    //--------------------------------------------------------------------------
     // Collect every exercise ID already present in the program.
-    //-----------------------------------------------------------------------
+    //--------------------------------------------------------------------------
 
     final weeklyUsedExerciseIds = <String>{};
 
     for (final entry in previousProgram.weeklySchedule.entries) {
       for (final exercise in entry.value) {
-        weeklyUsedExerciseIds.add(
-          exercise.id,
-        );
+        weeklyUsedExerciseIds.add(exercise.id);
       }
     }
 
-    //-----------------------------------------------------------------------
+    _logWeeklyUsedIds(
+      day: targetDay,
+      weeklyUsedExerciseIds: weeklyUsedExerciseIds,
+      context: 'BEFORE SINGLE-EXERCISE GENERATION',
+    );
+
+    //--------------------------------------------------------------------------
     // Remove the exercise currently being replaced.
-    //-----------------------------------------------------------------------
+    //--------------------------------------------------------------------------
 
     weeklyUsedExerciseIds.remove(
       targetExerciseId,
     );
 
-    //-----------------------------------------------------------------------
+    Log.debug(
+      'Removed target exercise ID from weekly exclusion set: '
+      '$targetExerciseId',
+      tag: _tag,
+    );
+
+    _logWeeklyUsedIds(
+      day: targetDay,
+      weeklyUsedExerciseIds: weeklyUsedExerciseIds,
+      context: 'AFTER REMOVING TARGET EXERCISE',
+    );
+
+    //--------------------------------------------------------------------------
     // Generate one replacement.
-    //-----------------------------------------------------------------------
+    //--------------------------------------------------------------------------
 
     final replacementDay = _dayGenerator.generate(
       split: split,
@@ -294,6 +411,12 @@ class RegenerationService {
       intensityOverride: _intensityString(options),
       desiredCountOverride: 1,
       weeklyUsedExerciseIds: weeklyUsedExerciseIds,
+    );
+
+    _logDayExercises(
+      day: targetDay,
+      exercises: replacementDay,
+      context: 'REPLACEMENT RESULT',
     );
 
     if (replacementDay.isEmpty) {
@@ -307,9 +430,7 @@ class RegenerationService {
       return previousProgram;
     }
 
-    final updatedDayExercises = List<Exercise>.from(
-      dayExercises,
-    );
+    final updatedDayExercises = List<Exercise>.from(dayExercises);
 
     updatedDayExercises[targetIndex] = replacementDay.first;
 
@@ -319,6 +440,31 @@ class RegenerationService {
 
     updatedSchedule[targetDay] = updatedDayExercises;
 
+    final updatedProgram = previousProgram.copyWith(
+      weeklySchedule: updatedSchedule,
+    );
+
+    _logDayExercises(
+      day: targetDay,
+      exercises: updatedDayExercises,
+      context: 'UPDATED DAY',
+    );
+
+    _logDuplicateIds(
+      exercises: updatedDayExercises,
+      context: 'SINGLE-EXERCISE UPDATED DAY',
+    );
+
+    _logProgramSnapshot(
+      program: updatedProgram,
+      stage: 'AFTER-SINGLE-EXERCISE-REGENERATION',
+    );
+
+    _logWeeklyDuplicateIds(
+      program: updatedProgram,
+      context: 'AFTER SINGLE-EXERCISE REGENERATION',
+    );
+
     Log.debug(
       'Replaced exercise at index $targetIndex on "$targetDay" '
       '("${dayExercises[targetIndex].name}" '
@@ -327,18 +473,16 @@ class RegenerationService {
       tag: _tag,
     );
 
-    return previousProgram.copyWith(
-      weeklySchedule: updatedSchedule,
-    );
+    return updatedProgram;
   }
 
   int _findTargetExerciseIndex(
     List<Exercise> dayExercises,
     String targetExerciseId,
   ) {
-    //-----------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     // Primary lookup: canonical exercise ID.
-    //-----------------------------------------------------------------------
+    //--------------------------------------------------------------------------
 
     final byId = dayExercises.indexWhere(
       (exercise) => exercise.id == targetExerciseId,
@@ -348,13 +492,13 @@ class RegenerationService {
       return byId;
     }
 
-    //-----------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     // Backward-compatible fallback.
-    //-----------------------------------------------------------------------
+    //--------------------------------------------------------------------------
 
-    final match = RegExp(r'^exercise_(\d+)$').firstMatch(
-      targetExerciseId,
-    );
+    final match = RegExp(
+      r'^exercise_(\d+)$',
+    ).firstMatch(targetExerciseId);
 
     if (match != null) {
       final index = int.tryParse(
@@ -386,7 +530,13 @@ class RegenerationService {
     final keepStructure = options['keepStructure'] as bool? ?? true;
 
     Log.debug(
-      '_regenerateFullProgram: keepStructure=$keepStructure',
+      '''
+------------------------------------------------------------
+RegenerationService: FULL PROGRAM
+------------------------------------------------------------
+keepStructure: $keepStructure
+------------------------------------------------------------
+''',
       tag: _tag,
     );
 
@@ -396,18 +546,42 @@ class RegenerationService {
         tag: _tag,
       );
 
-      return _generationService.generate(
+      final program = await _generationService.generate(
         profile: adjustedProfile,
         previousProgram: previousProgram,
         options: options,
       );
+
+      _logProgramSnapshot(
+        program: program,
+        stage: 'AFTER-FULL-FROM-SCRATCH-REGENERATION',
+      );
+
+      _logWeeklyDuplicateIds(
+        program: program,
+        context: 'AFTER FULL FROM-SCRATCH REGENERATION',
+      );
+
+      return program;
     }
 
-    return _regenerateKeepingStructure(
+    final program = await _regenerateKeepingStructure(
       profile: adjustedProfile,
       previousProgram: previousProgram,
       options: options,
     );
+
+    _logProgramSnapshot(
+      program: program,
+      stage: 'AFTER-FULL-STRUCTURE-PRESERVING-REGENERATION',
+    );
+
+    _logWeeklyDuplicateIds(
+      program: program,
+      context: 'AFTER FULL STRUCTURE-PRESERVING REGENERATION',
+    );
+
+    return program;
   }
 
   Future<TrainingProgram> _regenerateKeepingStructure({
@@ -427,6 +601,11 @@ class RegenerationService {
           (entry) => entry.key,
         )
         .toList();
+
+    Log.debug(
+      'Workout days preserved: ${workoutDays.join(', ')}',
+      tag: _tag,
+    );
 
     if (workoutDays.isEmpty) {
       Log.warning(
@@ -449,6 +628,12 @@ class RegenerationService {
     final selectedSplit = _planSplitsForWorkoutDays(
       profile: profile,
       workoutDayCount: workoutDays.length,
+    );
+
+    Log.debug(
+      'Selected splits for regeneration: '
+      '${selectedSplit.map((split) => split.name).join(' → ')}',
+      tag: _tag,
     );
 
     if (selectedSplit.length != workoutDays.length) {
@@ -479,10 +664,15 @@ class RegenerationService {
     final intensityOverride = _intensityString(options);
 
     //-----------------------------------------------------------------------
-    // Track newly generated exercise IDs across the entire regenerated week.
+    // Track newly generated canonical exercise IDs across the entire week.
     //-----------------------------------------------------------------------
 
     final weeklyUsedExerciseIds = <String>{};
+
+    Log.debug(
+      'Weekly used exercise IDs initialized as empty.',
+      tag: _tag,
+    );
 
     //-----------------------------------------------------------------------
     // Regenerate each scheduled day.
@@ -490,14 +680,42 @@ class RegenerationService {
 
     for (var i = 0; i < workoutDays.length && i < selectedSplit.length; i++) {
       final day = workoutDays[i];
+      final split = selectedSplit[i];
 
       final previousExercises =
           previousProgram.weeklySchedule[day] ?? const <Exercise>[];
 
       final desiredCount = previousExercises.length;
 
+      Log.debug(
+        '''
+============================================================
+RegenerationService: GENERATING DAY
+------------------------------------------------------------
+day: $day
+split: ${split.name}
+dayIndex: $i
+desiredCount: $desiredCount
+weeklyUsedCount BEFORE: ${weeklyUsedExerciseIds.length}
+============================================================
+''',
+        tag: _tag,
+      );
+
+      _logWeeklyUsedIds(
+        day: day,
+        weeklyUsedExerciseIds: weeklyUsedExerciseIds,
+        context: 'BEFORE DAY GENERATION',
+      );
+
+      _logDayExercises(
+        day: day,
+        exercises: previousExercises,
+        context: 'PREVIOUS DAY BEFORE REGENERATION',
+      );
+
       final dayExercises = _dayGenerator.generate(
-        split: selectedSplit[i],
+        split: split,
         profile: profile,
         previousProgram: previousProgram,
         excludeMuscles: excludeMuscles,
@@ -506,6 +724,53 @@ class RegenerationService {
         weeklyUsedExerciseIds: weeklyUsedExerciseIds,
       );
 
+      //---------------------------------------------------------------------
+      // Log the result BEFORE adding IDs to the weekly set.
+      //---------------------------------------------------------------------
+
+      _logDayExercises(
+        day: day,
+        exercises: dayExercises,
+        context: 'NEW DAY RESULT',
+      );
+
+      _logDuplicateIds(
+        exercises: dayExercises,
+        context: 'NEW DAY RESULT',
+      );
+
+      //---------------------------------------------------------------------
+      // Detect collision with previous days immediately.
+      //---------------------------------------------------------------------
+
+      final duplicateWithPreviousDays = dayExercises
+          .where(
+            (exercise) => weeklyUsedExerciseIds.contains(
+              exercise.id,
+            ),
+          )
+          .toList();
+
+      if (duplicateWithPreviousDays.isNotEmpty) {
+        Log.warning(
+          '''
+⚠️ WEEKLY DUPLICATE DETECTED DURING REGENERATION
+day: $day
+split: ${split.name}
+duplicates:
+${duplicateWithPreviousDays.map(
+                (exercise) => '  - ${exercise.name} [id=${exercise.id}]',
+              ).join('\n')}
+''',
+          tag: _tag,
+        );
+      } else {
+        Log.debug(
+          '✅ No collision with previously generated days for "$day".',
+          tag: _tag,
+        );
+      }
+
       updatedSchedule[day] = dayExercises;
 
       //---------------------------------------------------------------------
@@ -513,11 +778,62 @@ class RegenerationService {
       //---------------------------------------------------------------------
 
       for (final exercise in dayExercises) {
+        final wasAlreadyUsed = weeklyUsedExerciseIds.contains(
+          exercise.id,
+        );
+
         weeklyUsedExerciseIds.add(
           exercise.id,
         );
+
+        if (wasAlreadyUsed) {
+          Log.warning(
+            'Exercise ID already existed in weekly set when adding: '
+            '${exercise.id} (${exercise.name})',
+            tag: _tag,
+          );
+        }
       }
+
+      //---------------------------------------------------------------------
+      // Log weekly state AFTER this day.
+      //---------------------------------------------------------------------
+
+      _logWeeklyUsedIds(
+        day: day,
+        weeklyUsedExerciseIds: weeklyUsedExerciseIds,
+        context: 'AFTER DAY GENERATION',
+      );
+
+      Log.debug(
+        '''
+RegenerationService: DAY COMPLETE
+day: $day
+selectedExercises: ${dayExercises.length}
+weeklyUsedCount AFTER: ${weeklyUsedExerciseIds.length}
+------------------------------------------------------------
+''',
+        tag: _tag,
+      );
     }
+
+    //-----------------------------------------------------------------------
+    // Build resulting program.
+    //-----------------------------------------------------------------------
+
+    final updatedProgram = previousProgram.copyWith(
+      weeklySchedule: updatedSchedule,
+    );
+
+    _logProgramSnapshot(
+      program: updatedProgram,
+      stage: 'FINAL STRUCTURE-PRESERVING RESULT',
+    );
+
+    _logWeeklyDuplicateIds(
+      program: updatedProgram,
+      context: 'FINAL STRUCTURE-PRESERVING RESULT',
+    );
 
     Log.debug(
       'Regenerated all ${workoutDays.length} days '
@@ -525,9 +841,7 @@ class RegenerationService {
       tag: _tag,
     );
 
-    return previousProgram.copyWith(
-      weeklySchedule: updatedSchedule,
-    );
+    return updatedProgram;
   }
 
   //===========================================================================
@@ -541,6 +855,16 @@ class RegenerationService {
     final focusMuscles = ProfileCoherence.resolveFocusAreas(
       goal: profile.training.goal,
       userFocusAreas: profile.training.focusAreas,
+    );
+
+    Log.debug(
+      '''
+Split planning:
+workoutDayCount: $workoutDayCount
+focusMuscles: ${focusMuscles.map((m) => m.displayName).join(', ')}
+experience: ${profile.training.experience.name}
+''',
+      tag: _tag,
     );
 
     return _splitPlanner.plan(
@@ -585,7 +909,23 @@ class RegenerationService {
       focusMuscles: focusMuscles,
     );
 
+    Log.debug(
+      '''
+Find split for day:
+targetDay: $targetDay
+resolvedWorkoutDays: ${workoutDays.join(', ')}
+resolvedSplits: ${selectedSplit.map((split) => split.name).join(' → ')}
+''',
+      tag: _tag,
+    );
+
     if (selectedSplit.length != workoutDays.length) {
+      Log.warning(
+        'Split count (${selectedSplit.length}) does not match '
+        'workout day count (${workoutDays.length}).',
+        tag: _tag,
+      );
+
       return null;
     }
 
@@ -599,7 +939,15 @@ class RegenerationService {
       return null;
     }
 
-    return selectedSplit[dayIndex];
+    final resolvedSplit = selectedSplit[dayIndex];
+
+    Log.debug(
+      'Resolved "$targetDay" -> split "${resolvedSplit.name}" '
+      '(index=$dayIndex)',
+      tag: _tag,
+    );
+
+    return resolvedSplit;
   }
 
   List<String> _resolveWorkoutDays({
@@ -635,8 +983,6 @@ class RegenerationService {
 
     //-----------------------------------------------------------------------
     // Focus muscles
-    //
-    // Explicit regeneration focus options REPLACE the existing selection.
     //-----------------------------------------------------------------------
 
     final focusRaw = options['focusMuscles'];
@@ -661,6 +1007,12 @@ class RegenerationService {
         );
 
         changed = true;
+
+        Log.debug(
+          'Profile adjustment: focusAreas changed to '
+          '${requested.map((m) => m.displayName).join(', ')}',
+          tag: _tag,
+        );
       }
     }
 
@@ -686,6 +1038,12 @@ class RegenerationService {
         );
 
         changed = true;
+
+        Log.debug(
+          'Profile adjustment: added equipment '
+          '${equipment.displayName}',
+          tag: _tag,
+        );
       }
     }
 
@@ -719,12 +1077,14 @@ class RegenerationService {
         );
 
         changed = true;
+
+        Log.debug(
+          'Profile adjustment: avoidedMuscles changed to '
+          '${merged.map((m) => m.displayName).join(', ')}',
+          tag: _tag,
+        );
       }
     }
-
-    //-----------------------------------------------------------------------
-    // Return original profile when nothing changed.
-    //-----------------------------------------------------------------------
 
     if (!changed) {
       return profile;
@@ -764,6 +1124,243 @@ class RegenerationService {
     Map<String, dynamic> options,
   ) {
     return options['intensity'] as String?;
+  }
+
+  //===========================================================================
+  // Debug logging
+  //===========================================================================
+
+  /// Logs the exercises of one day with their canonical IDs.
+  void _logDayExercises({
+    required String day,
+    required List<Exercise> exercises,
+    required String context,
+  }) {
+    final lines = <String>[
+      '',
+      'RegenerationService: $context',
+      'day: $day',
+      'exerciseCount: ${exercises.length}',
+      '------------------------------------------------------------',
+    ];
+
+    if (exercises.isEmpty) {
+      lines.add('  REST / EMPTY');
+
+      Log.debug(
+        lines.join('\n'),
+        tag: _tag,
+      );
+
+      return;
+    }
+
+    for (var i = 0; i < exercises.length; i++) {
+      final exercise = exercises[i];
+
+      lines.add(
+        '  ${i + 1}. ${exercise.name} '
+        '[id=${exercise.id}, sets=${exercise.sets}, reps=${exercise.reps}]',
+      );
+    }
+
+    Log.debug(
+      lines.join('\n'),
+      tag: _tag,
+    );
+  }
+
+  /// Logs the set of canonical exercise IDs already used by previous days.
+  void _logWeeklyUsedIds({
+    required String day,
+    required Set<String> weeklyUsedExerciseIds,
+    required String context,
+  }) {
+    final sortedIds = weeklyUsedExerciseIds.toList()..sort();
+
+    Log.debug(
+      '''
+RegenerationService: $context
+currentDay: $day
+weeklyUsedExerciseIds.count: ${sortedIds.length}
+weeklyUsedExerciseIds:
+${sortedIds.isEmpty ? '  <empty>' : sortedIds.map((id) => '  - $id').join('\n')}
+''',
+      tag: _tag,
+    );
+  }
+
+  /// Logs duplicate IDs inside a single workout day.
+  void _logDuplicateIds({
+    required List<Exercise> exercises,
+    required String context,
+  }) {
+    final counts = <String, int>{};
+    final names = <String, List<String>>{};
+
+    for (final exercise in exercises) {
+      counts.update(
+        exercise.id,
+        (value) => value + 1,
+        ifAbsent: () => 1,
+      );
+
+      names
+          .putIfAbsent(
+            exercise.id,
+            () => <String>[],
+          )
+          .add(
+            exercise.name,
+          );
+    }
+
+    final duplicates = counts.entries
+        .where(
+          (entry) => entry.value > 1,
+        )
+        .toList();
+
+    if (duplicates.isEmpty) {
+      Log.debug(
+        '✅ No duplicate exercise IDs within day. context=$context',
+        tag: _tag,
+      );
+
+      return;
+    }
+
+    final lines = <String>[
+      '⚠️ DUPLICATE EXERCISE IDS WITHIN DAY',
+      'context: $context',
+    ];
+
+    for (final duplicate in duplicates) {
+      lines.add(
+        '  - id=${duplicate.key}, '
+        'count=${duplicate.value}, '
+        'names=${names[duplicate.key]!.join(' | ')}',
+      );
+    }
+
+    Log.warning(
+      lines.join('\n'),
+      tag: _tag,
+    );
+  }
+
+  /// Logs duplicate canonical exercise IDs across the complete program.
+  void _logWeeklyDuplicateIds({
+    required TrainingProgram program,
+    required String context,
+  }) {
+    final occurrences = <String, List<String>>{};
+    final names = <String, String>{};
+
+    for (final entry in program.weeklySchedule.entries) {
+      final day = entry.key;
+
+      for (final exercise in entry.value) {
+        occurrences
+            .putIfAbsent(
+              exercise.id,
+              () => <String>[],
+            )
+            .add(day);
+
+        names[exercise.id] = exercise.name;
+      }
+    }
+
+    final duplicates = occurrences.entries
+        .where(
+          (entry) => entry.value.length > 1,
+        )
+        .toList();
+
+    if (duplicates.isEmpty) {
+      Log.debug(
+        '''
+✅ NO WEEKLY DUPLICATE EXERCISE IDS
+context: $context
+''',
+        tag: _tag,
+      );
+
+      return;
+    }
+
+    final lines = <String>[
+      '',
+      '⚠️⚠️⚠️ WEEKLY DUPLICATE EXERCISE IDS DETECTED',
+      'context: $context',
+      'programId: ${program.id}',
+      '------------------------------------------------------------',
+    ];
+
+    for (final duplicate in duplicates) {
+      lines.add(
+        '  - ${names[duplicate.key]} '
+        '[id=${duplicate.key}] '
+        'appears ${duplicate.value.length} times: '
+        '${duplicate.value.join(', ')}',
+      );
+    }
+
+    Log.warning(
+      lines.join('\n'),
+      tag: _tag,
+    );
+  }
+
+  /// Logs the complete generated/regenerated program.
+  void _logProgramSnapshot({
+    required TrainingProgram program,
+    required String stage,
+  }) {
+    final lines = <String>[
+      '',
+      'RegenerationService: Program snapshot [$stage]',
+      '============================================================',
+      'Program ID: ${program.id}',
+      'User ID: ${program.userId}',
+      'Name: ${program.name}',
+      'Goal: ${program.goal.value}',
+      'Experience: ${program.experience.name}',
+      'Duration: ${program.durationWeeks} weeks',
+      'Generator: ${program.generatorType.name}',
+      'Version: ${program.generatorVersion}',
+      '------------------------------------------------------------',
+    ];
+
+    for (final day in program.weeklySchedule.entries) {
+      if (day.value.isEmpty) {
+        lines.add('${day.key}: REST');
+        continue;
+      }
+
+      lines.add('${day.key.toUpperCase()}:');
+
+      for (var i = 0; i < day.value.length; i++) {
+        final exercise = day.value[i];
+
+        lines.add(
+          '  ${i + 1}. ${exercise.name} '
+          '[id=${exercise.id}, sets=${exercise.sets}, reps=${exercise.reps}]',
+        );
+      }
+
+      lines.add('');
+    }
+
+    lines.add(
+      '============================================================',
+    );
+
+    Log.debug(
+      lines.join('\n'),
+      tag: _tag,
+    );
   }
 
   //===========================================================================

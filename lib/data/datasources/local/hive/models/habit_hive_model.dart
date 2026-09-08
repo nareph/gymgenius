@@ -25,6 +25,12 @@ class HabitHiveModel extends HiveObject {
   @HiveField(6)
   DateTime updatedAt;
 
+  /// Nullable so habits saved before this field existed still
+  /// deserialize (Hive leaves it null; mapper treats null as "plain
+  /// yes/no habit", matching the previous behavior exactly).
+  @HiveField(7)
+  String? unit;
+
   HabitHiveModel({
     required this.id,
     required this.userId,
@@ -33,5 +39,6 @@ class HabitHiveModel extends HiveObject {
     required this.isActive,
     required this.createdAt,
     required this.updatedAt,
+    this.unit,
   });
 }

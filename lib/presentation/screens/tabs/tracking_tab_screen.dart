@@ -123,13 +123,9 @@ class TrackingView extends StatelessWidget {
             ),
           ),
           SliverToBoxAdapter(child: const Divider(height: 1)),
-          SliverFillRemaining(
-            hasScrollBody: false,
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              child: _buildBodyContent(context, viewModel),
-            ),
-          ),
+          SliverToBoxAdapter(
+            child: _buildBodyContent(context, viewModel),
+          )
         ],
       ),
     );

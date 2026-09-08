@@ -26,8 +26,10 @@ const List<ExercisePoolEntry> upperBodyCableExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Triceps**\n\n'
-        '1. Attach rope to high pulley.\n'
-        '2. Pull down to full extension.',
+        '1. Attach a rope or straight bar to a high pulley.\n'
+        '2. Grip the handle, stand close to the machine, and keep your elbows pinned to your sides.\n'
+        '3. Push the handle down until your arms are fully extended, squeezing your triceps at the bottom.\n'
+        '4. Return slowly to the starting position, resisting the weight.',
   ),
   ExercisePoolEntry(
     id: 'upper_cable_lat_pulldowns',
@@ -45,8 +47,10 @@ const List<ExercisePoolEntry> upperBodyCableExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Back, Biceps**\n\n'
-        '1. Sit at machine, grip wide.\n'
-        '2. Pull bar to upper chest.',
+        '1. Sit at the lat pulldown machine, adjusting the thigh pad so it holds your legs firmly.\n'
+        '2. Grip the bar with a wide overhand grip (palms facing forward).\n'
+        '3. Pull the bar down towards your upper chest, keeping your back straight and squeezing your lats.\n'
+        '4. Pause briefly at the bottom, then slowly release the bar back to the starting position with control.',
   ),
   ExercisePoolEntry(
     id: 'upper_cable_crossover',
@@ -64,8 +68,11 @@ const List<ExercisePoolEntry> upperBodyCableExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.transverse,
     description: '**Target: Chest**\n\n'
-        '1. Stand between two high pulleys.\n'
-        '2. Bring handles together in front of chest.',
+        '1. Set both pulleys at chest height and attach D‑handles.\n'
+        '2. Stand in the middle, grab the handles with palms facing down, and step forward into a split stance.\n'
+        '3. Keeping a slight bend in your elbows, bring your hands together in front of your chest.\n'
+        '4. Squeeze your chest at the peak contraction, then slowly return to the stretch position.\n'
+        '5. Control the negative phase for maximum muscle fibre recruitment.',
   ),
   ExercisePoolEntry(
     id: 'upper_cable_seated_row',
@@ -83,8 +90,10 @@ const List<ExercisePoolEntry> upperBodyCableExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Back, Biceps**\n\n'
-        '1. Sit at row station, knees slightly bent.\n'
-        '2. Pull handle to torso.',
+        '1. Sit at the cable row station with your knees slightly bent and feet braced.\n'
+        '2. Grip the handle (V‑bar or close‑grip) and extend your arms forward.\n'
+        '3. Pull the handle towards your torso, squeezing your shoulder blades together.\n'
+        '4. Pause, then slowly return to the starting position, keeping your back straight.',
   ),
   ExercisePoolEntry(
     id: 'upper_cable_face_pulls',
@@ -102,7 +111,9 @@ const List<ExercisePoolEntry> upperBodyCableExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.transverse,
     description: '**Target: Rear Delts, Traps**\n\n'
-        '1. Attach rope to high pulley.\n'
-        '2. Pull towards face, elbows high.',
+        '1. Attach a rope to a high pulley, set at about face height.\n'
+        '2. Grasp the rope with both hands and step back to create tension.\n'
+        '3. Pull the rope towards your face, keeping your elbows high and hands beside your ears.\n'
+        '4. Squeeze your shoulder blades together at the peak, then slowly return.',
   ),
 ];

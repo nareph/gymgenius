@@ -29,9 +29,11 @@ const List<ExercisePoolEntry> chestTricepsDipExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Chest, Triceps, Shoulders**\n\n'
-        '1. Hoist on parallel bars.\n'
-        '2. Lower body until elbows are at 90°.\n'
-        '3. Push back up.',
+        '1. Grip the parallel bars, lift yourself up with straight arms.\n'
+        '2. Lean your torso slightly forward to emphasise the chest, or keep upright for triceps focus.\n'
+        '3. Lower your body until your shoulders are below your elbows (or until a comfortable stretch).\n'
+        '4. Push back up to the starting position, locking out at the top.\n'
+        '5. Keep your legs bent behind you to maintain balance.',
   ),
   ExercisePoolEntry(
     id: 'chest_triceps_dip_weighted_dips',
@@ -53,8 +55,10 @@ const List<ExercisePoolEntry> chestTricepsDipExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Chest, Triceps, Shoulders**\n\n'
-        '1. Attach weight to a dip belt.\n'
-        '2. Perform dips with extra load.',
+        '1. Attach a dip belt with a weight plate, or hold a dumbbell between your legs.\n'
+        '2. Perform dips with a forward lean (for chest) or upright (for triceps).\n'
+        '3. Lower until you feel a deep stretch, then press up powerfully.\n'
+        '4. Use a spotter or safety pins if going to failure.',
   ),
   ExercisePoolEntry(
     id: 'chest_triceps_dip_chest_dips',
@@ -71,9 +75,10 @@ const List<ExercisePoolEntry> chestTricepsDipExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Chest**\n\n'
-        '1. Lean forward slightly on the dip bars.\n'
-        '2. Lower until your chest is stretched.\n'
-        '3. Press up.',
+        '1. Lean your torso forward (about 20–30°) while gripping the parallel bars.\n'
+        '2. Lower your body until you feel a stretch in your chest, keeping your elbows slightly flared.\n'
+        '3. Push back up, squeezing your chest at the top.\n'
+        '4. Keep your legs bent behind you and your core tight.',
   ),
   ExercisePoolEntry(
     id: 'chest_triceps_dip_tricep_dips',
@@ -90,9 +95,10 @@ const List<ExercisePoolEntry> chestTricepsDipExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Triceps**\n\n'
-        '1. Keep torso upright on the dip bars.\n'
-        '2. Lower until elbows are at 90°.\n'
-        '3. Press up.',
+        '1. Keep your torso as upright as possible on the bars.\n'
+        '2. Lower your body until your elbows form a 90° angle, keeping them close to your sides.\n'
+        '3. Push back up to full extension, squeezing your triceps.\n'
+        '4. Avoid leaning forward to keep the focus on the triceps.',
   ),
   ExercisePoolEntry(
     id: 'chest_triceps_dip_band_assisted_dips',
@@ -109,8 +115,8 @@ const List<ExercisePoolEntry> chestTricepsDipExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Chest, Triceps**\n\n'
-        '1. Loop a band around the dip bars.\n'
-        '2. Place knees or feet in the band for assistance.\n'
-        '3. Perform dips with reduced load.',
+        '1. Loop a resistance band around the dip bars and place a knee or foot in the band for support.\n'
+        '2. Perform dips with a forward lean or upright, using the band to assist at the bottom of the movement.\n'
+        '3. As you gain strength, use a thinner band or perform without assistance.',
   ),
 ];

@@ -26,10 +26,11 @@ const List<ExercisePoolEntry> lowerBodyCableExercises = [
     laterality: Laterality.unilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Glutes**\n\n'
-        '1. Attach ankle strap to low pulley.\n'
-        '2. Kick leg back and up.\n'
-        '3. Squeeze glute, return with control.\n'
-        '4. Switch sides.',
+        '1. Attach an ankle strap to a low pulley on a cable machine and secure it around your right ankle.\n'
+        '2. Stand facing the machine, holding the support bar for balance, with your weight on your left leg.\n'
+        '3. Keeping your knee slightly bent, kick your right leg straight back, squeezing your glute at the top.\n'
+        '4. Return with control to the starting position.\n'
+        '5. Complete all reps on one side before switching.',
   ),
   ExercisePoolEntry(
     id: 'lower_cable_pull_through',
@@ -47,9 +48,11 @@ const List<ExercisePoolEntry> lowerBodyCableExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Glutes, Hamstrings**\n\n'
-        '1. Attach rope to low pulley.\n'
-        '2. Stand facing away, pull rope through legs.\n'
-        '3. Drive hips forward to stand.',
+        '1. Attach a rope to a low pulley and stand facing away from the machine, feet shoulder‑width apart.\n'
+        '2. Hinge at the hips, reaching back between your legs to grip the rope, keeping your back flat.\n'
+        '3. Drive your hips forward to stand up, squeezing your glutes at the top.\n'
+        '4. Lower the rope back through your legs with control.\n'
+        '5. Keep your core braced and your knees slightly bent throughout.',
   ),
   ExercisePoolEntry(
     id: 'lower_cable_hip_adduction',
@@ -67,9 +70,11 @@ const List<ExercisePoolEntry> lowerBodyCableExercises = [
     laterality: Laterality.unilateral,
     planeOfMotion: PlaneOfMotion.frontal,
     description: '**Target: Adductors**\n\n'
-        '1. Attach ankle strap to low pulley.\n'
-        '2. Stand sideways, pull leg across body.\n'
-        '3. Return with control, switch sides.',
+        '1. Attach an ankle strap to a low pulley on the side of the machine.\n'
+        '2. Stand with your side facing the machine, secure the strap to the ankle of the leg farthest from the pulley.\n'
+        '3. Keeping your core tight, pull your leg across your body (adduction), squeezing your inner thigh at the peak.\n'
+        '4. Return slowly with control.\n'
+        '5. Complete all reps on one side before switching.',
   ),
   ExercisePoolEntry(
     id: 'lower_cable_hip_abduction',
@@ -87,9 +92,11 @@ const List<ExercisePoolEntry> lowerBodyCableExercises = [
     laterality: Laterality.unilateral,
     planeOfMotion: PlaneOfMotion.frontal,
     description: '**Target: Glutes**\n\n'
-        '1. Attach ankle strap to low pulley.\n'
-        '2. Stand sideways, pull leg away.\n'
-        '3. Return with control, switch sides.',
+        '1. Attach an ankle strap to a low pulley on the side of the machine.\n'
+        '2. Stand with your side facing the machine, secure the strap to the ankle of the leg closest to the pulley.\n'
+        '3. Keeping your core tight, pull your leg away from your body (abduction), squeezing your glute medius at the peak.\n'
+        '4. Return slowly with control.\n'
+        '5. Complete all reps on one side before switching.',
   ),
   ExercisePoolEntry(
     id: 'lower_cable_squat_pulldown',
@@ -107,8 +114,10 @@ const List<ExercisePoolEntry> lowerBodyCableExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Quadriceps, Glutes**\n\n'
-        '1. Set cable at chest height.\n'
-        '2. Squat while pulling cable towards you.\n'
-        '3. Stand up and return cable.',
+        '1. Set a cable at chest height with a rope or bar attachment.\n'
+        '2. Take a slight step forward, hold the handle with both hands, and stand with feet shoulder‑width apart.\n'
+        '3. Squat down as you would in a bodyweight squat, keeping your chest up and core engaged.\n'
+        '4. As you stand up, pull the cable towards your chest to add resistance.\n'
+        '5. Perform the movement in a controlled manner, squeezing your glutes at the top.',
   ),
 ];

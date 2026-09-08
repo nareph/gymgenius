@@ -29,9 +29,11 @@ const List<ExercisePoolEntry> lowerBodyBodyweightExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Quadriceps, Glutes, Hamstrings**\n\n'
-        '1. Stand feet apart.\n'
-        '2. Squat down.\n'
-        '3. Stand up.',
+        '1. Stand with feet shoulder‑width apart, toes slightly pointed out, arms extended forward for balance.\n'
+        '2. Push your hips back and bend your knees, lowering your body as if sitting in a chair.\n'
+        '3. Go as low as you can while keeping your chest up and back straight (ideally thighs parallel or below).\n'
+        '4. Drive through your heels to return to the starting position, squeezing your glutes at the top.\n'
+        '5. Keep your knees tracking over your toes and avoid letting them cave inward.',
   ),
   ExercisePoolEntry(
     id: 'lower_bw_jump_squats',
@@ -51,10 +53,12 @@ const List<ExercisePoolEntry> lowerBodyBodyweightExercises = [
     forceType: ForceType.push,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Quadriceps, Glutes, Hamstrings**\n\n'
-        '1. Squat down.\n'
-        '2. Explosively jump up.\n'
-        '3. Land softly and repeat.',
+    description: '**Target: Quadriceps, Glutes, Hamstrings (Power)**\n\n'
+        '1. Start in a squat position with feet shoulder‑width apart.\n'
+        '2. Squat down until your thighs are parallel to the floor, then explode upward, jumping as high as possible.\n'
+        '3. Land softly with bent knees to absorb the impact, immediately descending into the next squat.\n'
+        '4. Keep your chest up and core tight throughout.\n'
+        '5. Focus on explosive power and controlled landings to protect your joints.',
   ),
   ExercisePoolEntry(
     id: 'lower_bw_lunges',
@@ -75,9 +79,11 @@ const List<ExercisePoolEntry> lowerBodyBodyweightExercises = [
     laterality: Laterality.alternating,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Quadriceps, Glutes, Hamstrings**\n\n'
-        '1. Step forward.\n'
-        '2. Lower hips.\n'
-        '3. Push back.',
+        '1. Stand upright with feet hip‑width apart, hands on your hips.\n'
+        '2. Step forward with your right leg, lowering your hips until both knees are bent at 90° (front knee over ankle, back knee hovering just above the floor).\n'
+        '3. Push through your front heel to return to the starting position.\n'
+        '4. Repeat with the left leg, alternating each rep.\n'
+        '5. Keep your torso upright and core engaged throughout.',
   ),
   ExercisePoolEntry(
     id: 'lower_bw_side_lunges',
@@ -98,9 +104,11 @@ const List<ExercisePoolEntry> lowerBodyBodyweightExercises = [
     laterality: Laterality.alternating,
     planeOfMotion: PlaneOfMotion.frontal,
     description: '**Target: Inner Thighs, Glutes**\n\n'
-        '1. Step to the side, bending the lead knee.\n'
-        '2. Push back to center.\n'
-        '3. Alternate sides.',
+        '1. Stand with feet together, then take a wide step to the right with your right foot.\n'
+        '2. Bend your right knee and push your hips back, lowering into a lunge while keeping your left leg straight.\n'
+        '3. Push off your right foot to return to the starting position.\n'
+        '4. Repeat on the left side, alternating.\n'
+        '5. Keep your chest up and back straight throughout the movement.',
   ),
   ExercisePoolEntry(
     id: 'lower_bw_glute_bridges',
@@ -117,9 +125,11 @@ const List<ExercisePoolEntry> lowerBodyBodyweightExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Glutes**\n\n'
-        '1. Lie on back, knees bent.\n'
-        '2. Lift hips off floor.\n'
-        '3. Squeeze glutes at top.',
+        '1. Lie on your back with your knees bent, feet flat on the floor, hip‑width apart.\n'
+        '2. Place your arms at your sides, palms down.\n'
+        '3. Press through your heels to lift your hips off the floor until your body forms a straight line from shoulders to knees.\n'
+        '4. Squeeze your glutes at the top and hold for a second.\n'
+        '5. Lower your hips back down with control.',
   ),
   ExercisePoolEntry(
     id: 'lower_bw_single_leg_glute_bridges',
@@ -135,10 +145,12 @@ const List<ExercisePoolEntry> lowerBodyBodyweightExercises = [
     forceType: ForceType.push,
     laterality: Laterality.unilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Glutes (unilateral)**\n\n'
-        '1. Lie on back, one foot on floor, other leg extended.\n'
-        '2. Lift hips off floor using the grounded leg.\n'
-        '3. Squeeze glute, lower with control.',
+    description: '**Target: Glutes (Unilateral)**\n\n'
+        '1. Lie on your back with one foot flat on the floor, the other leg extended straight up.\n'
+        '2. Drive through the heel of the grounded foot to lift your hips off the floor.\n'
+        '3. Squeeze your glute at the top, then lower with control.\n'
+        '4. Complete all reps on one side before switching.\n'
+        '5. Keep your core braced to maintain stability.',
   ),
   ExercisePoolEntry(
     id: 'lower_bw_sumo_squats',
@@ -159,8 +171,10 @@ const List<ExercisePoolEntry> lowerBodyBodyweightExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.frontal,
     description: '**Target: Quadriceps, Glutes, Adductors**\n\n'
-        '1. Stand with feet wide, toes pointed out.\n'
-        '2. Squat down, keeping chest up.\n'
-        '3. Push through heels to stand.',
+        '1. Stand with feet wider than shoulder‑width apart, toes pointed out at about 45°.\n'
+        '2. Push your hips back and lower your body straight down, keeping your chest up and back straight.\n'
+        '3. Descend until your thighs are at least parallel to the floor, feeling the stretch in your inner thighs.\n'
+        '4. Drive through your heels to stand back up, squeezing your glutes at the top.\n'
+        '5. Keep your knees tracking over your toes to avoid strain.',
   ),
 ];

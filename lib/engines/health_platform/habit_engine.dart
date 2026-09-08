@@ -40,27 +40,27 @@ class HabitEngine {
       );
     }
 
-    final todayLogs = logs.where((l) => l.dayKey == dayKey && l.completed);
-    final completedIds = todayLogs.map((l) => l.habitId).toSet();
-    final dueToday = active.where((h) {
-      if (h.frequency == HabitFrequency.daily) return true;
-      // Weekly: count as due if not completed yet this calendar week.
-      final weekStart = dayKey.subtract(Duration(days: dayKey.weekday - 1));
-      final weekLogs = logs.where(
-        (l) =>
-            l.habitId == h.id &&
-            l.completed &&
-            !l.dayKey.isBefore(weekStart) &&
-            !l.dayKey.isAfter(dayKey),
-      );
-      return weekLogs.isEmpty;
-    }).toList();
+    final weekStart = dayKey.subtract(Duration(days: dayKey.weekday - 1));
 
-    final completedToday =
-        dueToday.where((h) => completedIds.contains(h.id)).length;
-    final percent = dueToday.isEmpty
-        ? 100
-        : ((completedToday / dueToday.length) * 100).round();
+    // Previously this went through a `dueToday` list that EXCLUDED a
+    // weekly habit once it had already been completed this week (it
+    // was meant to answer "does this still need action?"), then
+    // counted completions as the intersection of `dueToday` and
+    // "completed today" logs. That's a self-defeating definition for
+    // weekly habits: completing one removes it from `dueToday`, so it
+    // could never be counted in `completedToday` — the header stayed
+    // stuck at e.g. "0/1" even right after saving a completion.
+    //
+    // completedToday now directly asks each active habit "is it
+    // completed for its current period?" (today for daily, this
+    // calendar week for weekly) — no intermediate "still due" list to
+    // accidentally exclude it from its own count.
+    final completedToday = active
+        .where((h) => _isCompletedForCurrentPeriod(h, logs, dayKey, weekStart))
+        .length;
+
+    final percent =
+        active.isEmpty ? 100 : ((completedToday / active.length) * 100).round();
 
     final streaks = <String, int>{};
     var longest = 0;
@@ -77,9 +77,32 @@ class HabitEngine {
       longestCurrentStreak: longest,
       streakByHabitId: streaks,
       reasons: [
-        '$completedToday/${dueToday.length} habits done today',
+        '$completedToday/${active.length} habits done today',
         if (longest > 0) 'Longest current streak: $longest days',
       ],
+    );
+  }
+
+  bool _isCompletedForCurrentPeriod(
+    Habit habit,
+    List<HabitLog> logs,
+    DateTime dayKey,
+    DateTime weekStart,
+  ) {
+    if (habit.frequency == HabitFrequency.daily) {
+      return logs.any(
+        (l) => l.habitId == habit.id && l.completed && l.dayKey == dayKey,
+      );
+    }
+
+    // Weekly: completed if there's any completion from the start of
+    // this calendar week through today.
+    return logs.any(
+      (l) =>
+          l.habitId == habit.id &&
+          l.completed &&
+          !l.dayKey.isBefore(weekStart) &&
+          !l.dayKey.isAfter(dayKey),
     );
   }
 

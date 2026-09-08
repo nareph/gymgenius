@@ -1,6 +1,5 @@
-import 'logged_exercise.dart';
+import 'package:gymgenius/domain/entities/logged_exercise.dart';
 
-/// Domain Entity representing a completed workout session.
 class WorkoutLog {
   final String id;
   final String userId;
@@ -11,9 +10,9 @@ class WorkoutLog {
   final DateTime endedAt;
   final int durationSeconds;
   final int? caloriesEstimate;
-  final double? volume; // total kg lifted
+  final double? volume;
   final double? averageRPE;
-  final int completionScore; // 0-100
+  final int completionScore;
   final List<LoggedExercise> exercises;
   final DateTime savedAt;
 
@@ -34,8 +33,12 @@ class WorkoutLog {
     required this.savedAt,
   });
 
+  bool get isCompleted => completionScore > 0;
+
   int get totalExercises => exercises.length;
+
   int get completedExercises => exercises.where((e) => e.completed).length;
+
   double get exerciseCompletionRate =>
       totalExercises > 0 ? completedExercises / totalExercises : 0;
 

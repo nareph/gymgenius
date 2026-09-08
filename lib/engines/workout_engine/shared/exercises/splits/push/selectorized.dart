@@ -30,9 +30,10 @@ const List<ExercisePoolEntry> pushSelectorizedExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Chest, Shoulders, Triceps**\n\n'
-        '1. Sit at the chest press machine, grips at chest height.\n'
-        '2. Press forward until arms are extended.\n'
-        '3. Return slowly to the starting position.',
+        '1. Sit on the chest press machine and adjust the seat so the handles are at chest height.\n'
+        '2. Grip the handles and press forward until your arms are fully extended.\n'
+        '3. Squeeze your chest at the end of the movement, then return slowly to the starting position.\n'
+        '4. Keep your back flat against the pad throughout the set.',
   ),
   ExercisePoolEntry(
     id: 'push_selector_machine_shoulder_press',
@@ -50,9 +51,10 @@ const List<ExercisePoolEntry> pushSelectorizedExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Shoulders, Triceps**\n\n'
-        '1. Sit at the shoulder press machine, grips at shoulder height.\n'
-        '2. Press upward until arms are extended.\n'
-        '3. Lower with control.',
+        '1. Sit at the shoulder press machine and adjust the seat so the handles are at shoulder height.\n'
+        '2. Press the handles upward until your arms are fully extended.\n'
+        '3. Pause at the top, then lower with control.\n'
+        '4. Keep your head and back against the pad for support.',
   ),
   ExercisePoolEntry(
     id: 'push_selector_pec_deck_fly',
@@ -70,9 +72,10 @@ const List<ExercisePoolEntry> pushSelectorizedExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.transverse,
     description: '**Target: Chest**\n\n'
-        '1. Sit on the pec deck machine, forearms against the pads.\n'
-        '2. Squeeze your chest to bring the pads together.\n'
-        '3. Return with control.',
+        '1. Sit on the pec deck machine with your forearms against the pads and your elbows at chest height.\n'
+        '2. Squeeze your chest to bring the pads together in front of you.\n'
+        '3. Hold the contraction for a second, then return slowly, feeling the stretch.\n'
+        '4. Keep your back flat and your head against the pad.',
   ),
   ExercisePoolEntry(
     id: 'push_selector_incline_chest_press',
@@ -90,9 +93,10 @@ const List<ExercisePoolEntry> pushSelectorizedExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Upper Chest, Shoulders**\n\n'
-        '1. Sit at the incline chest press machine.\n'
-        '2. Press forward and up.\n'
-        '3. Return with control.',
+        '1. Sit at the incline chest press machine and adjust the seat so the handles are at upper chest level.\n'
+        '2. Press the handles forward and upward, focusing on the upper pectoral contraction.\n'
+        '3. Return slowly with control.\n'
+        '4. Keep your back flat against the pad.',
   ),
   ExercisePoolEntry(
     id: 'push_selector_dips_assisted',
@@ -113,8 +117,9 @@ const List<ExercisePoolEntry> pushSelectorizedExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Chest, Triceps, Shoulders**\n\n'
-        '1. Kneel on the assisted dip machine, grip the handles.\n'
-        '2. Lower yourself by bending elbows.\n'
-        '3. Press back up.',
+        '1. Kneel on the assisted dip machine platform and grip the handles.\n'
+        '2. Lower your body by bending your elbows, allowing the machine to assist you.\n'
+        '3. Press back up to the starting position.\n'
+        '4. Adjust the assistance weight as needed to progress.',
   ),
 ];

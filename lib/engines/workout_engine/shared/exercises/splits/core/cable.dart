@@ -26,8 +26,11 @@ final List<ExercisePoolEntry> coreCableExercises = [
     laterality: Laterality.alternating,
     planeOfMotion: PlaneOfMotion.transverse,
     description: '**Target: Core, Shoulders**\n\n'
-        '1. Set cable at high or low position.\n'
-        '2. Chop diagonally across body.',
+        '1. Set the cable at the highest position and attach a rope or D‑handle.\n'
+        '2. Stand with your side to the machine, feet shoulder‑width apart, and grip the handle with both hands.\n'
+        '3. Pull the handle diagonally downward across your body, rotating your torso and squeezing your core.\n'
+        '4. Control the movement back to the starting position.\n'
+        '5. Complete all reps on one side before switching to the other.',
   ),
   ExercisePoolEntry(
     id: 'core_cable_crunches',
@@ -45,9 +48,11 @@ final List<ExercisePoolEntry> coreCableExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Abs**\n\n'
-        '1. Kneel below a high pulley, rope behind your head.\n'
-        '2. Crunch down, bringing elbows towards knees.\n'
-        '3. Return with control.',
+        '1. Attach a rope to a high pulley and kneel facing the machine, holding the rope behind your head.\n'
+        '2. Keep your elbows pointing toward the floor and your core engaged.\n'
+        '3. Crunch down by curling your upper body toward your knees, squeezing your abs.\n'
+        '4. Return slowly to the starting position, controlling the resistance.\n'
+        '5. Avoid pulling with your arms; the movement should come from your core.',
   ),
   ExercisePoolEntry(
     id: 'core_cable_pallof_press',
@@ -65,10 +70,11 @@ final List<ExercisePoolEntry> coreCableExercises = [
     laterality: Laterality.unilateral,
     planeOfMotion: PlaneOfMotion.transverse,
     description: '**Target: Core (anti-rotation)**\n\n'
-        '1. Set cable at chest height.\n'
-        '2. Stand sideways, hold handle with both hands.\n'
-        '3. Press straight out, resisting rotation.\n'
-        '4. Return and switch sides.',
+        '1. Set the cable at chest height and attach a D‑handle.\n'
+        '2. Stand sideways to the machine, feet shoulder‑width apart, and grip the handle with both hands.\n'
+        '3. Press the handle straight out in front of you, resisting the rotational pull of the cable.\n'
+        '4. Hold for a second, then return slowly with control.\n'
+        '5. Complete all reps on one side before switching.',
   ),
   ExercisePoolEntry(
     id: 'core_cable_oblique_twist',
@@ -86,9 +92,11 @@ final List<ExercisePoolEntry> coreCableExercises = [
     laterality: Laterality.unilateral,
     planeOfMotion: PlaneOfMotion.transverse,
     description: '**Target: Obliques**\n\n'
-        '1. Set cable at waist height with a D-handle.\n'
-        '2. Stand perpendicular, rotate torso away.\n'
-        '3. Return and switch sides.',
+        '1. Set the cable at waist height and attach a D‑handle.\n'
+        '2. Stand perpendicular to the machine, feet shoulder‑width apart, and grip the handle with both hands.\n'
+        '3. Rotate your torso away from the machine, keeping your arms straight and core tight.\n'
+        '4. Control the movement back to the starting position.\n'
+        '5. Complete all reps on one side before switching.',
   ),
   ExercisePoolEntry(
     id: 'core_cable_side_bend',
@@ -106,8 +114,10 @@ final List<ExercisePoolEntry> coreCableExercises = [
     laterality: Laterality.unilateral,
     planeOfMotion: PlaneOfMotion.frontal,
     description: '**Target: Obliques**\n\n'
-        '1. Set cable at low position with a D-handle.\n'
-        '2. Stand sideways, hold handle with one hand.\n'
-        '3. Bend torso sideways, then return.',
+        '1. Set the cable at the lowest position and attach a D‑handle.\n'
+        '2. Stand sideways to the machine, holding the handle with one hand at your side.\n'
+        '3. Bend your torso sideways toward the machine, then return to upright using your obliques.\n'
+        '4. Perform the movement slowly and with control.\n'
+        '5. Complete all reps on one side before switching.',
   ),
 ];

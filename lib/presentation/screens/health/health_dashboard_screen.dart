@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gymgenius/di/injection.dart';
+import 'package:gymgenius/domain/entities/habit.dart';
 import 'package:gymgenius/domain/enums/blood_pressure_category.dart';
 import 'package:gymgenius/domain/enums/energy_level.dart';
 import 'package:gymgenius/domain/enums/glucose_category.dart';
@@ -7,6 +8,7 @@ import 'package:gymgenius/domain/enums/glucose_context.dart';
 import 'package:gymgenius/domain/enums/habit_frequency.dart';
 import 'package:gymgenius/domain/enums/stress_level.dart';
 import 'package:gymgenius/presentation/viewmodels/health_platform_viewmodel.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 class HealthDashboardScreen extends StatelessWidget {
@@ -39,7 +41,8 @@ class _HealthDashboardView extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Health Platform')),
       body: switch (vm.state) {
-        HealthPlatformUiState.loading || HealthPlatformUiState.initial =>
+        HealthPlatformUiState.loading ||
+        HealthPlatformUiState.initial =>
           const Center(child: CircularProgressIndicator()),
         HealthPlatformUiState.error => Center(
             child: Padding(
@@ -433,14 +436,18 @@ class _HabitsCard extends StatelessWidget {
                 (h) => ListTile(
                   dense: true,
                   title: Text(h.name),
-                  subtitle: Text(h.frequency.displayName),
+                  subtitle: Text(
+                    h.tracksValue
+                        ? '${h.frequency.displayName} · tracked in ${h.unit}'
+                        : h.frequency.displayName,
+                  ),
                   trailing: Wrap(
                     children: [
                       IconButton(
-                        tooltip: 'Complete today',
+                        tooltip: 'Complete',
                         icon: const Icon(Icons.check_circle_outline),
                         onPressed: h.isActive
-                            ? () => vm.completeHabitToday(h)
+                            ? () => _showCompleteHabitDialog(context, h)
                             : null,
                       ),
                       IconButton(
@@ -467,8 +474,85 @@ class _HabitsCard extends StatelessWidget {
     );
   }
 
+  /// Lets the user confirm (or backdate) the completion date, and enter
+  /// a quantity when [habit] tracks one (e.g. km for a running habit).
+  /// Replaces the previous single-tap "always today, no value" action.
+  Future<void> _showCompleteHabitDialog(
+    BuildContext context,
+    Habit habit,
+  ) async {
+    var selectedDate = DateTime.now();
+    final valueController = TextEditingController();
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (dialogCtx, setState) => AlertDialog(
+          title: Text('Complete "${habit.name}"'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(
+                  'Date: ${DateFormat.yMMMd().format(selectedDate)}',
+                ),
+                trailing: const Icon(Icons.edit_calendar_outlined),
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: dialogCtx,
+                    initialDate: selectedDate,
+                    firstDate:
+                        DateTime.now().subtract(const Duration(days: 30)),
+                    lastDate: DateTime.now(),
+                  );
+                  if (picked != null) {
+                    setState(() => selectedDate = picked);
+                  }
+                },
+              ),
+              if (habit.tracksValue) ...[
+                const SizedBox(height: 8),
+                TextField(
+                  controller: valueController,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    labelText: 'Value (${habit.unit})',
+                  ),
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogCtx, true),
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (ok == true && context.mounted) {
+      await vm.completeHabit(
+        habit,
+        date: selectedDate,
+        value: habit.tracksValue
+            ? double.tryParse(valueController.text.trim())
+            : null,
+      );
+    }
+  }
+
   Future<void> _showCreateHabit(BuildContext context) async {
     final name = TextEditingController();
+    final unit = TextEditingController();
     var frequency = HabitFrequency.daily;
     final ok = await showDialog<bool>(
       context: context,
@@ -496,6 +580,12 @@ class _HabitsCard extends StatelessWidget {
                   if (v != null) setState(() => frequency = v);
                 },
               ),
+              TextField(
+                controller: unit,
+                decoration: const InputDecoration(
+                  labelText: 'Unit (optional, e.g. km, min, reps)',
+                ),
+              ),
             ],
           ),
           actions: [
@@ -512,7 +602,11 @@ class _HabitsCard extends StatelessWidget {
       ),
     );
     if (ok == true && context.mounted && name.text.trim().isNotEmpty) {
-      await vm.createHabit(name.text, frequency);
+      await vm.createHabit(
+        name.text,
+        frequency,
+        unit: unit.text.trim().isEmpty ? null : unit.text.trim(),
+      );
     }
   }
 }

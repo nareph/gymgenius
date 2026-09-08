@@ -26,9 +26,11 @@ const List<ExercisePoolEntry> pushCableExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.transverse,
     description: '**Target: Chest**\n\n'
-        '1. Stand between two high pulleys, grip a handle in each hand.\n'
-        '2. Pull the handles down and together in front of your body.\n'
-        '3. Squeeze your chest, then return slowly.',
+        '1. Set both pulleys at chest height and attach D‑handles.\n'
+        '2. Stand in the middle, grab the handles with palms facing down, and step forward into a split stance.\n'
+        '3. Keeping a slight bend in your elbows, bring your hands together in front of your chest.\n'
+        '4. Squeeze your chest at the peak contraction, then slowly return to the stretch position.\n'
+        '5. Control the negative phase for maximum muscle fibre recruitment.',
   ),
   ExercisePoolEntry(
     id: 'push_cable_lateral_raise',
@@ -46,9 +48,10 @@ const List<ExercisePoolEntry> pushCableExercises = [
     laterality: Laterality.unilateral,
     planeOfMotion: PlaneOfMotion.frontal,
     description: '**Target: Side Shoulders**\n\n'
-        '1. Stand sideways to a low pulley, handle in the outside hand.\n'
-        '2. Raise your arm laterally to shoulder height.\n'
-        '3. Lower with control, then switch sides.',
+        '1. Stand sideways to a low pulley, holding the handle with the hand farthest from the machine.\n'
+        '2. Keep your core tight and raise your arm laterally to shoulder height.\n'
+        '3. Hold for a second, then lower with control.\n'
+        '4. Complete all reps on one side before switching.',
   ),
   ExercisePoolEntry(
     id: 'push_cable_tricep_pushdowns',
@@ -66,13 +69,14 @@ const List<ExercisePoolEntry> pushCableExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Triceps**\n\n'
-        '1. Attach a rope or bar to a high pulley.\n'
-        '2. Grip the handle and pull down until arms are straight.\n'
-        '3. Squeeze triceps at the bottom, then return slowly.',
+        '1. Attach a rope or straight bar to a high pulley.\n'
+        '2. Grip the handle, stand close to the machine, and keep your elbows pinned to your sides.\n'
+        '3. Push the handle down until your arms are fully extended, squeezing your triceps at the bottom.\n'
+        '4. Return slowly to the starting position, resisting the weight.',
   ),
   ExercisePoolEntry(
     id: 'push_cable_chest_fly',
-    name: 'Cable Chest Fly (standing)',
+    name: 'Cable Flyes',
     category: ExerciseCategory.isolation,
     difficulty: ExerciseDifficulty.beginner,
     equipmentType: EquipmentType.cableMachinePulley,
@@ -86,9 +90,10 @@ const List<ExercisePoolEntry> pushCableExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.transverse,
     description: '**Target: Chest**\n\n'
-        '1. Set pulleys at chest height, grip handles.\n'
-        '2. Bring handles together in front of your chest.\n'
-        '3. Squeeze chest, then return.',
+        '1. Set the pulleys at chest height, grab a handle in each hand, and step forward.\n'
+        '2. Keep a slight bend in your elbows and bring the handles together in front of your chest.\n'
+        '3. Squeeze your chest, then slowly return to the starting position, feeling the stretch.\n'
+        '4. Control the movement and avoid using momentum.',
   ),
   ExercisePoolEntry(
     id: 'push_cable_overhead_tricep_extension',
@@ -106,8 +111,9 @@ const List<ExercisePoolEntry> pushCableExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Triceps**\n\n'
-        '1. Attach a rope to a low pulley, stand facing away.\n'
-        '2. Hold the rope overhead, extend arms up.\n'
-        '3. Lower the rope behind your head, then extend back.',
+        '1. Attach a rope to a low pulley and face away from the machine.\n'
+        '2. Hold the rope overhead with your arms bent, hands behind your head.\n'
+        '3. Extend your arms upward, straightening them fully, squeezing your triceps.\n'
+        '4. Lower the rope back behind your head with control, keeping your upper arms stationary.',
   ),
 ];

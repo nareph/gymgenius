@@ -29,10 +29,13 @@ const List<ExercisePoolEntry> lowerBodyBarbellExercises = [
     forceType: ForceType.push,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Quadriceps, Glutes, Hamstrings**\n\n'
-        '1. Bar on upper back.\n'
-        '2. Squat to parallel.\n'
-        '3. Drive through heels.',
+    description:
+        '**Target: Quadriceps, Glutes, Hamstrings**\n\n'
+        '1. Place a barbell across your upper back (low or high bar position) and stand with feet shoulder‑width apart, toes slightly turned out.\n'
+        '2. Unrack the bar, brace your core, and initiate the squat by pushing your hips back and bending your knees.\n'
+        '3. Lower your body until your thighs are at least parallel to the floor, keeping your chest up and back straight.\n'
+        '4. Drive through your heels to stand back up, squeezing your glutes at the top.\n'
+        '5. Keep your knees tracking over your toes and avoid letting them cave inward.',
   ),
   ExercisePoolEntry(
     id: 'lower_bb_front_squats',
@@ -49,10 +52,13 @@ const List<ExercisePoolEntry> lowerBodyBarbellExercises = [
     forceType: ForceType.push,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Quadriceps, Glutes**\n\n'
-        '1. Bar across front shoulders.\n'
-        '2. Squat with upright torso.\n'
-        '3. Drive through heels.',
+    description:
+        '**Target: Quadriceps, Glutes**\n\n'
+        '1. Rest the barbell across the front of your shoulders, crossing your arms to hold it (or using a clean grip with elbows high).\n'
+        '2. Keep your elbows up and chest proud throughout the movement.\n'
+        '3. Squat down by pushing your hips back and bending your knees, keeping your torso as upright as possible.\n'
+        '4. Descend until your thighs are parallel to the floor or deeper.\n'
+        '5. Drive through your heels to stand back up, keeping the bar stable and your core braced.',
   ),
   ExercisePoolEntry(
     id: 'lower_bb_deadlifts',
@@ -73,10 +79,13 @@ const List<ExercisePoolEntry> lowerBodyBarbellExercises = [
     forceType: ForceType.pull,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Hamstrings, Glutes, Back**\n\n'
-        '1. Bar over midfoot.\n'
-        '2. Hinge down, grip bar.\n'
-        '3. Drive through heels to stand.',
+    description:
+        '**Target: Hamstrings, Glutes, Back**\n\n'
+        '1. Stand with feet hip‑width apart, barbell over the middle of your feet, shins touching the bar.\n'
+        '2. Hinge at your hips and bend your knees to grip the bar just outside your knees with a shoulder‑width grip.\n'
+        '3. Keep your back flat, chest up, and drive through your heels to lift the bar off the floor, keeping it close to your body.\n'
+        '4. Stand tall with the bar at hip height, squeezing your glutes at the top.\n'
+        '5. Lower the bar back to the floor with control, maintaining a flat back throughout.',
   ),
   ExercisePoolEntry(
     id: 'lower_bb_romanian_deadlifts',
@@ -93,10 +102,13 @@ const List<ExercisePoolEntry> lowerBodyBarbellExercises = [
     forceType: ForceType.pull,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Hamstrings, Glutes**\n\n'
-        '1. Bar at thighs, hinge at hips.\n'
-        '2. Lower bar along legs.\n'
-        '3. Drive hips forward to return.',
+    description:
+        '**Target: Hamstrings, Glutes**\n\n'
+        '1. Stand with feet hip‑width apart, holding a barbell in front of your thighs with an overhand grip.\n'
+        '2. Keeping your knees slightly bent, push your hips back and lower the barbell down your legs, keeping your back flat.\n'
+        '3. Lower until you feel a deep stretch in your hamstrings (bar around mid‑shin), then drive your hips forward to stand back up.\n'
+        '4. Keep the bar close to your body throughout the movement.\n'
+        '5. Avoid rounding your back; the movement is predominantly a hip hinge.',
   ),
   ExercisePoolEntry(
     id: 'lower_bb_hip_thrusts',
@@ -113,9 +125,12 @@ const List<ExercisePoolEntry> lowerBodyBarbellExercises = [
     forceType: ForceType.push,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Glutes, Hamstrings**\n\n'
-        '1. Upper back on bench, bar over hips.\n'
-        '2. Drive hips up.\n'
-        '3. Squeeze glutes at top.',
+    description:
+        '**Target: Glutes, Hamstrings**\n\n'
+        '1. Sit on the floor with your upper back resting against a bench, a barbell placed over your hips (use a pad for comfort).\n'
+        '2. Place your feet flat on the floor, knees bent, about shoulder‑width apart.\n'
+        '3. Drive through your heels to lift your hips toward the ceiling, squeezing your glutes at the top.\n'
+        '4. Pause for a second at the top, then lower your hips back down with control.\n'
+        '5. Keep your chin tucked and your core engaged to protect your spine.',
   ),
 ];

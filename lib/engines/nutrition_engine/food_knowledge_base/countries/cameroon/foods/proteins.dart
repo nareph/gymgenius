@@ -171,7 +171,7 @@ const List<FoodItem> cameroonProteins = [
   ),
   FoodItem(
     id: 'cm_fermented_milk',
-    name: 'Fermented milk / Pendidam (lait caillé)',
+    name: 'Fermented milk / Pendidam',
     country: 'Cameroon',
     category: FoodCategory.protein,
     caloriesPer100g: 60,

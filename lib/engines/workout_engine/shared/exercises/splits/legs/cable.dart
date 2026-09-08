@@ -26,9 +26,11 @@ const List<ExercisePoolEntry> legsCableExercises = [
     laterality: Laterality.unilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Glutes**\n\n'
-        '1. Attach an ankle strap to a low pulley and secure it around your ankle.\n'
-        '2. Kick your leg back and up, squeezing your glute.\n'
-        '3. Return with control, then switch sides.',
+        '1. Attach an ankle strap to a low pulley on a cable machine and secure it around your right ankle.\n'
+        '2. Stand facing the machine, holding the support bar for balance, with your weight on your left leg.\n'
+        '3. Keeping your knee slightly bent, kick your right leg straight back, squeezing your glute at the top.\n'
+        '4. Return with control to the starting position.\n'
+        '5. Complete all reps on one side before switching.',
   ),
   ExercisePoolEntry(
     id: 'legs_cable_hip_adduction',
@@ -46,9 +48,11 @@ const List<ExercisePoolEntry> legsCableExercises = [
     laterality: Laterality.unilateral,
     planeOfMotion: PlaneOfMotion.frontal,
     description: '**Target: Adductors**\n\n'
-        '1. Attach ankle strap to a low pulley.\n'
-        '2. Stand sideways and pull your leg across your body.\n'
-        '3. Return with control.',
+        '1. Attach an ankle strap to a low pulley on the side of the machine.\n'
+        '2. Stand with your side facing the machine, secure the strap to the ankle of the leg farthest from the pulley.\n'
+        '3. Keeping your core tight, pull your leg across your body (adduction), squeezing your inner thigh at the peak.\n'
+        '4. Return slowly with control.\n'
+        '5. Complete all reps on one side before switching.',
   ),
   ExercisePoolEntry(
     id: 'legs_cable_hip_abduction',
@@ -66,9 +70,11 @@ const List<ExercisePoolEntry> legsCableExercises = [
     laterality: Laterality.unilateral,
     planeOfMotion: PlaneOfMotion.frontal,
     description: '**Target: Glutes, TFL**\n\n'
-        '1. Attach ankle strap to a low pulley.\n'
-        '2. Stand sideways and pull your leg away from your body.\n'
-        '3. Return with control.',
+        '1. Attach an ankle strap to a low pulley on the side of the machine.\n'
+        '2. Stand with your side facing the machine, secure the strap to the ankle of the leg closest to the pulley.\n'
+        '3. Keeping your core tight, pull your leg away from your body (abduction), squeezing your glute medius at the peak.\n'
+        '4. Return slowly with control.\n'
+        '5. Complete all reps on one side before switching.',
   ),
   ExercisePoolEntry(
     id: 'legs_cable_squat_pulldown',
@@ -86,9 +92,11 @@ const List<ExercisePoolEntry> legsCableExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Quadriceps, Glutes**\n\n'
-        '1. Set a cable at chest height, hold the handle.\n'
-        '2. Squat down while pulling the cable towards you.\n'
-        '3. Stand up and return the cable.',
+        '1. Set a cable at chest height with a rope or bar attachment.\n'
+        '2. Take a slight step forward, hold the handle with both hands, and stand with feet shoulder‑width apart.\n'
+        '3. Squat down as you would in a bodyweight squat, keeping your chest up and core engaged.\n'
+        '4. As you stand up, pull the cable towards your chest to add resistance.\n'
+        '5. Perform the movement in a controlled manner, squeezing your glutes at the top.',
   ),
   ExercisePoolEntry(
     id: 'legs_cable_pull_through',
@@ -106,8 +114,10 @@ const List<ExercisePoolEntry> legsCableExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Glutes, Hamstrings**\n\n'
-        '1. Attach a rope to a low pulley, stand facing away.\n'
-        '2. Hinge at the hips and pull the rope through your legs.\n'
-        '3. Drive hips forward to stand up.',
+        '1. Attach a rope to a low pulley and stand facing away from the machine, feet shoulder‑width apart.\n'
+        '2. Hinge at the hips, reaching back between your legs to grip the rope, keeping your back flat.\n'
+        '3. Drive your hips forward to stand up, squeezing your glutes at the top.\n'
+        '4. Lower the rope back through your legs with control.\n'
+        '5. Keep your core braced and your knees slightly bent throughout.',
   ),
 ];

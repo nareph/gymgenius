@@ -25,13 +25,14 @@ const List<ExercisePoolEntry> pushChairExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Triceps, Shoulders**\n\n'
-        '1. Sit on the edge of a bench or chair, hands gripping the edge beside your hips.\n'
-        '2. Slide your hips off and lower your body by bending your elbows.\n'
-        '3. Push back up to full extension.',
+        '1. Sit on the edge of a sturdy chair or bench, hands gripping the edge beside your hips.\n'
+        '2. Slide your hips off the seat and lower your body by bending your elbows until your arms form a 90° angle.\n'
+        '3. Push back up to the starting position, keeping your body close to the bench.\n'
+        '4. To increase difficulty, extend your legs further or place weight on your lap.',
   ),
   ExercisePoolEntry(
     id: 'push_chair_incline_push_ups',
-    name: 'Incline Push-ups',
+    name: 'Incline Push-Up',
     category: ExerciseCategory.compound,
     difficulty: ExerciseDifficulty.beginner,
     equipmentType: EquipmentType.chairOrSimpleBench,
@@ -44,13 +45,14 @@ const List<ExercisePoolEntry> pushChairExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Chest, Shoulders**\n\n'
-        '1. Place hands on a bench or chair, body in plank.\n'
-        '2. Lower chest towards the bench.\n'
-        '3. Press back up.',
+        '1. Place your hands on a stable chair or bench, shoulder‑width apart.\n'
+        '2. Extend your legs behind you, forming a plank position.\n'
+        '3. Lower your chest towards the chair by bending your elbows.\n'
+        '4. Push back up, keeping your body straight. This variation reduces the load compared to a standard push‑up.',
   ),
   ExercisePoolEntry(
     id: 'push_chair_decline_push_ups',
-    name: 'Decline Push-ups (feet on chair)',
+    name: 'Decline Push-Up',
     category: ExerciseCategory.compound,
     difficulty: ExerciseDifficulty.intermediate,
     equipmentType: EquipmentType.chairOrSimpleBench,
@@ -63,12 +65,13 @@ const List<ExercisePoolEntry> pushChairExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Upper Chest**\n\n'
-        '1. Place feet on a chair, hands on the floor.\n'
-        '2. Perform push-ups with elevated feet.',
+        '1. Place your feet on a chair or bench, hands on the floor directly under your shoulders.\n'
+        '2. Lower your chest towards the floor, keeping your body straight.\n'
+        '3. Push back up. The elevated feet increase the load on the upper chest and shoulders.',
   ),
   ExercisePoolEntry(
     id: 'push_chair_diamond_push_ups',
-    name: 'Diamond Push-ups',
+    name: 'Diamond Push-Up',
     category: ExerciseCategory.compound,
     difficulty: ExerciseDifficulty.intermediate,
     equipmentType: EquipmentType.chairOrSimpleBench,
@@ -81,13 +84,13 @@ const List<ExercisePoolEntry> pushChairExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Triceps, Inner Chest**\n\n'
-        '1. Hands together under chest, form a diamond.\n'
-        '2. Lower chest towards hands.\n'
-        '3. Press up.',
+        '1. Place your hands together under your chest, forming a diamond shape.\n'
+        '2. Keep your elbows close to your body as you lower your chest towards your hands.\n'
+        '3. Push back up, focusing on the triceps and inner chest squeeze.',
   ),
   ExercisePoolEntry(
     id: 'push_chair_plyometric_push_ups',
-    name: 'Plyometric Push-ups (hands on chair)',
+    name: 'Plyometric Push-Up (hands on chair)',
     category: ExerciseCategory.compound,
     difficulty: ExerciseDifficulty.advanced,
     equipmentType: EquipmentType.chairOrSimpleBench,
@@ -99,10 +102,10 @@ const List<ExercisePoolEntry> pushChairExercises = [
     forceType: ForceType.push,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Chest, Triceps**\n\n'
-        '1. Place hands on a stable chair or bench.\n'
-        '2. Lower chest towards the chair.\n'
-        '3. Explosively push up, hands leaving the surface.\n'
-        '4. Land softly and repeat.',
+    description: '**Target: Chest, Triceps (Power)**\n\n'
+        '1. Place your hands on a sturdy chair or bench, shoulder‑width apart.\n'
+        '2. Lower your chest towards the chair, then explode upward so your hands leave the chair.\n'
+        '3. Land softly and immediately go into the next rep.\n'
+        '4. This builds explosive upper‑body power.',
   ),
 ];

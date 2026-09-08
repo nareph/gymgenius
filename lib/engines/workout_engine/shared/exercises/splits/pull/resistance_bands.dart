@@ -18,16 +18,18 @@ const List<ExercisePoolEntry> pullResistanceBandsExercises = [
     equipmentType: EquipmentType.resistanceBands,
     targetMuscles: [MuscleGroup.back, MuscleGroup.biceps],
     secondaryMuscles: [],
-    usesWeight: true,
+    usesWeight: false,
     movementPattern: MovementPattern.pull,
     mechanics: Mechanics.openChain,
     forceType: ForceType.pull,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Back, Biceps**\n\n'
-        '1. Anchor a band at chest height and step back to create tension.\n'
-        '2. Pull the handles towards your torso, squeezing your shoulder blades.\n'
-        '3. Return slowly with control.',
+        '1. Anchor a resistance band at chest height around a sturdy post or door frame.\n'
+        '2. Step back to create tension, hold the handles (or the band) with both hands, arms extended.\n'
+        '3. Pull the band handles towards your torso, squeezing your shoulder blades together.\n'
+        '4. Pause, then return slowly with control, keeping tension on the band throughout.\n'
+        '5. Maintain a flat back and core engagement to avoid lower back strain.',
   ),
   ExercisePoolEntry(
     id: 'pull_band_bicep_curls',
@@ -37,16 +39,18 @@ const List<ExercisePoolEntry> pullResistanceBandsExercises = [
     equipmentType: EquipmentType.resistanceBands,
     targetMuscles: [MuscleGroup.biceps],
     secondaryMuscles: [],
-    usesWeight: true,
+    usesWeight: false,
     movementPattern: MovementPattern.pull,
     mechanics: Mechanics.openChain,
     forceType: ForceType.pull,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Biceps**\n\n'
-        '1. Stand on the band, holding a handle in each hand.\n'
-        '2. Curl your hands towards your shoulders.\n'
-        '3. Lower with control against the band tension.',
+        '1. Stand on the middle of a resistance band, holding a handle in each hand, arms straight down.\n'
+        '2. Keeping your elbows pinned to your sides, curl the handles up towards your shoulders.\n'
+        '3. Squeeze your biceps at the top, then lower with control against the band tension.\n'
+        '4. Avoid using momentum; keep the movement slow and controlled.\n'
+        '5. For added tension, step further onto the band or use a thicker band.',
   ),
   ExercisePoolEntry(
     id: 'pull_band_pull_aparts',
@@ -56,16 +60,18 @@ const List<ExercisePoolEntry> pullResistanceBandsExercises = [
     equipmentType: EquipmentType.resistanceBands,
     targetMuscles: [MuscleGroup.back, MuscleGroup.shoulders],
     secondaryMuscles: [],
-    usesWeight: true,
+    usesWeight: false,
     movementPattern: MovementPattern.pull,
     mechanics: Mechanics.openChain,
     forceType: ForceType.pull,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.transverse,
     description: '**Target: Rear Delts, Upper Back**\n\n'
-        '1. Hold a band in front of you with arms straight.\n'
-        '2. Pull the band apart by moving your hands out to the sides.\n'
-        '3. Squeeze shoulder blades, then return.',
+        '1. Hold a resistance band in front of you with both hands, arms extended straight out, shoulder‑width apart.\n'
+        '2. Keeping your arms straight, pull the band apart by moving your hands out to the sides, stretching the band.\n'
+        '3. Squeeze your shoulder blades together at the peak, then slowly return to the starting position.\n'
+        '4. This is a great warm‑up or finishing exercise for shoulder health and posture.\n'
+        '5. Perform controlled reps, avoiding rapid jerks.',
   ),
   ExercisePoolEntry(
     id: 'pull_band_face_pulls',
@@ -75,16 +81,18 @@ const List<ExercisePoolEntry> pullResistanceBandsExercises = [
     equipmentType: EquipmentType.resistanceBands,
     targetMuscles: [MuscleGroup.shoulders, MuscleGroup.back],
     secondaryMuscles: [MuscleGroup.traps],
-    usesWeight: true,
+    usesWeight: false,
     movementPattern: MovementPattern.pull,
     mechanics: Mechanics.openChain,
     forceType: ForceType.pull,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.transverse,
     description: '**Target: Rear Delts, Traps**\n\n'
-        '1. Anchor a band at face height.\n'
-        '2. Pull the band towards your face, elbows high.\n'
-        '3. Squeeze shoulder blades, then return.',
+        '1. Anchor a band at face height (e.g., to a door handle or pole).\n'
+        '2. Hold the band with both hands, arms extended, and step back to create tension.\n'
+        '3. Pull the band towards your face, keeping your elbows high and your hands near your ears.\n'
+        '4. Squeeze your shoulder blades together at the peak, then return slowly.\n'
+        '5. This exercise is excellent for correcting rounded shoulders and improving posture.',
   ),
   ExercisePoolEntry(
     id: 'pull_band_lat_pulldown',
@@ -94,16 +102,18 @@ const List<ExercisePoolEntry> pullResistanceBandsExercises = [
     equipmentType: EquipmentType.resistanceBands,
     targetMuscles: [MuscleGroup.back, MuscleGroup.biceps],
     secondaryMuscles: [],
-    usesWeight: true,
+    usesWeight: false,
     movementPattern: MovementPattern.pull,
     mechanics: Mechanics.openChain,
     forceType: ForceType.pull,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Lats, Biceps**\n\n'
-        '1. Anchor a band overhead (e.g., to a pull-up bar).\n'
-        '2. Pull the band down towards your chest, squeezing lats.\n'
-        '3. Return with control.',
+        '1. Anchor a resistance band overhead (e.g., to a pull‑up bar or door frame).\n'
+        '2. Kneel or sit, grab the band with both hands, arms extended overhead, and lean back slightly.\n'
+        '3. Pull the band down towards your chest, driving your elbows down and back, squeezing your lats.\n'
+        '4. Pause at the bottom, then return slowly, keeping tension on the band.\n'
+        '5. Use a moderate band to allow for controlled reps.',
   ),
   ExercisePoolEntry(
     id: 'pull_band_single_arm_row',
@@ -113,14 +123,18 @@ const List<ExercisePoolEntry> pullResistanceBandsExercises = [
     equipmentType: EquipmentType.resistanceBands,
     targetMuscles: [MuscleGroup.back, MuscleGroup.biceps],
     secondaryMuscles: [MuscleGroup.shoulders],
-    usesWeight: true,
+    usesWeight: false,
     movementPattern: MovementPattern.pull,
     mechanics: Mechanics.openChain,
     forceType: ForceType.pull,
     laterality: Laterality.unilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description:
-        '**Target: Back, Biceps**\n\n1. Anchor the band at chest height.\n2. Pull one handle to your hip while keeping torso stable.\n3. Alternate or complete all reps on one side.',
+    description: '**Target: Back, Biceps**\n\n'
+        '1. Anchor a band at chest height.\n'
+        '2. Step back, grab the handle with one hand, and stand with your feet shoulder‑width apart.\n'
+        '3. Pull the handle towards your hip, squeezing your lat, while keeping your torso stable.\n'
+        '4. Return slowly with control.\n'
+        '5. Complete all reps on one side before switching.',
   ),
   ExercisePoolEntry(
     id: 'pull_band_straight_arm_pulldown',
@@ -130,13 +144,17 @@ const List<ExercisePoolEntry> pullResistanceBandsExercises = [
     equipmentType: EquipmentType.resistanceBands,
     targetMuscles: [MuscleGroup.back],
     secondaryMuscles: [MuscleGroup.triceps],
-    usesWeight: true,
+    usesWeight: false,
     movementPattern: MovementPattern.pull,
     mechanics: Mechanics.openChain,
     forceType: ForceType.pull,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description:
-        '**Target: Lats**\n\n1. Anchor the band overhead.\n2. With nearly straight arms, pull the band down to your thighs.\n3. Return with control.',
+    description: '**Target: Lats**\n\n'
+        '1. Anchor a band overhead (e.g., to a pull‑up bar).\n'
+        '2. Stand facing the anchor, grab the band with both hands, arms extended straight out in front.\n'
+        '3. Keeping your arms straight, push the band down towards your thighs by hinging at the shoulders, squeezing your lats.\n'
+        '4. Pause at the bottom, then return slowly to the starting position.\n'
+        '5. Keep a slight bend in your elbows to maintain tension on the lats.',
   ),
 ];

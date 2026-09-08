@@ -158,16 +158,24 @@ class HealthPlatformViewModel extends ChangeNotifier {
     await load();
   }
 
-  Future<void> createHabit(String name, HabitFrequency frequency) async {
+  /// [unit] is optional (e.g. 'km', 'min', 'reps'). When set, completing
+  /// this habit will prompt for a quantity each time — see [completeHabit].
+  Future<void> createHabit(
+    String name,
+    HabitFrequency frequency, {
+    String? unit,
+  }) async {
     final userId = _userId;
     if (userId == null) return;
     final now = DateTime.now();
+    final trimmedUnit = unit?.trim();
     await _repository.saveHabit(
       Habit(
         id: '${userId}_habit_${now.millisecondsSinceEpoch}',
         userId: userId,
         name: name.trim(),
         frequency: frequency,
+        unit: (trimmedUnit == null || trimmedUnit.isEmpty) ? null : trimmedUnit,
         createdAt: now,
         updatedAt: now,
       ),
@@ -187,11 +195,27 @@ class HealthPlatformViewModel extends ChangeNotifier {
     await load();
   }
 
-  Future<void> completeHabitToday(Habit habit) async {
+  /// Logs a completion for [habit].
+  ///
+  /// [date] defaults to today — pass a past date to log a habit done
+  /// earlier without it counting for the wrong day.
+  ///
+  /// [value] is the quantity for habits that track one (e.g. 8.0 for
+  /// "8 km" on a habit whose [Habit.unit] is 'km'); ignored/null for
+  /// plain yes/no habits.
+  ///
+  /// Replaces the previous completeHabitToday(), which always used
+  /// today's date and had no way to record a quantity.
+  Future<void> completeHabit(
+    Habit habit, {
+    DateTime? date,
+    double? value,
+  }) async {
     final userId = _userId;
     if (userId == null) return;
     final now = DateTime.now();
-    final day = DateTime(now.year, now.month, now.day);
+    final target = date ?? now;
+    final day = DateTime(target.year, target.month, target.day);
     await _repository.saveHabitLog(
       HabitLog(
         id: '${habit.id}_${day.toIso8601String()}',
@@ -199,6 +223,7 @@ class HealthPlatformViewModel extends ChangeNotifier {
         habitId: habit.id,
         date: day,
         completed: true,
+        value: value,
         loggedAt: now,
       ),
     );

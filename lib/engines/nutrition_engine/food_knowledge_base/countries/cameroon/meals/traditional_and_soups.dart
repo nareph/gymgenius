@@ -21,6 +21,33 @@ const List<MealTemplate> cameroonTraditionalAndSoups = [
     tags: ['traditional', 'dinner'],
   ),
   MealTemplate(
+    id: 'cm_meal_ndole_rice',
+    name: 'Ndolé with rice',
+    objective: MealObjective.highEnergy,
+    ingredientIds: ['cm_ndole_leaves', 'cm_groundnuts', 'cm_beef', 'cm_rice'],
+    ingredientNames: ['Ndolé leaves', 'Groundnuts', 'Beef', 'White rice'],
+    baseMacros: MacroTargets(calories: 680, proteinG: 35, carbsG: 58, fatG: 32),
+    minBudget: BudgetLevel.medium,
+    allergens: ['peanut'],
+    tags: ['traditional', 'dinner', 'lunch'],
+  ),
+  MealTemplate(
+    id: 'cm_meal_ndole_miondo',
+    name: 'Ndolé with Miondo',
+    objective: MealObjective.highEnergy,
+    ingredientIds: [
+      'cm_ndole_leaves',
+      'cm_groundnuts',
+      'cm_beef',
+      'cm_cassava_bobolo'
+    ],
+    ingredientNames: ['Ndolé leaves', 'Groundnuts', 'Beef', 'Miondo'],
+    baseMacros: MacroTargets(calories: 690, proteinG: 34, carbsG: 60, fatG: 33),
+    minBudget: BudgetLevel.medium,
+    allergens: ['peanut'],
+    tags: ['traditional', 'dinner'],
+  ),
+  MealTemplate(
     id: 'cm_meal_eru_fufu',
     name: 'Water fufu and Eru',
     objective: MealObjective.highEnergy,
@@ -134,7 +161,7 @@ const List<MealTemplate> cameroonTraditionalAndSoups = [
   ),
   MealTemplate(
     id: 'cm_meal_mbongo_tchobi',
-    name: 'Mbongo Tchobi (Ragoût noir aux épices)',
+    name: 'Mbongo Tchobi (Spicy black stew)',
     objective: MealObjective.highProtein,
     ingredientIds: [
       'cm_beef',
@@ -151,7 +178,7 @@ const List<MealTemplate> cameroonTraditionalAndSoups = [
   ),
   MealTemplate(
     id: 'cm_meal_pepe_soup',
-    name: 'Pèpè Soup (Soupe pimentée au poisson/viande)',
+    name: 'Pèpè Soup (Spicy fish or meat soup)',
     objective: MealObjective.recovery,
     ingredientIds: ['cm_fish', 'cm_onion', 'cm_hot_pepper', 'cm_tomato'],
     ingredientNames: ['Fish', 'Onion', 'Hot pepper', 'Tomato'],
@@ -162,7 +189,7 @@ const List<MealTemplate> cameroonTraditionalAndSoups = [
   ),
   MealTemplate(
     id: 'cm_meal_kwem',
-    name: 'Kwem (Purée de feuilles de manioc)',
+    name: 'Kwem (Cassava leaf purée)',
     objective: MealObjective.light,
     ingredientIds: ['cm_cassava', 'cm_spinach', 'cm_palm_oil', 'cm_onion'],
     ingredientNames: ['Cassava', 'Spinach', 'Palm oil', 'Onion'],
@@ -171,7 +198,7 @@ const List<MealTemplate> cameroonTraditionalAndSoups = [
   ),
   MealTemplate(
     id: 'cm_meal_grilled_fish_plantain',
-    name: 'Poisson braisé avec plantain',
+    name: 'Grilled fish with plantain',
     objective: MealObjective.recovery,
     ingredientIds: [
       'cm_fish',

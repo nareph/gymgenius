@@ -18,17 +18,18 @@ final List<ExercisePoolEntry> coreResistanceBandsExercises = [
     equipmentType: EquipmentType.resistanceBands,
     targetMuscles: [MuscleGroup.absCore],
     secondaryMuscles: [MuscleGroup.shoulders],
-    usesWeight: true,
+    usesWeight: false,
     movementPattern: MovementPattern.core,
     mechanics: Mechanics.openChain,
     forceType: ForceType.push,
     laterality: Laterality.unilateral,
     planeOfMotion: PlaneOfMotion.transverse,
     description: '**Target: Core (anti-rotation)**\n\n'
-        '1. Anchor a band at chest height.\n'
-        '2. Stand sideways, hold the band with both hands.\n'
-        '3. Press straight out, resisting rotation.\n'
-        '4. Return and switch sides.',
+        '1. Anchor a resistance band at chest height (e.g., to a door handle or pole).\n'
+        '2. Stand sideways to the anchor, hold the band with both hands, and step forward to create tension.\n'
+        '3. Press the band straight out in front of you, resisting the rotational pull.\n'
+        '4. Hold for a second, then return slowly with control.\n'
+        '5. Complete all reps on one side before switching.',
   ),
   ExercisePoolEntry(
     id: 'core_band_woodchop',
@@ -38,16 +39,18 @@ final List<ExercisePoolEntry> coreResistanceBandsExercises = [
     equipmentType: EquipmentType.resistanceBands,
     targetMuscles: [MuscleGroup.absCore],
     secondaryMuscles: [MuscleGroup.shoulders],
-    usesWeight: true,
+    usesWeight: false,
     movementPattern: MovementPattern.rotation,
     mechanics: Mechanics.openChain,
     forceType: ForceType.pull,
     laterality: Laterality.alternating,
     planeOfMotion: PlaneOfMotion.transverse,
     description: '**Target: Core, Shoulders**\n\n'
-        '1. Anchor a band at low or high position.\n'
-        '2. Chop diagonally across your body.\n'
-        '3. Alternate sides.',
+        '1. Anchor a resistance band at low or high position.\n'
+        '2. Stand with feet shoulder‑width apart, grip the band with both hands.\n'
+        '3. Chop diagonally across your body, using your core to rotate.\n'
+        '4. Return slowly with control.\n'
+        '5. Complete all reps on one side before switching.',
   ),
   ExercisePoolEntry(
     id: 'core_band_crunches',
@@ -57,17 +60,18 @@ final List<ExercisePoolEntry> coreResistanceBandsExercises = [
     equipmentType: EquipmentType.resistanceBands,
     targetMuscles: [MuscleGroup.absCore],
     secondaryMuscles: [],
-    usesWeight: true,
+    usesWeight: false,
     movementPattern: MovementPattern.core,
     mechanics: Mechanics.openChain,
     forceType: ForceType.pull,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Abs**\n\n'
-        '1. Anchor a band above you.\n'
-        '2. Kneel and hold the band behind your neck.\n'
-        '3. Crunch forward against resistance.\n'
-        '4. Return with control.',
+        '1. Anchor a resistance band at a high position (e.g., a pull‑up bar or door frame hook).\n'
+        '2. Kneel on the floor, holding the band behind your head with both hands.\n'
+        '3. Crunch forward, curling your torso toward your knees, squeezing your abs.\n'
+        '4. Return slowly against the band tension.\n'
+        '5. Keep your elbows pointing forward and your core engaged.',
   ),
   ExercisePoolEntry(
     id: 'core_band_russian_twists',
@@ -77,17 +81,18 @@ final List<ExercisePoolEntry> coreResistanceBandsExercises = [
     equipmentType: EquipmentType.resistanceBands,
     targetMuscles: [MuscleGroup.absCore],
     secondaryMuscles: [],
-    usesWeight: true,
+    usesWeight: false,
     movementPattern: MovementPattern.rotation,
     mechanics: Mechanics.openChain,
     forceType: ForceType.pull,
     laterality: Laterality.alternating,
     planeOfMotion: PlaneOfMotion.transverse,
     description: '**Target: Obliques**\n\n'
-        '1. Sit on the floor, knees bent, feet lifted.\n'
-        '2. Anchor a band at waist height.\n'
-        '3. Hold the band and rotate side to side.\n'
-        '4. Control the movement.',
+        '1. Sit on the floor with your knees bent and feet lifted, holding a resistance band with both hands.\n'
+        '2. Anchor the band at waist height behind you or under your feet.\n'
+        '3. Rotate your torso to the right, then to the left, keeping the band under tension.\n'
+        '4. Perform the movement slowly and with control.\n'
+        '5. This adds resistance to the standard Russian twist.',
   ),
   ExercisePoolEntry(
     id: 'core_band_leg_raises',
@@ -97,16 +102,17 @@ final List<ExercisePoolEntry> coreResistanceBandsExercises = [
     equipmentType: EquipmentType.resistanceBands,
     targetMuscles: [MuscleGroup.absCore],
     secondaryMuscles: [MuscleGroup.quadriceps],
-    usesWeight: true,
+    usesWeight: false,
     movementPattern: MovementPattern.core,
     mechanics: Mechanics.openChain,
     forceType: ForceType.pull,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Lower Abs**\n\n'
-        '1. Lie on your back, loop a band around your feet.\n'
-        '2. Hold the ends of the band for resistance.\n'
-        '3. Raise your legs straight up.\n'
-        '4. Lower with control.',
+        '1. Lie on your back with a resistance band looped around your feet and holding the ends with your hands.\n'
+        '2. Keep your legs straight and raise them to a 90° angle against the band tension.\n'
+        '3. Lower them slowly, resisting the band.\n'
+        '4. Keep your lower back pressed into the floor throughout.\n'
+        '5. This adds resistance to standard leg raises.',
   ),
 ];

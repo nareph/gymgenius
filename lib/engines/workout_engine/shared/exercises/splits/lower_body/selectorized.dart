@@ -26,9 +26,11 @@ const List<ExercisePoolEntry> lowerBodySelectorizedExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Quadriceps**\n\n'
-        '1. Sit on machine, shins behind pad.\n'
-        '2. Extend legs fully.\n'
-        '3. Lower with control.',
+        '1. Sit on the leg extension machine with your back against the pad and your shins behind the ankle pad.\n'
+        '2. Grasp the handles for stability, keep your knees aligned with the machine\'s pivot.\n'
+        '3. Extend your legs until they are straight, squeezing your quads at the top.\n'
+        '4. Lower the weight with control back to the starting position.\n'
+        '5. Avoid swinging; use a controlled tempo.',
   ),
   ExercisePoolEntry(
     id: 'lower_selector_leg_curl',
@@ -46,9 +48,11 @@ const List<ExercisePoolEntry> lowerBodySelectorizedExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Hamstrings**\n\n'
-        '1. Lie face down, ankles under pads.\n'
-        '2. Curl heels towards glutes.\n'
-        '3. Lower with control.',
+        '1. Lie face down on the leg curl machine, with the pad resting just above your heels.\n'
+        '2. Grasp the handles for stability and keep your hips pressed against the pad.\n'
+        '3. Curl your heels towards your glutes by flexing your hamstrings, squeezing at the peak.\n'
+        '4. Lower the weight with control back to the starting position, fully extending your legs.\n'
+        '5. Avoid using momentum; perform the movement slowly and deliberately.',
   ),
   ExercisePoolEntry(
     id: 'lower_selector_hip_abduction',
@@ -66,31 +70,15 @@ const List<ExercisePoolEntry> lowerBodySelectorizedExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.frontal,
     description: '**Target: Glutes**\n\n'
-        '1. Sit on machine, thighs against pads.\n'
-        '2. Press outward against pads.',
-  ),
-  ExercisePoolEntry(
-    id: 'lower_selector_hip_adduction',
-    name: 'Selectorized Hip Adduction',
-    category: ExerciseCategory.isolation,
-    difficulty: ExerciseDifficulty.beginner,
-    equipmentType: EquipmentType.gymMachinesSelectorized,
-    targetMuscles: [MuscleGroup.adductors],
-    secondaryMuscles: [],
-    usesWeight: true,
-    weightSuggestion: 'Light',
-    movementPattern: MovementPattern.core,
-    mechanics: Mechanics.openChain,
-    forceType: ForceType.pull,
-    laterality: Laterality.bilateral,
-    planeOfMotion: PlaneOfMotion.frontal,
-    description: '**Target: Adductors**\n\n'
-        '1. Sit on machine, thighs inside pads.\n'
-        '2. Squeeze thighs together.',
+        '1. Sit on the hip abduction machine, with your thighs against the pads and your hands on the handles.\n'
+        '2. Press your thighs outward against the pads, squeezing your glute medius.\n'
+        '3. Hold for a second at the peak, then return with control.\n'
+        '4. Keep your torso stable and avoid using momentum.\n'
+        '5. This targets the hip abductors and glute medius.',
   ),
   ExercisePoolEntry(
     id: 'lower_selector_seated_calf_raise',
-    name: 'Selectorized Seated Calf Raise',
+    name: 'Seated Calf Raises',
     category: ExerciseCategory.isolation,
     difficulty: ExerciseDifficulty.beginner,
     equipmentType: EquipmentType.gymMachinesSelectorized,
@@ -103,9 +91,11 @@ const List<ExercisePoolEntry> lowerBodySelectorizedExercises = [
     forceType: ForceType.push,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Calves**\n\n'
-        '1. Sit at machine, pads on knees.\n'
-        '2. Raise heels as high as possible.\n'
-        '3. Lower slowly.',
+    description: '**Target: Calves (Soleus)**\n\n'
+        '1. Sit on the seated calf raise machine, with the pads resting on your knees.\n'
+        '2. Place your feet on the platform with your heels hanging off the edge.\n'
+        '3. Lower your heels down for a full stretch, then raise them as high as possible.\n'
+        '4. Squeeze your calves at the top, hold for a second.\n'
+        '5. Lower with control, feeling the stretch.',
   ),
 ];

@@ -25,9 +25,11 @@ const List<ExercisePoolEntry> backBicepsBodyweightExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Back, Glutes**\n\n'
-        '1. Lie face down, arms extended forward.\n'
-        '2. Lift chest, arms, and legs off the ground.\n'
-        '3. Hold briefly, then lower.',
+        '1. Lie face down on the floor with your arms extended forward and legs straight.\n'
+        '2. Simultaneously lift your arms, chest, and legs off the floor as high as possible.\n'
+        '3. Squeeze your glutes and lower back muscles at the top, hold for 2 seconds.\n'
+        '4. Lower back to the starting position with control.\n'
+        '5. Keep your neck neutral by looking down at the floor.',
   ),
   ExercisePoolEntry(
     id: 'back_biceps_bw_prone_y_raises',
@@ -44,9 +46,11 @@ const List<ExercisePoolEntry> backBicepsBodyweightExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Lower Traps, Rear Delts**\n\n'
-        '1. Lie face down, arms in Y position.\n'
-        '2. Raise arms off the floor.\n'
-        '3. Squeeze shoulder blades and lower.',
+        '1. Lie face down on the floor with your arms extended in a "Y" position, thumbs pointing up.\n'
+        '2. Lift your arms off the floor, squeezing your shoulder blades together and down.\n'
+        '3. Hold at the top for 1‑2 seconds, then lower slowly.\n'
+        '4. Keep your neck relaxed and your chest on the floor.\n'
+        '5. This exercise specifically targets the lower trapezius and improves shoulder posture.',
   ),
   ExercisePoolEntry(
     id: 'back_biceps_bw_prone_t_raises',
@@ -63,9 +67,11 @@ const List<ExercisePoolEntry> backBicepsBodyweightExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.transverse,
     description: '**Target: Mid Traps, Rear Delts**\n\n'
-        '1. Lie face down, arms out to the sides (T position).\n'
-        '2. Raise arms off the floor, squeezing shoulder blades.\n'
-        '3. Lower with control.',
+        '1. Lie face down on the floor with your arms extended straight out to the sides, thumbs pointing up (T position).\n'
+        '2. Lift your arms off the floor, squeezing your shoulder blades together.\n'
+        '3. Hold at the top for 1‑2 seconds, then lower slowly.\n'
+        '4. Keep your chest and core engaged to maintain stability.\n'
+        '5. This strengthens the mid‑traps and rear deltoids, essential for good posture.',
   ),
   ExercisePoolEntry(
     id: 'back_biceps_bw_reverse_snow_angels',
@@ -82,9 +88,11 @@ const List<ExercisePoolEntry> backBicepsBodyweightExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.transverse,
     description: '**Target: Rear Delts, Upper Back**\n\n'
-        '1. Lie face down, arms out to sides.\n'
-        '2. Raise arms and squeeze shoulder blades together.\n'
-        '3. Lower slowly.',
+        '1. Lie face down on the floor with your arms extended out to the sides at shoulder height, forming a "T" shape.\n'
+        '2. Keeping your arms straight, raise them off the floor as high as possible, squeezing your shoulder blades together.\n'
+        '3. Slowly rotate your arms backward and upward, as if making a snow angel in reverse, until your hands are near your hips.\n'
+        '4. Reverse the movement to return to the starting position.\n'
+        '5. Perform the movement slowly and with control for maximum muscle engagement.',
   ),
   ExercisePoolEntry(
     id: 'back_biceps_bw_scapular_push_ups',
@@ -100,10 +108,12 @@ const List<ExercisePoolEntry> backBicepsBodyweightExercises = [
     forceType: ForceType.pull,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Traps, Serratus**\n\n'
-        '1. Plank position, arms straight.\n'
-        '2. Push your upper back towards the ceiling (without bending elbows).\n'
-        '3. Return to neutral.',
+    description: '**Target: Traps, Serratus Anterior**\n\n'
+        '1. Start in a high plank position with your arms straight, hands directly under your shoulders.\n'
+        '2. Without bending your elbows, push your upper back towards the ceiling by protracting your shoulder blades (rounding your upper back).\n'
+        '3. Then, retract your shoulder blades by pulling your chest towards the floor, squeezing your traps.\n'
+        '4. Move only your shoulder blades, keeping your arms and body straight.\n'
+        '5. This small movement improves scapular control and strengthens the traps.',
   ),
   ExercisePoolEntry(
     id: 'back_biceps_bw_prone_i_raises',
@@ -120,9 +130,11 @@ const List<ExercisePoolEntry> backBicepsBodyweightExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Lower Traps, Rhomboids**\n\n'
-        '1. Lie face down, arms straight overhead (I position).\n'
-        '2. Raise arms off the floor, squeezing shoulder blades.\n'
-        '3. Lower with control.',
+        '1. Lie face down on the floor with your arms extended straight overhead, thumbs pointing up (I position).\n'
+        '2. Lift your arms off the floor, squeezing your shoulder blades together and down.\n'
+        '3. Hold at the top for 1‑2 seconds, then lower slowly.\n'
+        '4. Keep your neck relaxed and your chest on the floor.\n'
+        '5. This exercise strengthens the lower traps and improves shoulder stability.',
   ),
   ExercisePoolEntry(
     id: 'back_biceps_bw_prone_w_raises',
@@ -139,9 +151,11 @@ const List<ExercisePoolEntry> backBicepsBodyweightExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Mid/Lower Traps, Rhomboids**\n\n'
-        '1. Lie face down, arms bent at 90° (W position).\n'
-        '2. Raise arms off the floor, squeezing shoulder blades.\n'
-        '3. Lower with control.',
+        '1. Lie face down on the floor with your arms bent at 90°, elbows in line with your shoulders (W position).\n'
+        '2. Lift your arms off the floor, squeezing your shoulder blades together and down.\n'
+        '3. Hold at the top for 1‑2 seconds, then lower slowly.\n'
+        '4. Keep your neck relaxed and your chest on the floor.\n'
+        '5. This variation targets the mid‑lower traps and rhomboids for better posture.',
   ),
   ExercisePoolEntry(
     id: 'back_biceps_bw_table_rows',
@@ -158,8 +172,10 @@ const List<ExercisePoolEntry> backBicepsBodyweightExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Back, Biceps**\n\n'
-        '1. Lie under a sturdy table or bar, grip the edge.\n'
-        '2. Pull your chest towards the table.\n'
-        '3. Lower with control.',
+        '1. Lie under a sturdy table or bar, grip the edge with an overhand grip, hands shoulder‑width apart.\n'
+        '2. With your body straight and heels on the floor, pull your chest towards the table by driving your elbows back.\n'
+        '3. Squeeze your shoulder blades together at the top, then lower your body with control back to the starting position.\n'
+        '4. Keep your core tight to maintain a straight body line.\n'
+        '5. To increase difficulty, elevate your feet or use a lower bar.',
   ),
 ];

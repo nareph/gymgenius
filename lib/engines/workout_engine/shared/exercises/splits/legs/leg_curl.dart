@@ -26,9 +26,11 @@ const List<ExercisePoolEntry> legsLegCurlExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Hamstrings**\n\n'
-        '1. Lie face down on the leg curl machine, ankles under the pads.\n'
-        '2. Curl your heels towards your glutes.\n'
-        '3. Lower with control.',
+        '1. Lie face down on the leg curl machine, with the pad resting just above your heels.\n'
+        '2. Grasp the handles for stability and keep your hips pressed against the pad.\n'
+        '3. Curl your heels towards your glutes by flexing your hamstrings, squeezing at the peak.\n'
+        '4. Lower the weight with control back to the starting position, fully extending your legs.\n'
+        '5. Avoid using momentum; perform the movement slowly and deliberately.',
   ),
   ExercisePoolEntry(
     id: 'legs_curl_single_leg',
@@ -45,8 +47,12 @@ const List<ExercisePoolEntry> legsLegCurlExercises = [
     forceType: ForceType.pull,
     laterality: Laterality.unilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Hamstrings (unilateral)**\n\n'
-        '1. Use one leg at a time.',
+    description: '**Target: Hamstrings (Unilateral)**\n\n'
+        '1. Use the leg curl machine, but only place one leg under the pad, the other resting on the machine.\n'
+        '2. Perform the curl with the working leg, focusing on the contraction.\n'
+        '3. Squeeze at the top and lower with control.\n'
+        '4. Complete all reps on one side before switching.\n'
+        '5. This helps correct imbalances between legs.',
   ),
   ExercisePoolEntry(
     id: 'legs_curl_seated',
@@ -64,8 +70,11 @@ const List<ExercisePoolEntry> legsLegCurlExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Hamstrings**\n\n'
-        '1. Sit on the machine, pads on front of ankles.\n'
-        '2. Curl the weight towards your glutes.',
+        '1. Sit on the seated leg curl machine, with the pad resting just above your heels (on the front of your ankles).\n'
+        '2. Grasp the handles and keep your back against the pad.\n'
+        '3. Curl the weight towards your glutes by flexing your hamstrings.\n'
+        '4. Squeeze at the peak, then return slowly.\n'
+        '5. This variation targets the hamstrings from a seated position, which can emphasise the medial head.',
   ),
   ExercisePoolEntry(
     id: 'legs_curl_iso_hold',
@@ -83,8 +92,11 @@ const List<ExercisePoolEntry> legsLegCurlExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Hamstrings**\n\n'
-        '1. Curl and hold the top position for 3-5 seconds.\n'
-        '2. Lower slowly.',
+        '1. Perform a standard leg curl, but when you reach the peak contraction, hold the position for 3–5 seconds.\n'
+        '2. Maintain the hold, squeezing your hamstrings as hard as possible.\n'
+        '3. Slowly lower the weight back to the starting position.\n'
+        '4. This increases time under tension and improves mind‑muscle connection.\n'
+        '5. Use a lighter weight to allow for the hold.',
   ),
   ExercisePoolEntry(
     id: 'legs_curl_band',
@@ -101,7 +113,10 @@ const List<ExercisePoolEntry> legsLegCurlExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Hamstrings**\n\n'
-        '1. Anchor a band, lie face down, loop band around ankles.\n'
-        '2. Curl your heels towards glutes.',
+        '1. Anchor a resistance band at floor level behind you.\n'
+        '2. Loop the band around your ankles and lie face down on the floor.\n'
+        '3. Curl your heels towards your glutes against the band tension.\n'
+        '4. Squeeze your hamstrings at the top, then return slowly.\n'
+        '5. This is a great home alternative to the machine.',
   ),
 ];

@@ -33,7 +33,7 @@ const List<MealTemplate> cameroonBeansDishes = [
   ),
   MealTemplate(
     id: 'cm_meal_rice_beans',
-    name: 'Riz + Haricots (Rice and Beans)',
+    name: 'Rice and Beans',
     objective: MealObjective.highEnergy,
     ingredientIds: [
       'cm_rice',
@@ -48,7 +48,7 @@ const List<MealTemplate> cameroonBeansDishes = [
   ),
   MealTemplate(
     id: 'cm_meal_beans_yam',
-    name: 'Haricots + Igname (Beans and Yam)',
+    name: 'Beans and Yam',
     objective: MealObjective.highEnergy,
     ingredientIds: ['cm_beans', 'cm_yam', 'cm_palm_oil', 'cm_onion'],
     ingredientNames: ['Beans', 'Yam', 'Palm oil', 'Onion'],
@@ -57,7 +57,7 @@ const List<MealTemplate> cameroonBeansDishes = [
   ),
   MealTemplate(
     id: 'cm_meal_beans_macaroni',
-    name: 'Haricots + Macaroni (Beans and Pasta)',
+    name: 'Beans and Pasta',
     objective: MealObjective.highEnergy,
     ingredientIds: [
       'cm_beans',
@@ -72,7 +72,7 @@ const List<MealTemplate> cameroonBeansDishes = [
   ),
   MealTemplate(
     id: 'cm_meal_beans_tomato_beef',
-    name: 'Haricot sauce tomate avec viande (Beans stew with beef)',
+    name: 'Beans stew with beef',
     objective: MealObjective.highProtein,
     ingredientIds: [
       'cm_beans',
@@ -88,7 +88,7 @@ const List<MealTemplate> cameroonBeansDishes = [
   ),
   MealTemplate(
     id: 'cm_meal_beans_tomato_fish',
-    name: 'Haricot sauce tomate avec poisson (Beans stew with fish)',
+    name: 'Beans stew with fish',
     objective: MealObjective.highProtein,
     ingredientIds: [
       'cm_beans',
@@ -105,7 +105,7 @@ const List<MealTemplate> cameroonBeansDishes = [
   ),
   MealTemplate(
     id: 'cm_meal_beans_corn_meal',
-    name: 'Haricots + Farine de maïs (Beans with corn meal)',
+    name: 'Beans with corn meal',
     objective: MealObjective.highEnergy,
     ingredientIds: ['cm_beans', 'cm_corn_flour', 'cm_palm_oil', 'cm_onion'],
     ingredientNames: ['Beans', 'Corn flour', 'Palm oil', 'Onion'],
@@ -114,7 +114,7 @@ const List<MealTemplate> cameroonBeansDishes = [
   ),
   MealTemplate(
     id: 'cm_meal_beans_fufu',
-    name: 'Haricots + Fufu (Beans with fufu)',
+    name: 'Beans with fufu',
     objective: MealObjective.highEnergy,
     ingredientIds: ['cm_beans', 'cm_fufu', 'cm_palm_oil', 'cm_onion'],
     ingredientNames: ['Beans', 'Fufu', 'Palm oil', 'Onion'],

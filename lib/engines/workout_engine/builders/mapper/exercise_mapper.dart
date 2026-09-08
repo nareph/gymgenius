@@ -16,13 +16,13 @@ class ExerciseMapper {
     required String description,
   }) {
     return Exercise(
-      id: '',
+      id: entry.id,
       name: entry.name,
       description: description,
       category: entry.category,
       movementPattern: entry.movementPattern,
       primaryMuscles: entry.targetMuscles,
-      secondaryMuscles: const [],
+      secondaryMuscles: entry.secondaryMuscles,
       equipment: entry.equipmentType,
       difficulty: difficulty,
       mechanics: entry.mechanics,

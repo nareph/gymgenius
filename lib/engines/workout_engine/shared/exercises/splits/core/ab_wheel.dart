@@ -25,9 +25,11 @@ const List<ExercisePoolEntry> coreAbWheelExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Core, Shoulders**\n\n'
-        '1. Kneel on the floor, gripping the ab wheel handles.\n'
-        '2. Roll forward slowly, keeping your core braced and back flat.\n'
-        '3. Roll back to the starting position.',
+        '1. Kneel on the floor with the ab wheel directly in front of you, gripping the handles.\n'
+        '2. Brace your core, keep your back flat, and slowly roll the wheel forward as far as you can without letting your hips drop.\n'
+        '3. Pause briefly at the furthest point, feeling the stretch in your core.\n'
+        '4. Engage your abs to pull the wheel back to the starting position, keeping your back straight throughout.\n'
+        '5. Avoid arching your lower back; maintain a neutral spine.',
   ),
   ExercisePoolEntry(
     id: 'core_abwheel_knee_rollouts',
@@ -44,9 +46,11 @@ const List<ExercisePoolEntry> coreAbWheelExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Core**\n\n'
-        '1. Start on your knees with the wheel in front.\n'
-        '2. Roll out only until your shoulders are extended, keeping back flat.\n'
-        '3. Pull back to the start.',
+        '1. Kneel on the floor with the ab wheel in front of you, gripping the handles.\n'
+        '2. Roll forward only until your shoulders are extended and your torso is nearly parallel to the floor, keeping your back flat.\n'
+        '3. Pause briefly, then pull back to the starting position using your core.\n'
+        '4. This is a less intense version of the full rollout, ideal for beginners.\n'
+        '5. Focus on maintaining a straight line from your knees to your shoulders.',
   ),
   ExercisePoolEntry(
     id: 'core_abwheel_standing_rollouts',
@@ -63,9 +67,11 @@ const List<ExercisePoolEntry> coreAbWheelExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Core, Shoulders**\n\n'
-        '1. Stand with feet hip-width apart, holding the wheel.\n'
-        '2. Roll down towards the floor, keeping back straight.\n'
-        '3. Roll back up using your core.',
+        '1. Stand with feet hip‑width apart, gripping the ab wheel handles.\n'
+        '2. Roll the wheel forward, bending at the hips, until your torso is nearly horizontal and your arms are extended overhead.\n'
+        '3. Pause at the bottom, feeling the deep stretch in your core.\n'
+        '4. Use your core and glutes to pull the wheel back to the starting position, maintaining a straight back.\n'
+        '5. This is an advanced variation; start with short range of motion.',
   ),
   ExercisePoolEntry(
     id: 'core_abwheel_oblique_rollouts',
@@ -82,9 +88,11 @@ const List<ExercisePoolEntry> coreAbWheelExercises = [
     laterality: Laterality.unilateral,
     planeOfMotion: PlaneOfMotion.frontal,
     description: '**Target: Obliques**\n\n'
-        '1. Kneel on the floor, wheel in front.\n'
-        '2. Roll out diagonally to one side.\n'
-        '3. Pull back and repeat on the other side.',
+        '1. Kneel on the floor with the ab wheel in front of you, gripping the handles.\n'
+        '2. Roll the wheel forward and diagonally to the right, keeping your core engaged and back flat.\n'
+        '3. Pause, then pull back to the centre and repeat on the left side.\n'
+        '4. This variation targets the obliques and improves rotational stability.\n'
+        '5. Alternate sides for a balanced workout.',
   ),
   ExercisePoolEntry(
     id: 'core_abwheel_negative_rollouts',
@@ -101,8 +109,10 @@ const List<ExercisePoolEntry> coreAbWheelExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Core, Shoulders**\n\n'
-        '1. Roll out as far as possible.\n'
-        '2. Pause at the bottom for 2-3 seconds.\n'
-        '3. Pull back with control.',
+        '1. Kneel on the floor with the ab wheel in front of you, gripping the handles.\n'
+        '2. Roll forward as far as you can, focusing on the eccentric (negative) portion of the movement.\n'
+        '3. Pause at the bottom for 2–3 seconds, feeling the deep isometric contraction.\n'
+        '4. Pull back to the starting position with control.\n'
+        '5. This variation increases time under tension and builds core endurance.',
   ),
 ];

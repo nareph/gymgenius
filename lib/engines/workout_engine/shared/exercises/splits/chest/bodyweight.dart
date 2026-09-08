@@ -12,7 +12,7 @@ import 'package:gymgenius/engines/workout_engine/shared/exercise_pool_entry.dart
 const List<ExercisePoolEntry> chestBodyweightExercises = [
   ExercisePoolEntry(
     id: 'chest_bw_push_up',
-    name: 'Push-Up',
+    name: 'Standard Push-Up',
     category: ExerciseCategory.compound,
     difficulty: ExerciseDifficulty.beginner,
     equipmentType: EquipmentType.bodyweight,
@@ -24,8 +24,12 @@ const List<ExercisePoolEntry> chestBodyweightExercises = [
     forceType: ForceType.push,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description:
-        'Classic bodyweight push exercise for chest, shoulders and triceps.',
+    description: '**Target: Chest, Shoulders, Triceps**\n\n'
+        '1. Start in a high plank with hands slightly wider than shoulders.\n'
+        '2. Keep your body in a straight line from head to heels, core engaged.\n'
+        '3. Lower your chest toward the floor until your elbows reach at least 90°.\n'
+        '4. Push back up to the starting position, exhaling at the top.\n'
+        '5. Perform controlled reps, avoiding any sagging or arching of your back.',
   ),
   ExercisePoolEntry(
     id: 'chest_bw_wide_push_up',
@@ -40,7 +44,11 @@ const List<ExercisePoolEntry> chestBodyweightExercises = [
     forceType: ForceType.push,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: 'Wide hand placement increases chest activation.',
+    description: '**Target: Chest (Outer Pecs)**\n\n'
+        '1. Place your hands significantly wider than shoulder‑width apart.\n'
+        '2. As you lower, your elbows will flare out – this increases chest recruitment.\n'
+        '3. Lower until your chest nearly touches the floor, then push up.\n'
+        '4. Keep your core tight to prevent your hips from dropping.',
   ),
   ExercisePoolEntry(
     id: 'chest_bw_decline_push_up',
@@ -55,7 +63,11 @@ const List<ExercisePoolEntry> chestBodyweightExercises = [
     forceType: ForceType.push,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: 'Feet elevated push-up emphasizing the upper chest.',
+    description: '**Target: Upper Chest**\n\n'
+        '1. Place your feet on an elevated surface (bench, chair, step).\n'
+        '2. Your hands are on the floor, directly under your shoulders.\n'
+        '3. Perform a push‑up; the elevated feet shift more weight to your upper chest and shoulders.\n'
+        '4. Lower until your chest is a few inches from the floor, then push up.',
   ),
   ExercisePoolEntry(
     id: 'chest_bw_archer_push_up',
@@ -74,7 +86,12 @@ const List<ExercisePoolEntry> chestBodyweightExercises = [
     forceType: ForceType.push,
     laterality: Laterality.unilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: 'Advanced unilateral push-up increasing chest strength.',
+    description: '**Target: Chest (Unilateral Strength)**\n\n'
+        '1. Start in a wide push‑up position.\n'
+        '2. Shift your weight onto one side, extending the other arm out to the side.\n'
+        '3. Lower your chest toward the hand of the working side.\n'
+        '4. Push back up, then repeat on the other side.\n'
+        '5. This challenges stability and builds unilateral pressing strength.',
   ),
   ExercisePoolEntry(
     id: 'chest_bw_diamond_push_up',
@@ -89,8 +106,10 @@ const List<ExercisePoolEntry> chestBodyweightExercises = [
     forceType: ForceType.push,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description:
-        'Close-grip push-up increasing inner chest and triceps activation.',
+    description: '**Target: Triceps + Inner Chest**\n\n'
+        '1. Place your hands close together under your chest, forming a diamond with thumbs and index fingers.\n'
+        '2. Keep your elbows close to your body as you lower your chest toward your hands.\n'
+        '3. Push back up, focusing on triceps engagement and inner chest squeeze.',
   ),
   ExercisePoolEntry(
     id: 'chest_bw_plyo_push_up',
@@ -105,6 +124,10 @@ const List<ExercisePoolEntry> chestBodyweightExercises = [
     forceType: ForceType.push,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: 'Explosive push-up for power development.',
+    description: '**Target: Power Development**\n\n'
+        '1. Start in a standard push‑up position.\n'
+        '2. Lower your chest toward the floor, then explode upward so your hands leave the floor.\n'
+        '3. Clap your hands (if comfortable) and land softly, absorbing the impact.\n'
+        '4. Immediately go into the next rep. This builds explosive strength and fast‑twitch fibers.',
   ),
 ];

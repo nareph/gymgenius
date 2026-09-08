@@ -105,6 +105,10 @@ class HealthPlatformMapper {
         name: m.name,
         frequency: HabitFrequencyExtension.fromValue(m.frequency),
         isActive: m.isActive,
+        // m.unit is null for habits saved before this field existed —
+        // Habit.unit being null means "plain yes/no habit", exactly the
+        // previous behavior, so no explicit fallback needed here.
+        unit: m.unit,
         createdAt: m.createdAt,
         updatedAt: m.updatedAt,
       );
@@ -117,6 +121,7 @@ class HealthPlatformMapper {
         isActive: e.isActive,
         createdAt: e.createdAt,
         updatedAt: e.updatedAt,
+        unit: e.unit,
       );
 
   static HabitLog toHabitLog(HabitLogHiveModel m) => HabitLog(
@@ -125,6 +130,7 @@ class HealthPlatformMapper {
         habitId: m.habitId,
         date: m.date,
         completed: m.completed,
+        value: m.value,
         loggedAt: m.loggedAt,
       );
 
@@ -135,5 +141,6 @@ class HealthPlatformMapper {
         date: e.date,
         completed: e.completed,
         loggedAt: e.loggedAt,
+        value: e.value,
       );
 }

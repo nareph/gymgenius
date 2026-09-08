@@ -16,7 +16,7 @@ const List<MealTemplate> cameroonRiceAndGrainDishes = [
   ),
   MealTemplate(
     id: 'cm_meal_jollof_rice',
-    name: 'Jollof Rice (Riz au gras)',
+    name: 'Jollof Rice',
     objective: MealObjective.highEnergy,
     ingredientIds: [
       'cm_rice',
@@ -31,7 +31,7 @@ const List<MealTemplate> cameroonRiceAndGrainDishes = [
   ),
   MealTemplate(
     id: 'cm_meal_bifaga',
-    name: 'Bifaga (Rice sautéed with smoked fish & morue)',
+    name: 'Bifaga (Rice sautéed with smoked fish & salted cod)',
     objective: MealObjective.highProtein,
     ingredientIds: [
       'cm_rice',
@@ -56,7 +56,7 @@ const List<MealTemplate> cameroonRiceAndGrainDishes = [
   ),
   MealTemplate(
     id: 'cm_meal_rice_tomato_fish',
-    name: 'Riz sauce tomate avec poisson',
+    name: 'Rice with tomato sauce and fish',
     objective: MealObjective.highProtein,
     ingredientIds: [
       'cm_rice',
@@ -73,7 +73,7 @@ const List<MealTemplate> cameroonRiceAndGrainDishes = [
   ),
   MealTemplate(
     id: 'cm_meal_rice_peanut_sauce',
-    name: 'White rice with peanut sauce (Riz sauce arachide)',
+    name: 'White rice with peanut sauce',
     objective: MealObjective.highEnergy,
     ingredientIds: [
       'cm_rice',
@@ -108,5 +108,14 @@ const List<MealTemplate> cameroonRiceAndGrainDishes = [
     ],
     baseMacros: MacroTargets(calories: 520, proteinG: 20, carbsG: 65, fatG: 18),
     tags: ['street_food', 'lunch', 'dinner', 'staple'],
+  ),
+  MealTemplate(
+    id: 'cm_meal_pasta_tomato_sauce',
+    name: 'Pasta with tomato sauce',
+    objective: MealObjective.light,
+    ingredientIds: ['cm_macaroni', 'cm_tomato', 'cm_onion', 'cm_palm_oil'],
+    ingredientNames: ['Macaroni', 'Tomato', 'Onion', 'Palm oil'],
+    baseMacros: MacroTargets(calories: 450, proteinG: 12, carbsG: 78, fatG: 10),
+    tags: ['lunch', 'dinner', 'vegetarian', 'light'],
   ),
 ];

@@ -25,8 +25,12 @@ const List<ExercisePoolEntry> chestSelectorizedExercises = [
     forceType: ForceType.push,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.transverse,
-    description:
-        'Machine chest press with a fixed path and selectorized weight stack.',
+    description: '**Target: Chest (Machine)**\n\n'
+        '1. Adjust the seat so the handles are at chest height.\n'
+        '2. Grip the handles, keep your back flat against the pad.\n'
+        '3. Press forward until your arms are extended, squeezing your chest.\n'
+        '4. Return slowly, controlling the weight throughout.\n'
+        '5. This machine provides a fixed path, great for beginners.',
   ),
   ExercisePoolEntry(
     id: 'chest_selector_pec_deck_fly',
@@ -43,7 +47,12 @@ const List<ExercisePoolEntry> chestSelectorizedExercises = [
     forceType: ForceType.push,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.transverse,
-    description: 'Machine fly that isolates the chest with constant tension.',
+    description: '**Target: Chest (Isolation Machine)**\n\n'
+        '1. Sit on the pec deck, position your forearms against the pads.\n'
+        '2. Keep a slight bend in your elbows, chest out.\n'
+        '3. Bring the pads together in front of your chest, squeezing hard.\n'
+        '4. Return with control, feel the stretch.\n'
+        '5. This isolates the pecs with constant tension.',
   ),
   ExercisePoolEntry(
     id: 'chest_selector_incline_press',
@@ -60,7 +69,11 @@ const List<ExercisePoolEntry> chestSelectorizedExercises = [
     forceType: ForceType.push,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.transverse,
-    description: 'Incline chest press machine targeting the upper chest.',
+    description: '**Target: Upper Chest (Machine)**\n\n'
+        '1. Adjust the incline machine seat so handles are at upper chest level.\n'
+        '2. Press upward and forward, squeezing your upper chest.\n'
+        '3. Lower with control.\n'
+        '4. Great for targeting the clavicular head.',
   ),
   ExercisePoolEntry(
     id: 'chest_selector_decline_press',
@@ -77,7 +90,10 @@ const List<ExercisePoolEntry> chestSelectorizedExercises = [
     forceType: ForceType.push,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.transverse,
-    description: 'Decline chest press machine focusing on the lower chest.',
+    description: '**Target: Lower Chest (Machine)**\n\n'
+        '1. Sit in the decline press machine, handles at lower chest height.\n'
+        '2. Press downward and forward, focusing on the lower sternal region.\n'
+        '3. Return slowly and with control.',
   ),
   ExercisePoolEntry(
     id: 'chest_selector_plate_loaded_press',
@@ -94,7 +110,10 @@ const List<ExercisePoolEntry> chestSelectorizedExercises = [
     forceType: ForceType.push,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.transverse,
-    description:
-        'Plate-loaded chest press providing a natural feel and heavy loading.',
+    description: '**Target: Chest (Plate‑Loaded Machine)**\n\n'
+        '1. Load plates on the machine, sit and adjust the seat.\n'
+        '2. Grip the handles and press forward, maintaining a natural arc.\n'
+        '3. Lower with control.\n'
+        '4. This machine often feels more natural than selectorized and allows heavy loading.',
   ),
 ];

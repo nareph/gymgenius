@@ -26,9 +26,11 @@ final List<ExercisePoolEntry> coreSelectorizedExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Abs**\n\n'
-        '1. Sit on the machine, feet under the pads.\n'
-        '2. Crunch down, bringing elbows towards knees.\n'
-        '3. Return with control.',
+        '1. Sit on the ab crunch machine, with your feet secured under the pads.\n'
+        '2. Grip the handles and keep your arms at a 90° angle.\n'
+        '3. Crunch down by curling your torso toward your knees, squeezing your abs.\n'
+        '4. Return slowly to the starting position, controlling the resistance.\n'
+        '5. Avoid pulling with your arms; the movement should come from your core.',
   ),
   ExercisePoolEntry(
     id: 'core_selector_torso_rotation',
@@ -46,9 +48,11 @@ final List<ExercisePoolEntry> coreSelectorizedExercises = [
     laterality: Laterality.alternating,
     planeOfMotion: PlaneOfMotion.transverse,
     description: '**Target: Obliques**\n\n'
-        '1. Sit on the machine, grip handles.\n'
-        '2. Rotate side to side against resistance.\n'
-        '3. Control the movement.',
+        '1. Sit on the torso rotation machine, gripping the handles firmly.\n'
+        '2. Rotate your torso to the right, then to the left, against the resistance.\n'
+        '3. Keep your hips stationary and your core engaged.\n'
+        '4. Perform the movement in a controlled, steady rhythm.\n'
+        '5. Adjust the weight to allow for full range of motion.',
   ),
   ExercisePoolEntry(
     id: 'core_selector_oblique_crunch',
@@ -66,9 +70,11 @@ final List<ExercisePoolEntry> coreSelectorizedExercises = [
     laterality: Laterality.unilateral,
     planeOfMotion: PlaneOfMotion.transverse,
     description: '**Target: Obliques**\n\n'
-        '1. Sit sideways on the machine, one hip against the pad.\n'
-        '2. Crunch torso towards your hip.\n'
-        '3. Return and switch sides.',
+        '1. Sit sideways on the oblique crunch machine, placing one hip against the pad.\n'
+        '2. Grip the handles and crunch your torso sideways toward your hip.\n'
+        '3. Squeeze your oblique at the peak, then return slowly.\n'
+        '4. Complete all reps on one side before switching.\n'
+        '5. Keep the movement controlled and avoid using momentum.',
   ),
   ExercisePoolEntry(
     id: 'core_selector_leg_lift',
@@ -86,9 +92,11 @@ final List<ExercisePoolEntry> coreSelectorizedExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Lower Abs**\n\n'
-        '1. Sit on a leg lift machine, arms on pads.\n'
-        '2. Lift knees towards chest.\n'
-        '3. Lower with control.',
+        '1. Sit on the leg lift machine, placing your arms on the pads for support.\n'
+        '2. Rest your legs on the lower pads and lift your knees toward your chest.\n'
+        '3. Squeeze your lower abs at the top, then lower with control.\n'
+        '4. Keep your back against the pad throughout.\n'
+        '5. Use a moderate weight to maintain control.',
   ),
   ExercisePoolEntry(
     id: 'core_selector_ab_extension',
@@ -106,8 +114,10 @@ final List<ExercisePoolEntry> coreSelectorizedExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Lower Abs**\n\n'
-        '1. Lie back on the machine, holding handles above.\n'
-        '2. Curl hips off the pad, bringing knees to chest.\n'
-        '3. Lower with control.',
+        '1. Lie back on the ab extension machine, holding the handles above you.\n'
+        '2. Curl your hips off the pad, bringing your knees toward your chest.\n'
+        '3. Squeeze your lower abs at the peak, then lower with control.\n'
+        '4. Keep your neck relaxed and your head resting on the pad.\n'
+        '5. Use a light weight to focus on the contraction.',
   ),
 ];

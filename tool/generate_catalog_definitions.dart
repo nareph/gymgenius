@@ -178,13 +178,23 @@ List<ExercisePoolEntry> _getCanonicalExercisesWithSplits() {
 /// after this light normalization — same standard used for the
 /// generated file's per-file dedup at the id level, applied globally.
 String _normalizeName(String name) {
-  return name
+  final cleaned = name
       .replaceAll(RegExp(r'\([^)]*\)'), '')
       .replaceAll(RegExp(r'\[[^\]]*\]'), '')
       .replaceAll(RegExp(r'[^a-zA-Z0-9\s]'), ' ')
       .replaceAll(RegExp(r'\s+'), ' ')
       .trim()
       .toLowerCase();
+
+  final words = cleaned.split(' ').map(_singularize).toList();
+  return words.join(' ');
+}
+
+String _singularize(String word) {
+  if (word.length > 3 && word.endsWith('s') && !word.endsWith('ss')) {
+    return word.substring(0, word.length - 1);
+  }
+  return word;
 }
 
 /// Creates a new immutable [ExercisePoolEntry] containing the merged

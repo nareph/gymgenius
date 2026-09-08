@@ -21,12 +21,7 @@ import 'package:gymgenius/engines/workout_engine/workout_engine.dart';
 import 'package:gymgenius/presentation/screens/recovery/daily_checkin_screen.dart';
 import 'package:gymgenius/presentation/widgets/regeneration/regeneration_options_sheet.dart';
 
-enum HomeState {
-  initial,
-  loading,
-  loaded,
-  error,
-}
+enum HomeState { initial, loading, loaded, error }
 
 class HomeViewModel extends ChangeNotifier {
   final WorkoutEngine _workoutEngine;
@@ -114,9 +109,7 @@ class HomeViewModel extends ChangeNotifier {
   // =========================================================================
 
   Future<void> _loadData() async {
-    Log.info(
-      'HomeViewModel: Loading data...',
-    );
+    Log.info('HomeViewModel: Loading data...');
 
     _state = HomeState.loading;
     notifyListeners();
@@ -125,9 +118,7 @@ class HomeViewModel extends ChangeNotifier {
       final user = await _userRepository.getCurrentUser();
 
       if (user == null) {
-        throw Exception(
-          'User not authenticated',
-        );
+        throw Exception('User not authenticated');
       }
 
       final healthProfile = await _healthRepository.getCurrentProfile();
@@ -203,34 +194,17 @@ class HomeViewModel extends ChangeNotifier {
         }
       }
 
+      Log.info('HomeViewModel: Profile complete: $_isProfileComplete');
+      Log.info('HomeViewModel: Program found: ${_currentProgram != null}');
+      Log.info('HomeViewModel: DailyPlan loaded: ${_dailyPlan != null}');
       Log.info(
-        'HomeViewModel: Profile complete: '
-        '$_isProfileComplete',
-      );
-
-      Log.info(
-        'HomeViewModel: Program found: '
-        '${_currentProgram != null}',
-      );
-
-      Log.info(
-        'HomeViewModel: DailyPlan loaded: '
-        '${_dailyPlan != null}',
-      );
-
-      Log.info(
-        'HomeViewModel: Recovery status: '
-        '${_dailyPlan?.recoveryStatus != null}',
-      );
+          'HomeViewModel: Recovery status: ${_dailyPlan?.recoveryStatus != null}');
 
       _state = HomeState.loaded;
       notifyListeners();
 
       if (_dailyPlan != null) {
-        await _loadDailyCoaching(
-          user.id,
-          _dailyPlan!,
-        );
+        await _loadDailyCoaching(user.id, _dailyPlan!);
       } else {
         _dailyCoaching = null;
       }
@@ -256,13 +230,9 @@ class HomeViewModel extends ChangeNotifier {
     required HealthProfile profile,
     required DailyPlan plan,
   }) async {
-    if (_autoRefreshAttempted) {
-      return false;
-    }
+    if (_autoRefreshAttempted) return false;
 
-    if (!plan.shouldRefreshProgram) {
-      return false;
-    }
+    if (!plan.shouldRefreshProgram) return false;
 
     _autoRefreshAttempted = true;
 
@@ -270,8 +240,7 @@ class HomeViewModel extends ChangeNotifier {
 
     Log.info(
       'HomeViewModel: Auto-refreshing program '
-      '(${refresh.reason.name}): '
-      '${refresh.message}',
+      '(${refresh.reason.name}): ${refresh.message}',
     );
 
     try {
@@ -301,10 +270,7 @@ class HomeViewModel extends ChangeNotifier {
   // Coaching
   // =========================================================================
 
-  Future<void> _loadDailyCoaching(
-    String userId,
-    DailyPlan plan,
-  ) async {
+  Future<void> _loadDailyCoaching(String userId, DailyPlan plan) async {
     _isLoadingCoaching = true;
     notifyListeners();
 
@@ -312,9 +278,7 @@ class HomeViewModel extends ChangeNotifier {
       _dailyCoaching = await _coachRepository.getOrCreateDailyCoaching(
         userId: userId,
         plan: plan,
-        generate: () => _aiCoachEngine.generateDailyCoaching(
-          plan,
-        ),
+        generate: () => _aiCoachEngine.generateDailyCoaching(plan),
       );
     } catch (e, s) {
       Log.error(
@@ -332,17 +296,11 @@ class HomeViewModel extends ChangeNotifier {
 
   Future<void> retryCoaching() async {
     final user = await _userRepository.getCurrentUser();
-
     final plan = _dailyPlan;
 
-    if (user == null || plan == null) {
-      return;
-    }
+    if (user == null || plan == null) return;
 
-    await _loadDailyCoaching(
-      user.id,
-      plan,
-    );
+    await _loadDailyCoaching(user.id, plan);
   }
 
   // =========================================================================
@@ -352,10 +310,8 @@ class HomeViewModel extends ChangeNotifier {
   Future<void> generateNewProgram() async {
     if (_healthProfile == null || !_healthProfile!.isComplete) {
       _errorMessage = 'Health profile is incomplete.';
-
       _state = HomeState.error;
       notifyListeners();
-
       return;
     }
 
@@ -372,7 +328,6 @@ class HomeViewModel extends ChangeNotifier {
       await _loadData();
     } catch (e) {
       _errorMessage = 'Failed to generate program: $e';
-
       _state = HomeState.error;
       notifyListeners();
     } finally {
@@ -381,15 +336,11 @@ class HomeViewModel extends ChangeNotifier {
     }
   }
 
-  Future<void> regenerateProgram(
-    RegenerationOptions options,
-  ) async {
+  Future<void> regenerateProgram(RegenerationOptions options) async {
     if (_healthProfile == null || !_healthProfile!.isComplete) {
       _errorMessage = 'Health profile is incomplete.';
-
       _state = HomeState.error;
       notifyListeners();
-
       return;
     }
 
@@ -406,22 +357,15 @@ class HomeViewModel extends ChangeNotifier {
       await _loadData();
 
       if (_context != null && _context!.mounted) {
-        _showSuccessMessage(
-          _context!,
-          options,
-        );
+        _showSuccessMessage(_context!, options);
       }
     } catch (e) {
       _errorMessage = 'Failed to regenerate program: $e';
-
       _state = HomeState.error;
       notifyListeners();
 
       if (_context != null && _context!.mounted) {
-        _showErrorMessage(
-          _context!,
-          e.toString(),
-        );
+        _showErrorMessage(_context!, e.toString());
       }
     } finally {
       _isGeneratingProgram = false;
@@ -429,10 +373,7 @@ class HomeViewModel extends ChangeNotifier {
     }
   }
 
-  void _showSuccessMessage(
-    BuildContext context,
-    RegenerationOptions options,
-  ) {
+  void _showSuccessMessage(BuildContext context, RegenerationOptions options) {
     final message = switch (options.type) {
       RegenerationType.fullProgram =>
         'New training program generated successfully!',
@@ -449,10 +390,7 @@ class HomeViewModel extends ChangeNotifier {
     );
   }
 
-  void _showErrorMessage(
-    BuildContext context,
-    String error,
-  ) {
+  void _showErrorMessage(BuildContext context, String error) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('❌ Failed: $error'),
@@ -479,78 +417,67 @@ class HomeViewModel extends ChangeNotifier {
   // Daily Check-in
   // =========================================================================
 
-  Future<void> triggerCheckInIfNeeded(
-    BuildContext context,
-  ) async {
+  Future<void> triggerCheckInIfNeeded(BuildContext context) async {
     final user = await _userRepository.getCurrentUser();
 
-    if (user == null) {
-      return;
-    }
+    if (user == null) return;
 
-    if (_healthProfile == null || !_healthProfile!.isComplete) {
-      return;
-    }
+    if (_healthProfile == null || !_healthProfile!.isComplete) return;
 
     final today = DateTime.now();
 
+    // The RecoveryRepository is the source of truth.
+    //
+    // If today's check-in already exists, it has been completed.
+    // Therefore we must not show the screen again today.
     final existing = await _recoveryRepository.getDailyCheckIn(
       user.id,
       today,
     );
 
-    if (existing != null) {
-      return;
-    }
+    if (existing != null) return;
 
-    final skipped = await _recoveryRepository.isCheckInSkipped(
-      user.id,
-      today,
-    );
-
-    if (skipped) {
-      return;
-    }
-
-    if (!context.mounted) {
-      return;
-    }
+    if (!context.mounted) return;
 
     final checkIn = await Navigator.of(context).push<DailyCheckIn?>(
-      DailyCheckInScreen.route(
-        user.id,
-      ),
+      DailyCheckInScreen.route(user.id),
     );
 
-    if (!context.mounted) {
-      return;
-    }
+    if (!context.mounted) return;
 
     if (checkIn != null) {
-      await _applyCheckIn(
-        checkIn,
-      );
-    } else {
-      // The user explicitly skipped.
+      // The user completed today's DailyCheckIn.
       //
-      // We remember the skip so the screen is not reopened during
-      // the same calendar day.
-      await _recoveryRepository.markCheckInSkipped(
-        user.id,
-        today,
-      );
-
-      // Keep the current DailyPlan untouched.
-      // In particular: recoveryStatus remains null.
+      // _applyCheckIn() will persist the check-in through
+      // DecisionEngine / RecoveryRepository and update the daily plan.
+      await _applyCheckIn(checkIn);
     }
+
+    /*
+     * checkIn == null means:
+     *
+     *     User pressed "Plus tard".
+     *
+     * IMPORTANT:
+     *
+     * We deliberately do NOTHING here.
+     *
+     * "Plus tard" is NOT a business state.
+     * It is simply closing the form because the user is not ready
+     * to provide the information yet.
+     *
+     * Therefore:
+     *
+     *     - no "skipped" flag
+     *     - no database write
+     *     - no RecoveryStatus
+     *     - today's check-in remains incomplete
+     *     - it can be shown again later
+     */
   }
 
-  Future<void> _applyCheckIn(
-    DailyCheckIn checkIn,
-  ) async {
-    if (_currentProgram == null || _healthProfile == null) {
-      return;
-    }
+  Future<void> _applyCheckIn(DailyCheckIn checkIn) async {
+    if (_currentProgram == null || _healthProfile == null) return;
 
     _state = HomeState.loading;
     notifyListeners();
@@ -593,10 +520,7 @@ class HomeViewModel extends ChangeNotifier {
       notifyListeners();
 
       if (_dailyPlan != null) {
-        await _loadDailyCoaching(
-          checkIn.userId,
-          _dailyPlan!,
-        );
+        await _loadDailyCoaching(checkIn.userId, _dailyPlan!);
       }
     } catch (e) {
       _errorMessage = e.toString();
@@ -617,9 +541,7 @@ class HomeViewModel extends ChangeNotifier {
   // Context
   // =========================================================================
 
-  void setContext(
-    BuildContext context,
-  ) {
+  void setContext(BuildContext context) {
     _context = context;
   }
 }

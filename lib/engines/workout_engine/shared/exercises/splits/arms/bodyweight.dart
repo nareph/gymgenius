@@ -11,8 +11,8 @@ import 'package:gymgenius/engines/workout_engine/shared/exercise_pool_entry.dart
 
 const List<ExercisePoolEntry> armsBodyweightExercises = [
   ExercisePoolEntry(
-    id: 'arms_bw_tricep_dips_chair',
-    name: 'Tricep Dips (chair)',
+    id: 'arms_bw_bench_dips',
+    name: 'Bench Dips',
     category: ExerciseCategory.compound,
     difficulty: ExerciseDifficulty.beginner,
     equipmentType: EquipmentType.bodyweight,
@@ -24,12 +24,16 @@ const List<ExercisePoolEntry> armsBodyweightExercises = [
     forceType: ForceType.push,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description:
-        '**Target: Triceps, Shoulders**\n\n1. Sit on a chair, hands on the edge.\n2. Slide hips off and lower body.\n3. Push back up.',
+    description: '**Target: Triceps, Shoulders**\n\n'
+        '1. Sit on the edge of a sturdy chair or bench, hands gripping the edge beside your hips, fingers pointing forward.\n'
+        '2. Slide your hips off the seat and lower your body by bending your elbows until your arms form a 90° angle.\n'
+        '3. Push back up to the starting position, keeping your body close to the bench.\n'
+        '4. To increase difficulty, extend your legs further or place weight on your lap.\n'
+        '5. Keep your shoulders down and avoid shrugging.',
   ),
   ExercisePoolEntry(
     id: 'arms_bw_close_grip_pushups',
-    name: 'Close-Grip Push-ups',
+    name: 'Close-Grip Push-Up',
     category: ExerciseCategory.compound,
     difficulty: ExerciseDifficulty.beginner,
     equipmentType: EquipmentType.bodyweight,
@@ -41,8 +45,12 @@ const List<ExercisePoolEntry> armsBodyweightExercises = [
     forceType: ForceType.push,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description:
-        '**Target: Triceps, Inner Chest**\n\n1. Hands close together under chest.\n2. Lower chest towards hands.\n3. Press up.',
+    description: '**Target: Triceps, Inner Chest**\n\n'
+        '1. Place your hands directly under your chest, with your thumbs and index fingers touching to form a diamond shape.\n'
+        '2. Keep your body in a straight line from head to heels, core engaged.\n'
+        '3. Lower your chest towards your hands, keeping your elbows close to your body.\n'
+        '4. Push back up to the starting position, focusing on the triceps and inner chest squeeze.\n'
+        '5. Avoid flaring your elbows out to the sides.',
   ),
   ExercisePoolEntry(
     id: 'arms_bw_tricep_isometric_hold',
@@ -59,12 +67,16 @@ const List<ExercisePoolEntry> armsBodyweightExercises = [
     forceType: ForceType.isometric,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description:
-        '**Target: Triceps**\n\n1. Halfway down in a push-up position.\n2. Hold for time, keeping body straight.',
+    description: '**Target: Triceps**\n\n'
+        '1. Start in a push‑up position, but lower yourself about halfway down, so your elbows are bent at approximately 90°.\n'
+        '2. Hold this position, keeping your body straight and core engaged.\n'
+        '3. Hold for the prescribed time, maintaining tension in your triceps.\n'
+        '4. If this is too difficult, perform the hold with your knees on the floor for support.\n'
+        '5. Focus on keeping your elbows tucked close to your body.',
   ),
   ExercisePoolEntry(
     id: 'arms_bw_diamond_pushups',
-    name: 'Diamond Push-ups',
+    name: 'Diamond Push-Up',
     category: ExerciseCategory.compound,
     difficulty: ExerciseDifficulty.intermediate,
     equipmentType: EquipmentType.bodyweight,
@@ -76,8 +88,12 @@ const List<ExercisePoolEntry> armsBodyweightExercises = [
     forceType: ForceType.push,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description:
-        '**Target: Triceps, Inner Chest**\n\n1. Hands in diamond shape under chest.\n2. Lower chest towards hands.\n3. Press up.',
+    description: '**Target: Triceps, Inner Chest**\n\n'
+        '1. Place your hands together under your chest, forming a diamond shape with your thumbs and index fingers.\n'
+        '2. Keep your elbows close to your body and lower your chest towards your hands.\n'
+        '3. Push back up, focusing on the triceps and inner chest squeeze.\n'
+        '4. Maintain a straight body line throughout the movement.\n'
+        '5. This variation places maximum emphasis on the triceps.',
   ),
   ExercisePoolEntry(
     id: 'arms_bw_plank_shoulder_taps',
@@ -97,8 +113,12 @@ const List<ExercisePoolEntry> armsBodyweightExercises = [
     forceType: ForceType.isometric,
     laterality: Laterality.alternating,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description:
-        '**Target: Shoulders, Triceps, Core**\n\n1. Plank position.\n2. Lift one hand to tap opposite shoulder.\n3. Alternate.',
+    description: '**Target: Shoulders, Triceps, Core**\n\n'
+        '1. Start in a high plank position with your hands directly under your shoulders.\n'
+        '2. Lift your right hand off the floor and tap your left shoulder, keeping your hips as still as possible.\n'
+        '3. Return your right hand to the floor, then lift your left hand to tap your right shoulder.\n'
+        '4. Continue alternating, keeping your core braced to prevent your hips from swaying.\n'
+        '5. To reduce difficulty, perform with your knees on the floor.',
   ),
   ExercisePoolEntry(
     id: 'arms_bw_bicep_isometric_hold',
@@ -115,31 +135,16 @@ const List<ExercisePoolEntry> armsBodyweightExercises = [
     forceType: ForceType.isometric,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description:
-        '**Target: Biceps**\n\n1. Flex biceps in a curled position.\n2. Hold for time, squeezing hard.',
-  ),
-  ExercisePoolEntry(
-    id: 'arms_bw_bench_dips',
-    name: 'Bench Dips',
-    category: ExerciseCategory.compound,
-    difficulty: ExerciseDifficulty.beginner,
-    equipmentType: EquipmentType.bodyweight,
-    targetMuscles: [MuscleGroup.triceps, MuscleGroup.shoulders],
-    secondaryMuscles: [MuscleGroup.chest],
-    usesWeight: false,
-    movementPattern: MovementPattern.push,
-    mechanics: Mechanics.openChain,
-    forceType: ForceType.push,
-    laterality: Laterality.bilateral,
-    planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Triceps, Shoulders**\n\n'
-        '1. Sit on the edge of a bench or chair, hands gripping the edge beside your hips.\n'
-        '2. Slide your hips off and lower your body by bending your elbows.\n'
-        '3. Push back up to full extension.',
+    description: '**Target: Biceps**\n\n'
+        '1. Stand with your arms bent at 90°, flexing your biceps as hard as possible.\n'
+        '2. Hold this contracted position, squeezing your biceps with maximum effort.\n'
+        '3. Keep your shoulders down and your core engaged.\n'
+        '4. Hold for the prescribed time, focusing on the mind‑muscle connection.\n'
+        '5. This can also be performed with one arm at a time for more intensity.',
   ),
   ExercisePoolEntry(
     id: 'arms_bw_incline_pushups',
-    name: 'Incline Push-ups (Tricep Focus)',
+    name: 'Incline Push-Up (Tricep Focus)',
     category: ExerciseCategory.compound,
     difficulty: ExerciseDifficulty.beginner,
     equipmentType: EquipmentType.bodyweight,
@@ -151,8 +156,12 @@ const List<ExercisePoolEntry> armsBodyweightExercises = [
     forceType: ForceType.push,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description:
-        '**Target: Triceps, Chest**\n\n1. Place hands on a bench or sturdy surface.\n2. Keep elbows tucked and lower your chest.\n3. Press back up.',
+    description: '**Target: Triceps, Chest**\n\n'
+        '1. Place your hands on a sturdy bench, chair, or step, shoulder‑width apart, with your body in a plank position.\n'
+        '2. Keep your elbows tucked close to your body as you lower your chest towards the bench.\n'
+        '3. Push back up, focusing on the triceps and chest squeeze.\n'
+        '4. This incline variation reduces the load, making it suitable for beginners.\n'
+        '5. To increase difficulty, lower the height of the surface.',
   ),
   ExercisePoolEntry(
     id: 'arms_bw_forearm_plank',
@@ -169,8 +178,12 @@ const List<ExercisePoolEntry> armsBodyweightExercises = [
     forceType: ForceType.isometric,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description:
-        '**Target: Forearms, Core**\n\n1. Hold a forearm plank with shoulders stacked over elbows.\n2. Maintain a straight line from head to heels.\n3. Hold for time.',
+    description: '**Target: Forearms, Core**\n\n'
+        '1. Lie on your stomach, then prop yourself up on your forearms, with your elbows directly under your shoulders.\n'
+        '2. Keep your body in a straight line from head to heels, core engaged.\n'
+        '3. Hold this position for the prescribed time, maintaining tension in your forearms and core.\n'
+        '4. Avoid letting your hips sag or pike up.\n'
+        '5. To increase difficulty, extend your arms further forward or lift one leg.',
   ),
   ExercisePoolEntry(
     id: 'arms_bw_reverse_plank',
@@ -187,8 +200,12 @@ const List<ExercisePoolEntry> armsBodyweightExercises = [
     forceType: ForceType.isometric,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description:
-        '**Target: Triceps, Rear Delts**\n\n1. Sit with legs extended, hands behind hips.\n2. Lift hips until body forms a straight line.\n3. Hold while keeping chest open.',
+    description: '**Target: Triceps, Rear Delts**\n\n'
+        '1. Sit on the floor with your legs extended and your hands on the floor behind your hips, fingers pointing towards your body.\n'
+        '2. Press through your hands and lift your hips until your body forms a straight line from your shoulders to your heels.\n'
+        '3. Keep your chest open, shoulders down, and core engaged.\n'
+        '4. Hold for the prescribed time, focusing on triceps and rear delt engagement.\n'
+        '5. Avoid letting your hips drop; keep them elevated.',
   ),
   ExercisePoolEntry(
     id: 'arms_bw_wall_handstand_hold',
@@ -205,24 +222,11 @@ const List<ExercisePoolEntry> armsBodyweightExercises = [
     forceType: ForceType.isometric,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description:
-        '**Target: Shoulders, Triceps**\n\n1. Kick up into a handstand with feet on a wall.\n2. Keep arms straight and core tight.\n3. Hold for time.',
-  ),
-  ExercisePoolEntry(
-    id: 'arms_bw_chair_tricep_extensions',
-    name: 'Chair Tricep Extensions',
-    category: ExerciseCategory.isolation,
-    difficulty: ExerciseDifficulty.beginner,
-    equipmentType: EquipmentType.bodyweight,
-    targetMuscles: [MuscleGroup.triceps],
-    secondaryMuscles: [MuscleGroup.shoulders],
-    usesWeight: false,
-    movementPattern: MovementPattern.push,
-    mechanics: Mechanics.openChain,
-    forceType: ForceType.push,
-    laterality: Laterality.bilateral,
-    planeOfMotion: PlaneOfMotion.sagittal,
-    description:
-        '**Target: Triceps**\n\n1. Place hands on a chair behind you, fingers forward.\n2. Bend elbows to lower hips.\n3. Extend arms to lift back up.',
+    description: '**Target: Shoulders, Triceps**\n\n'
+        '1. Place your hands on the floor about 6–12 inches from a wall, shoulder‑width apart.\n'
+        '2. Kick up into a handstand position, resting your feet against the wall for support.\n'
+        '3. Keep your arms straight, shoulders engaged, and core tight.\n'
+        '4. Hold for the prescribed time, maintaining a straight body line.\n'
+        '5. To reduce difficulty, practice with one foot on the wall and one foot off.',
   ),
 ];

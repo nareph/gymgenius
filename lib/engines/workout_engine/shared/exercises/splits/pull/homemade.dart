@@ -16,7 +16,12 @@ const List<ExercisePoolEntry> pullHomemadeExercises = [
     forceType: ForceType.pull,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: 'Bend over, pull weights towards lower chest.',
+    description: '**Target: Back**\n\n'
+        '1. Hold two homemade weights (e.g., bags of rice, water jugs, sandbags) at your sides.\n'
+        '2. Bend at the hips with a flat back, torso nearly parallel to the floor.\n'
+        '3. Pull the weights towards your lower chest, squeezing your shoulder blades together.\n'
+        '4. Lower with control, keeping your back flat throughout the movement.\n'
+        '5. Ensure the weights are secure to avoid injury.',
   ),
   ExercisePoolEntry(
     id: 'pull_homemade_deadlift',
@@ -32,7 +37,12 @@ const List<ExercisePoolEntry> pullHomemadeExercises = [
     forceType: ForceType.pull,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: 'Hinge at hips, lift weights to standing position.',
+    description: '**Target: Full Posterior Chain**\n\n'
+        '1. Stand with feet hip‑width apart, holding a heavy homemade weight (or two) in front of your thighs.\n'
+        '2. Hinge at your hips, keeping your back flat, and lower the weight towards the floor while bending your knees slightly.\n'
+        '3. Drive through your heels to stand up, squeezing your glutes and lats at the top.\n'
+        '4. Lower with control to the starting position.\n'
+        '5. Keep the weight close to your body throughout the lift.',
   ),
   ExercisePoolEntry(
     id: 'pull_homemade_bicep_curl',
@@ -48,7 +58,12 @@ const List<ExercisePoolEntry> pullHomemadeExercises = [
     forceType: ForceType.pull,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: 'Stand, curl weights up to shoulder height.',
+    description: '**Target: Biceps**\n\n'
+        '1. Stand upright with feet shoulder‑width apart, holding a homemade weight in each hand, palms facing forward.\n'
+        '2. Keeping your elbows pinned to your sides, curl the weights up towards your shoulders.\n'
+        '3. Squeeze your biceps at the top, then lower with control.\n'
+        '4. Avoid swinging your body; use strict form.\n'
+        '5. Perform the movement slowly for maximum biceps activation.',
   ),
   ExercisePoolEntry(
     id: 'pull_homemade_hammer_curl',
@@ -64,7 +79,12 @@ const List<ExercisePoolEntry> pullHomemadeExercises = [
     forceType: ForceType.pull,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: 'Neutral grip curl.',
+    description: '**Target: Biceps, Forearms**\n\n'
+        '1. Stand upright with feet shoulder‑width apart, holding a homemade weight in each hand with a neutral grip (palms facing each other).\n'
+        '2. Keeping your elbows pinned to your sides, curl the weights up towards your shoulders without rotating your wrists.\n'
+        '3. Squeeze your biceps and forearms at the top, then lower with control.\n'
+        '4. This variation targets the brachialis and brachioradialis muscles.\n'
+        '5. Perform the movement slowly for maximum muscle engagement.',
   ),
   ExercisePoolEntry(
     id: 'pull_homemade_shrugs',
@@ -80,6 +100,11 @@ const List<ExercisePoolEntry> pullHomemadeExercises = [
     forceType: ForceType.pull,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: 'Shrug shoulders up toward ears.',
+    description: '**Target: Traps**\n\n'
+        '1. Stand upright with feet shoulder‑width apart, holding a homemade weight in each hand at your sides.\n'
+        '2. Shrug your shoulders straight up towards your ears as high as possible, squeezing your traps.\n'
+        '3. Hold for a second, then slowly lower back down.\n'
+        '4. Keep your arms straight and your neck relaxed.\n'
+        '5. Avoid rotating your shoulders; focus on the vertical movement.',
   ),
 ];

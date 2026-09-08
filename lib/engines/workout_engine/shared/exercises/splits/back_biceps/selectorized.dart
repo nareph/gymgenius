@@ -12,7 +12,7 @@ import 'package:gymgenius/engines/workout_engine/shared/exercise_pool_entry.dart
 const List<ExercisePoolEntry> backBicepsSelectorizedExercises = [
   ExercisePoolEntry(
     id: 'back_biceps_selector_machine_row',
-    name: 'Machine Row',
+    name: 'Selectorized Machine Row',
     category: ExerciseCategory.compound,
     difficulty: ExerciseDifficulty.beginner,
     equipmentType: EquipmentType.gymMachinesSelectorized,
@@ -26,8 +26,11 @@ const List<ExercisePoolEntry> backBicepsSelectorizedExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Back, Biceps**\n\n'
-        '1. Sit at the row machine, chest against the pad.\n'
-        '2. Pull the handles towards your torso.',
+        '1. Sit on the seated row machine, brace your feet against the footplates, and keep your knees slightly bent.\n'
+        '2. Grasp the V‑handle or bar, lean forward slightly at the hips, and then pull the handle towards your abdomen.\n'
+        '3. Squeeze your shoulder blades together at the peak contraction, then return slowly with control.\n'
+        '4. Keep your back straight and avoid using excessive momentum.\n'
+        '5. Adjust the seat height so the handles are at chest level for optimal range of motion.',
   ),
   ExercisePoolEntry(
     id: 'back_biceps_selector_lat_pulldown',
@@ -45,12 +48,15 @@ const List<ExercisePoolEntry> backBicepsSelectorizedExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Lats, Biceps**\n\n'
-        '1. Sit at machine, grip wide bar.\n'
-        '2. Pull down to upper chest.',
+        '1. Sit at the lat pulldown machine, secure your thighs under the pads, and grip the bar with an overhand grip slightly wider than shoulder‑width.\n'
+        '2. Lean back slightly, keep your chest up, and pull the bar down to your upper chest, driving your elbows down and back.\n'
+        '3. Squeeze your lats at the bottom, then let the bar rise slowly back to the starting position.\n'
+        '4. Control the movement; do not use momentum.\n'
+        '5. Variations: use a wide grip, neutral grip, or underhand grip for different muscle emphasis.',
   ),
   ExercisePoolEntry(
     id: 'back_biceps_selector_chest_supported_row',
-    name: 'Chest-Supported Row',
+    name: 'Selectorized Chest-Supported Row',
     category: ExerciseCategory.compound,
     difficulty: ExerciseDifficulty.beginner,
     equipmentType: EquipmentType.gymMachinesSelectorized,
@@ -64,12 +70,15 @@ const List<ExercisePoolEntry> backBicepsSelectorizedExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Back**\n\n'
-        '1. Lie chest-down on the machine, grip handles.\n'
-        '2. Pull handles towards your chest.',
+        '1. Lie chest‑down on the chest‑supported row machine, gripping the handles at chest height.\n'
+        '2. Pull the handles towards your chest, driving your elbows back and squeezing your shoulder blades together.\n'
+        '3. Pause at the peak contraction, then slowly release the weight back to the starting position.\n'
+        '4. Keep your chest against the pad and avoid lifting your torso.\n'
+        '5. This machine removes lower back strain, allowing you to focus entirely on the back muscles.',
   ),
   ExercisePoolEntry(
     id: 'back_biceps_selector_rear_delt_fly',
-    name: 'Rear Delt Fly',
+    name: 'Selectorized Rear Delt Fly',
     category: ExerciseCategory.isolation,
     difficulty: ExerciseDifficulty.beginner,
     equipmentType: EquipmentType.gymMachinesSelectorized,
@@ -83,12 +92,15 @@ const List<ExercisePoolEntry> backBicepsSelectorizedExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.transverse,
     description: '**Target: Rear Delts**\n\n'
-        '1. Sit on the machine, arms against the pads.\n'
-        '2. Push pads back and out, squeezing shoulder blades.',
+        '1. Sit on the rear delt machine, adjust the seat so your arms are parallel to the floor when you grip the handles.\n'
+        '2. Position your elbows against the pads and grasp the handles.\n'
+        '3. Push the handles back and outward, squeezing your shoulder blades together.\n'
+        '4. Pause at the peak contraction, then return with control.\n'
+        '5. Use a light weight to focus on strict form and the mind‑muscle connection.',
   ),
   ExercisePoolEntry(
     id: 'back_biceps_selector_preacher_curl',
-    name: 'Preacher Curl Machine',
+    name: 'Selectorized Preacher Curl',
     category: ExerciseCategory.isolation,
     difficulty: ExerciseDifficulty.beginner,
     equipmentType: EquipmentType.gymMachinesSelectorized,
@@ -102,7 +114,10 @@ const List<ExercisePoolEntry> backBicepsSelectorizedExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Biceps**\n\n'
-        '1. Sit at the preacher curl machine, rest upper arms on pad.\n'
-        '2. Curl handles up towards shoulders.',
+        '1. Sit at the preacher curl machine, rest your upper arms on the pad, and grip the handles with an underhand grip.\n'
+        '2. Curl the handles up towards your shoulders by contracting your biceps, keeping your upper arms stationary on the pad.\n'
+        '3. Squeeze your biceps at the top, then lower the handles with control until your arms are fully extended.\n'
+        '4. Avoid using momentum; keep the movement slow and controlled.\n'
+        '5. This machine isolates the biceps effectively and minimises cheating.',
   ),
 ];

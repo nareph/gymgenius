@@ -22,6 +22,11 @@ class HabitLogHiveModel extends HiveObject {
   @HiveField(5)
   DateTime loggedAt;
 
+  /// Nullable — existing logs saved before this field existed
+  /// deserialize with value == null (no quantity recorded).
+  @HiveField(6)
+  double? value;
+
   HabitLogHiveModel({
     required this.id,
     required this.userId,
@@ -29,5 +34,6 @@ class HabitLogHiveModel extends HiveObject {
     required this.date,
     required this.completed,
     required this.loggedAt,
+    this.value,
   });
 }

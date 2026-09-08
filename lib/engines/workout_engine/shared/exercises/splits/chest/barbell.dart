@@ -25,7 +25,13 @@ const List<ExercisePoolEntry> chestBarbellExercises = [
     forceType: ForceType.push,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.transverse,
-    description: 'The primary strength exercise for chest development.',
+    description: '**Target: Chest (Overall Mass)**\n\n'
+        '1. Lie on a flat bench, eyes directly under the bar.\n'
+        '2. Grip the bar slightly wider than shoulder‑width, wrap your thumbs around.\n'
+        '3. Unrack the bar and hold it above your chest with arms extended.\n'
+        '4. Lower the bar to your mid‑chest while keeping your elbows at about 75°.\n'
+        '5. Drive the bar back up explosively, squeezing your chest.\n'
+        '6. Keep your feet planted and your back slightly arched.',
   ),
   ExercisePoolEntry(
     id: 'chest_bb_incline_press',
@@ -42,7 +48,12 @@ const List<ExercisePoolEntry> chestBarbellExercises = [
     forceType: ForceType.push,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.transverse,
-    description: 'Heavy incline pressing movement emphasizing the upper chest.',
+    description: '**Target: Upper Chest**\n\n'
+        '1. Set the bench to a 30–45° incline.\n'
+        '2. Grip the bar slightly wider than shoulder‑width.\n'
+        '3. Unrack and lower the bar to your upper chest, just below the collarbone.\n'
+        '4. Press up with control, driving your upper back into the pad.\n'
+        '5. Avoid locking your elbows at the top to keep tension on the chest.',
   ),
   ExercisePoolEntry(
     id: 'chest_bb_close_press',
@@ -59,8 +70,11 @@ const List<ExercisePoolEntry> chestBarbellExercises = [
     forceType: ForceType.push,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.transverse,
-    description:
-        'Close grip variation increasing triceps contribution while training the chest.',
+    description: '**Target: Chest + Triceps**\n\n'
+        '1. Lie on a flat bench with hands shoulder‑width apart or slightly narrower.\n'
+        '2. Lower the bar to your lower chest while keeping your elbows tucked close to your torso.\n'
+        '3. Press back up, focusing on the triceps and inner chest.\n'
+        '4. Keep your wrists straight and the bar over your wrists.',
   ),
   ExercisePoolEntry(
     id: 'chest_bb_floor_press',
@@ -77,7 +91,11 @@ const List<ExercisePoolEntry> chestBarbellExercises = [
     forceType: ForceType.push,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.transverse,
-    description: 'Press performed from the floor to reduce shoulder stress.',
+    description: '**Target: Chest (Lockout Strength)**\n\n'
+        '1. Lie on the floor with a barbell held above your chest.\n'
+        '2. Lower the bar until your upper arms touch the floor.\n'
+        '3. Pause briefly, then press back up with maximal force.\n'
+        '4. This limits shoulder range, reducing impingement risk while building lockout power.',
   ),
   ExercisePoolEntry(
     id: 'chest_bb_spoto_press',
@@ -94,7 +112,11 @@ const List<ExercisePoolEntry> chestBarbellExercises = [
     forceType: ForceType.push,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.transverse,
-    description:
-        'Paused bench press variation improving control and pressing strength.',
+    description: '**Target: Chest (Pause & Control)**\n\n'
+        '1. Perform a standard bench press setup.\n'
+        '2. Lower the bar until it is 1–2 inches above your chest.\n'
+        '3. Hold that position for a full second, maintaining tightness.\n'
+        '4. Press the bar back up without bouncing.\n'
+        '5. This variation improves technique and strength off the chest.',
   ),
 ];

@@ -26,8 +26,11 @@ const List<ExercisePoolEntry> backBicepsSmithExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Back, Biceps**\n\n'
-        '1. Set bar at waist height, bend over with flat back.\n'
-        '2. Pull bar towards lower chest.',
+        '1. Set the Smith machine bar at waist height and load the desired weight.\n'
+        '2. Stand over the bar, bend at the hips with a flat back, and grip the bar with an overhand grip, hands slightly wider than shoulders.\n'
+        '3. Pull the bar towards your lower chest, driving your elbows back and squeezing your shoulder blades together.\n'
+        '4. Pause at the peak contraction, then lower the bar with control back to the starting position.\n'
+        '5. Keep your core tight and your back flat throughout the movement.',
   ),
   ExercisePoolEntry(
     id: 'back_biceps_smith_inverted_rows',
@@ -44,8 +47,11 @@ const List<ExercisePoolEntry> backBicepsSmithExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Back, Biceps**\n\n'
-        '1. Set bar at hip height, lie under and grip.\n'
-        '2. Pull chest towards bar.',
+        '1. Set the Smith machine bar at hip height and load no weight (or a very light weight).\n'
+        '2. Lie under the bar, grip it with an overhand grip, hands shoulder‑width apart, and extend your legs forward with your heels on the floor.\n'
+        '3. Keeping your body straight, pull your chest towards the bar by driving your elbows back.\n'
+        '4. Squeeze your shoulder blades together at the top, then lower your body with control.\n'
+        '5. This is a bodyweight row variation; increase difficulty by elevating your feet or adding weight to the bar.',
   ),
   ExercisePoolEntry(
     id: 'back_biceps_smith_shrugs',
@@ -63,8 +69,11 @@ const List<ExercisePoolEntry> backBicepsSmithExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.frontal,
     description: '**Target: Traps**\n\n'
-        '1. Stand with Smith bar at thigh height.\n'
-        '2. Shrug shoulders up towards ears.',
+        '1. Set the Smith machine bar at thigh height and load a heavy weight.\n'
+        '2. Stand upright, grip the bar with an overhand grip, hands shoulder‑width apart.\n'
+        '3. Shrug your shoulders straight up towards your ears as high as possible, squeezing your traps.\n'
+        '4. Hold at the top for a second, then lower the bar back down with control.\n'
+        '5. Avoid rolling your shoulders; focus on a pure vertical movement.',
   ),
   ExercisePoolEntry(
     id: 'back_biceps_smith_deadlift',
@@ -86,8 +95,11 @@ const List<ExercisePoolEntry> backBicepsSmithExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Full Posterior Chain**\n\n'
-        '1. Position Smith bar over midfoot.\n'
-        '2. Hinge down, grip, drive through heels to stand.',
+        '1. Position the Smith machine bar over the middle of your feet and load the desired weight.\n'
+        '2. Hinge at your hips and bend your knees, grip the bar with a shoulder‑width grip, and keep your back flat.\n'
+        '3. Drive through your heels to stand up, squeezing your glutes and lats at the top.\n'
+        '4. Lower the bar back to the starting position with control, maintaining a flat back.\n'
+        '5. The Smith machine\'s fixed bar path helps maintain proper form throughout the movement.',
   ),
   ExercisePoolEntry(
     id: 'back_biceps_smith_bicep_curl',
@@ -105,7 +117,10 @@ const List<ExercisePoolEntry> backBicepsSmithExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Biceps**\n\n'
-        '1. Stand with Smith bar at thigh height.\n'
-        '2. Curl bar up towards shoulders.',
+        '1. Set the Smith machine bar at thigh height and load a light weight.\n'
+        '2. Stand facing the bar, grip it with an underhand grip, hands shoulder‑width apart.\n'
+        '3. Curl the bar up towards your shoulders, keeping your elbows pinned to your sides.\n'
+        '4. Squeeze your biceps at the top, then lower the bar with control back to the starting position.\n'
+        '5. The fixed bar path helps maintain strict form and isolate the biceps effectively.',
   ),
 ];

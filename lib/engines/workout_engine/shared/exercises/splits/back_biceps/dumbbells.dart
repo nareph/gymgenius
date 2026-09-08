@@ -12,7 +12,7 @@ import 'package:gymgenius/engines/workout_engine/shared/exercise_pool_entry.dart
 const List<ExercisePoolEntry> backBicepsDumbbellExercises = [
   ExercisePoolEntry(
     id: 'back_biceps_db_dumbbell_rows',
-    name: 'Dumbbell Rows',
+    name: 'Single-Arm Dumbbell Row',
     category: ExerciseCategory.compound,
     difficulty: ExerciseDifficulty.beginner,
     equipmentType: EquipmentType.dumbbells,
@@ -26,8 +26,11 @@ const List<ExercisePoolEntry> backBicepsDumbbellExercises = [
     laterality: Laterality.unilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Back, Biceps**\n\n'
-        '1. Support one knee and hand on bench.\n'
-        '2. Row dumbbell towards hip.',
+        '1. Place one knee and one hand on a flat bench, with your other foot on the floor for stability.\n'
+        '2. With your free hand, grab a dumbbell and let it hang straight down, palm facing your body.\n'
+        '3. Pull the dumbbell up towards your hip, keeping your elbow close to your body and squeezing your lat.\n'
+        '4. Lower with control, feeling the stretch in your lat, then complete all reps on one side before switching.\n'
+        '5. Keep your back flat and your core engaged throughout.',
   ),
   ExercisePoolEntry(
     id: 'back_biceps_db_bicep_curls',
@@ -45,8 +48,11 @@ const List<ExercisePoolEntry> backBicepsDumbbellExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Biceps**\n\n'
-        '1. Stand with dumbbells.\n'
-        '2. Curl up to shoulder height.',
+        '1. Stand with feet shoulder‑width apart, holding a dumbbell in each hand with palms facing forward.\n'
+        '2. Keeping your elbows pinned to your sides, curl the dumbbells up towards your shoulders.\n'
+        '3. Squeeze your biceps at the top, then lower the weights with control back to the starting position.\n'
+        '4. Avoid swinging your body; use strict form.\n'
+        '5. Perform the movement slowly to maximise muscle tension.',
   ),
   ExercisePoolEntry(
     id: 'back_biceps_db_hammer_curls',
@@ -63,9 +69,12 @@ const List<ExercisePoolEntry> backBicepsDumbbellExercises = [
     forceType: ForceType.pull,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Biceps (brachialis), Forearms**\n\n'
-        '1. Neutral grip.\n'
-        '2. Curl without rotation.',
+    description: '**Target: Biceps (Brachialis), Forearms**\n\n'
+        '1. Stand with feet shoulder‑width apart, holding a dumbbell in each hand with a neutral grip (palms facing each other).\n'
+        '2. Keeping your elbows pinned to your sides, curl the dumbbells up towards your shoulders without rotating your wrists.\n'
+        '3. Squeeze your biceps and forearms at the top, then lower with control.\n'
+        '4. This variation places more emphasis on the brachialis and brachioradialis.\n'
+        '5. Perform the movement slowly for maximum muscle engagement.',
   ),
   ExercisePoolEntry(
     id: 'back_biceps_db_concentration_curls',
@@ -82,13 +91,16 @@ const List<ExercisePoolEntry> backBicepsDumbbellExercises = [
     forceType: ForceType.pull,
     laterality: Laterality.unilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Biceps (peak)**\n\n'
-        '1. Elbow braced against inner thigh while seated.\n'
-        '2. Curl the weight towards your shoulder.',
+    description: '**Target: Biceps (Peak)**\n\n'
+        '1. Sit on a bench, spread your legs, and rest your elbow against your inner thigh on the same side.\n'
+        '2. Hold a dumbbell in your hand, arm extended, and let it hang between your legs.\n'
+        '3. Curl the dumbbell up towards your shoulder, squeezing your biceps at the top.\n'
+        '4. Lower with control, fully extending your arm at the bottom.\n'
+        '5. Complete all reps on one side before switching to the other.',
   ),
   ExercisePoolEntry(
     id: 'back_biceps_db_reverse_flyes',
-    name: 'Reverse Flyes',
+    name: 'Dumbbell Rear Delt Fly',
     category: ExerciseCategory.isolation,
     difficulty: ExerciseDifficulty.beginner,
     equipmentType: EquipmentType.dumbbells,
@@ -102,7 +114,10 @@ const List<ExercisePoolEntry> backBicepsDumbbellExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.transverse,
     description: '**Target: Rear Delts, Upper Back**\n\n'
-        '1. Bend forward at the hips.\n'
-        '2. Raise your arms out to the sides.',
+        '1. Bend forward at the hips with a flat back, holding a light dumbbell in each hand, palms facing each other.\n'
+        '2. Let your arms hang straight down, then raise them out to the sides in a wide arc, squeezing your shoulder blades together.\n'
+        '3. Pause when your arms are parallel to the floor, then lower with control.\n'
+        '4. Keep a slight bend in your elbows throughout the movement.\n'
+        '5. Use light weight to focus on form and the contraction of the rear delts.',
   ),
 ];

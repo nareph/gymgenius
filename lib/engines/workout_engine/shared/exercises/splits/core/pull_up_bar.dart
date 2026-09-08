@@ -25,9 +25,11 @@ const List<ExercisePoolEntry> corePullUpBarExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Lower Abs**\n\n'
-        '1. Hang from a pull-up bar with arms fully extended.\n'
-        '2. Raise your legs straight up towards your chest.\n'
-        '3. Lower with control.',
+        '1. Hang from a pull‑up bar with your arms fully extended and shoulders relaxed.\n'
+        '2. Keep your legs straight and raise them up to a 90° angle or higher.\n'
+        '3. Pause briefly at the top, squeezing your lower abs.\n'
+        '4. Lower your legs with control back to the starting position.\n'
+        '5. Avoid swinging; use a controlled tempo to maximise core engagement.',
   ),
   ExercisePoolEntry(
     id: 'core_pullup_hanging_knee_raises',
@@ -44,9 +46,11 @@ const List<ExercisePoolEntry> corePullUpBarExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Lower Abs**\n\n'
-        '1. Hang from a bar.\n'
-        '2. Raise knees towards your chest.\n'
-        '3. Lower with control.',
+        '1. Hang from a pull‑up bar with your arms fully extended.\n'
+        '2. Bend your knees and raise them toward your chest as high as possible.\n'
+        '3. Squeeze your lower abs at the top, then lower your legs with control.\n'
+        '4. This is a less demanding alternative to straight leg raises.\n'
+        '5. Focus on the contraction and avoid using momentum.',
   ),
   ExercisePoolEntry(
     id: 'core_pullup_windshield_wipers',
@@ -63,9 +67,11 @@ const List<ExercisePoolEntry> corePullUpBarExercises = [
     laterality: Laterality.alternating,
     planeOfMotion: PlaneOfMotion.transverse,
     description: '**Target: Obliques, Core**\n\n'
-        '1. Hang from a bar with legs extended.\n'
-        '2. Rotate your legs side to side like windshield wipers.\n'
-        '3. Keep your upper body stable.',
+        '1. Hang from a pull‑up bar with your legs extended straight.\n'
+        '2. Rotate your legs to the right, then to the left, like windshield wipers.\n'
+        '3. Keep your upper body stable and your core engaged throughout.\n'
+        '4. Perform the movement slowly and with control.\n'
+        '5. This is an advanced exercise; start with a smaller range of motion.',
   ),
   ExercisePoolEntry(
     id: 'core_pullup_l_sit',
@@ -83,9 +89,11 @@ const List<ExercisePoolEntry> corePullUpBarExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Core, Shoulders**\n\n'
-        '1. Hang from a bar.\n'
-        '2. Raise legs to a 90° angle, forming an L-shape.\n'
-        '3. Hold the position.',
+        '1. Hang from a pull‑up bar with your arms fully extended.\n'
+        '2. Raise your legs to a 90° angle, keeping them straight, forming an L shape.\n'
+        '3. Hold this position for the prescribed time, keeping your core tight.\n'
+        '4. Avoid swinging; focus on maintaining the L position.\n'
+        '5. This exercise builds core strength and shoulder endurance.',
   ),
   ExercisePoolEntry(
     id: 'core_pullup_toes_to_bar',
@@ -102,8 +110,10 @@ const List<ExercisePoolEntry> corePullUpBarExercises = [
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Core, Shoulders**\n\n'
-        '1. Hang from a bar.\n'
-        '2. Raise straight legs up to touch the bar with your toes.\n'
-        '3. Lower with control.',
+        '1. Hang from a pull‑up bar with your arms fully extended.\n'
+        '2. Use your core to bring your toes up to touch the bar.\n'
+        '3. Squeeze your abs at the top, then lower your legs with control.\n'
+        '4. Keep your arms straight and avoid using momentum.\n'
+        '5. This is an advanced movement; start with knee raises and progress gradually.',
   ),
 ];

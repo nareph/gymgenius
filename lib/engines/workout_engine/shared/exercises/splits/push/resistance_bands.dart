@@ -18,16 +18,17 @@ const List<ExercisePoolEntry> pushResistanceBandsExercises = [
     equipmentType: EquipmentType.resistanceBands,
     targetMuscles: [MuscleGroup.shoulders],
     secondaryMuscles: [],
-    usesWeight: true,
+    usesWeight: false,
     movementPattern: MovementPattern.push,
     mechanics: Mechanics.openChain,
     forceType: ForceType.push,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.frontal,
     description: '**Target: Side Shoulders**\n\n'
-        '1. Stand on the band, holding a handle in each hand at your sides.\n'
-        '2. Raise your arms laterally to shoulder height.\n'
-        '3. Lower with control against the band tension.',
+        '1. Stand on the middle of a resistance band, holding a handle in each hand at your sides.\n'
+        '2. Keep a slight bend in your elbows and raise your arms laterally to shoulder height.\n'
+        '3. Pause at the top, then lower slowly against the band tension.\n'
+        '4. Keep your core tight and avoid swinging.',
   ),
   ExercisePoolEntry(
     id: 'push_band_chest_press',
@@ -37,35 +38,37 @@ const List<ExercisePoolEntry> pushResistanceBandsExercises = [
     equipmentType: EquipmentType.resistanceBands,
     targetMuscles: [MuscleGroup.chest, MuscleGroup.triceps],
     secondaryMuscles: [MuscleGroup.shoulders],
-    usesWeight: true,
+    usesWeight: false,
     movementPattern: MovementPattern.push,
     mechanics: Mechanics.openChain,
     forceType: ForceType.push,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Chest, Triceps**\n\n'
-        '1. Anchor a band at chest height, step forward.\n'
-        '2. Press the handles forward until arms are straight.\n'
-        '3. Return slowly.',
+        '1. Anchor a band behind you at chest height (e.g., a door frame or post).\n'
+        '2. Step forward, grab the handles, and position your hands at chest level.\n'
+        '3. Press the handles forward until your arms are fully extended, squeezing your chest.\n'
+        '4. Return slowly, controlling the resistance.',
   ),
   ExercisePoolEntry(
     id: 'push_band_overhead_press',
-    name: 'Band Overhead Press',
+    name: 'Band Shoulder Press',
     category: ExerciseCategory.compound,
     difficulty: ExerciseDifficulty.beginner,
     equipmentType: EquipmentType.resistanceBands,
     targetMuscles: [MuscleGroup.shoulders, MuscleGroup.triceps],
     secondaryMuscles: [],
-    usesWeight: true,
+    usesWeight: false,
     movementPattern: MovementPattern.push,
     mechanics: Mechanics.openChain,
     forceType: ForceType.push,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Shoulders, Triceps**\n\n'
-        '1. Stand on the band, hold handles at shoulder height.\n'
-        '2. Press overhead until arms are extended.\n'
-        '3. Lower with control.',
+        '1. Stand on the band, holding the handles at shoulder height with palms facing forward.\n'
+        '2. Press the handles overhead until your arms are fully extended.\n'
+        '3. Lower back to shoulder height with control, maintaining tension in the band.\n'
+        '4. Keep your core braced and avoid arching your back.',
   ),
   ExercisePoolEntry(
     id: 'push_band_face_pull',
@@ -75,16 +78,17 @@ const List<ExercisePoolEntry> pushResistanceBandsExercises = [
     equipmentType: EquipmentType.resistanceBands,
     targetMuscles: [MuscleGroup.shoulders, MuscleGroup.back],
     secondaryMuscles: [MuscleGroup.traps],
-    usesWeight: true,
+    usesWeight: false,
     movementPattern: MovementPattern.push,
     mechanics: Mechanics.openChain,
     forceType: ForceType.pull,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.transverse,
     description: '**Target: Rear Delts, Traps**\n\n'
-        '1. Anchor a band at face height.\n'
-        '2. Pull the band towards your face, elbows high.\n'
-        '3. Squeeze, then return.',
+        '1. Anchor a band at face height, hold the ends with both hands.\n'
+        '2. Step back to create tension, and pull the band towards your face, keeping your elbows high and hands beside your ears.\n'
+        '3. Squeeze your shoulder blades together at the peak, then return slowly.\n'
+        '4. This exercise improves posture and shoulder health.',
   ),
   ExercisePoolEntry(
     id: 'push_band_tricep_pushdown',
@@ -94,15 +98,16 @@ const List<ExercisePoolEntry> pushResistanceBandsExercises = [
     equipmentType: EquipmentType.resistanceBands,
     targetMuscles: [MuscleGroup.triceps],
     secondaryMuscles: [],
-    usesWeight: true,
+    usesWeight: false,
     movementPattern: MovementPattern.push,
     mechanics: Mechanics.openChain,
     forceType: ForceType.push,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
     description: '**Target: Triceps**\n\n'
-        '1. Anchor a band overhead.\n'
-        '2. Pull down until arms are straight.\n'
-        '3. Squeeze triceps, return.',
+        '1. Anchor a band overhead (e.g., a doorframe hook or pull‑up bar).\n'
+        '2. Grip the band or handles with both hands, elbows pinned to your sides.\n'
+        '3. Push the handles down until your arms are straight, squeezing your triceps.\n'
+        '4. Return slowly, resisting the band tension.',
   ),
 ];

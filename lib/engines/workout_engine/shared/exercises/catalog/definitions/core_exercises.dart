@@ -32,7 +32,7 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.pull,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Core**\n\n1. Start on your knees with the wheel in front.\n2. Roll out only until your shoulders are extended, keeping back flat.\n3. Pull back to the start.',
+    description: '**Target: Core**\n\n1. Kneel on the floor with the ab wheel in front of you, gripping the handles.\n2. Roll forward only until your shoulders are extended and your torso is nearly parallel to the floor, keeping your back flat.\n3. Pause briefly, then pull back to the starting position using your core.\n4. This is a less intense version of the full rollout, ideal for beginners.\n5. Focus on maintaining a straight line from your knees to your shoulders.',
   ),
   ExercisePoolEntry(
     id: 'core_abwheel_negative_rollouts',
@@ -60,7 +60,7 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.pull,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Core, Shoulders**\n\n1. Roll out as far as possible.\n2. Pause at the bottom for 2-3 seconds.\n3. Pull back with control.',
+    description: '**Target: Core, Shoulders**\n\n1. Kneel on the floor with the ab wheel in front of you, gripping the handles.\n2. Roll forward as far as you can, focusing on the eccentric (negative) portion of the movement.\n3. Pause at the bottom for 2–3 seconds, feeling the deep isometric contraction.\n4. Pull back to the starting position with control.\n5. This variation increases time under tension and builds core endurance.',
   ),
   ExercisePoolEntry(
     id: 'core_abwheel_oblique_rollouts',
@@ -88,7 +88,7 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.pull,
     laterality: Laterality.unilateral,
     planeOfMotion: PlaneOfMotion.frontal,
-    description: '**Target: Obliques**\n\n1. Kneel on the floor, wheel in front.\n2. Roll out diagonally to one side.\n3. Pull back and repeat on the other side.',
+    description: '**Target: Obliques**\n\n1. Kneel on the floor with the ab wheel in front of you, gripping the handles.\n2. Roll the wheel forward and diagonally to the right, keeping your core engaged and back flat.\n3. Pause, then pull back to the centre and repeat on the left side.\n4. This variation targets the obliques and improves rotational stability.\n5. Alternate sides for a balanced workout.',
   ),
   ExercisePoolEntry(
     id: 'core_abwheel_rollouts',
@@ -116,7 +116,7 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.pull,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Core, Shoulders**\n\n1. Kneel on the floor, gripping the ab wheel handles.\n2. Roll forward slowly, keeping your core braced and back flat.\n3. Roll back to the starting position.',
+    description: '**Target: Core, Shoulders**\n\n1. Kneel on the floor with the ab wheel directly in front of you, gripping the handles.\n2. Brace your core, keep your back flat, and slowly roll the wheel forward as far as you can without letting your hips drop.\n3. Pause briefly at the furthest point, feeling the stretch in your core.\n4. Engage your abs to pull the wheel back to the starting position, keeping your back straight throughout.\n5. Avoid arching your lower back; maintain a neutral spine.',
   ),
   ExercisePoolEntry(
     id: 'core_abwheel_standing_rollouts',
@@ -144,7 +144,7 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.pull,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Core, Shoulders**\n\n1. Stand with feet hip-width apart, holding the wheel.\n2. Roll down towards the floor, keeping back straight.\n3. Roll back up using your core.',
+    description: '**Target: Core, Shoulders**\n\n1. Stand with feet hip‑width apart, gripping the ab wheel handles.\n2. Roll the wheel forward, bending at the hips, until your torso is nearly horizontal and your arms are extended overhead.\n3. Pause at the bottom, feeling the deep stretch in your core.\n4. Use your core and glutes to pull the wheel back to the starting position, maintaining a straight back.\n5. This is an advanced variation; start with short range of motion.',
   ),
   ExercisePoolEntry(
     id: 'core_band_crunches',
@@ -164,14 +164,14 @@ const List<ExercisePoolEntry> coreDefinitions = [
       'Push',
       'Upper Body',
     },
-    usesWeight: true,
+    usesWeight: false,
     isTimed: false,
     movementPattern: MovementPattern.core,
     mechanics: Mechanics.openChain,
     forceType: ForceType.pull,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Abs**\n\n1. Anchor a band above you.\n2. Kneel and hold the band behind your neck.\n3. Crunch forward against resistance.\n4. Return with control.',
+    description: '**Target: Abs**\n\n1. Anchor a resistance band at a high position (e.g., a pull‑up bar or door frame hook).\n2. Kneel on the floor, holding the band behind your head with both hands.\n3. Crunch forward, curling your torso toward your knees, squeezing your abs.\n4. Return slowly against the band tension.\n5. Keep your elbows pointing forward and your core engaged.',
   ),
   ExercisePoolEntry(
     id: 'core_band_leg_raises',
@@ -192,14 +192,14 @@ const List<ExercisePoolEntry> coreDefinitions = [
       'Push',
       'Upper Body',
     },
-    usesWeight: true,
+    usesWeight: false,
     isTimed: false,
     movementPattern: MovementPattern.core,
     mechanics: Mechanics.openChain,
     forceType: ForceType.pull,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Lower Abs**\n\n1. Lie on your back, loop a band around your feet.\n2. Hold the ends of the band for resistance.\n3. Raise your legs straight up.\n4. Lower with control.',
+    description: '**Target: Lower Abs**\n\n1. Lie on your back with a resistance band looped around your feet and holding the ends with your hands.\n2. Keep your legs straight and raise them to a 90° angle against the band tension.\n3. Lower them slowly, resisting the band.\n4. Keep your lower back pressed into the floor throughout.\n5. This adds resistance to standard leg raises.',
   ),
   ExercisePoolEntry(
     id: 'core_band_pallof_press',
@@ -220,14 +220,14 @@ const List<ExercisePoolEntry> coreDefinitions = [
       'Push',
       'Upper Body',
     },
-    usesWeight: true,
+    usesWeight: false,
     isTimed: false,
     movementPattern: MovementPattern.core,
     mechanics: Mechanics.openChain,
     forceType: ForceType.push,
     laterality: Laterality.unilateral,
     planeOfMotion: PlaneOfMotion.transverse,
-    description: '**Target: Core (anti-rotation)**\n\n1. Anchor a band at chest height.\n2. Stand sideways, hold the band with both hands.\n3. Press straight out, resisting rotation.\n4. Return and switch sides.',
+    description: '**Target: Core (anti-rotation)**\n\n1. Anchor a resistance band at chest height (e.g., to a door handle or pole).\n2. Stand sideways to the anchor, hold the band with both hands, and step forward to create tension.\n3. Press the band straight out in front of you, resisting the rotational pull.\n4. Hold for a second, then return slowly with control.\n5. Complete all reps on one side before switching.',
   ),
   ExercisePoolEntry(
     id: 'core_band_russian_twists',
@@ -247,14 +247,14 @@ const List<ExercisePoolEntry> coreDefinitions = [
       'Push',
       'Upper Body',
     },
-    usesWeight: true,
+    usesWeight: false,
     isTimed: false,
     movementPattern: MovementPattern.rotation,
     mechanics: Mechanics.openChain,
     forceType: ForceType.pull,
     laterality: Laterality.alternating,
     planeOfMotion: PlaneOfMotion.transverse,
-    description: '**Target: Obliques**\n\n1. Sit on the floor, knees bent, feet lifted.\n2. Anchor a band at waist height.\n3. Hold the band and rotate side to side.\n4. Control the movement.',
+    description: '**Target: Obliques**\n\n1. Sit on the floor with your knees bent and feet lifted, holding a resistance band with both hands.\n2. Anchor the band at waist height behind you or under your feet.\n3. Rotate your torso to the right, then to the left, keeping the band under tension.\n4. Perform the movement slowly and with control.\n5. This adds resistance to the standard Russian twist.',
   ),
   ExercisePoolEntry(
     id: 'core_band_woodchop',
@@ -275,14 +275,14 @@ const List<ExercisePoolEntry> coreDefinitions = [
       'Push',
       'Upper Body',
     },
-    usesWeight: true,
+    usesWeight: false,
     isTimed: false,
     movementPattern: MovementPattern.rotation,
     mechanics: Mechanics.openChain,
     forceType: ForceType.pull,
     laterality: Laterality.alternating,
     planeOfMotion: PlaneOfMotion.transverse,
-    description: '**Target: Core, Shoulders**\n\n1. Anchor a band at low or high position.\n2. Chop diagonally across your body.\n3. Alternate sides.',
+    description: '**Target: Core, Shoulders**\n\n1. Anchor a resistance band at low or high position.\n2. Stand with feet shoulder‑width apart, grip the band with both hands.\n3. Chop diagonally across your body, using your core to rotate.\n4. Return slowly with control.\n5. Complete all reps on one side before switching.',
   ),
   ExercisePoolEntry(
     id: 'core_bw_bicycle_crunches',
@@ -309,7 +309,7 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.pull,
     laterality: Laterality.alternating,
     planeOfMotion: PlaneOfMotion.transverse,
-    description: '**Target: Abs, Obliques**\n\n1. Lie on your back, hands behind your head.\n2. Bring one elbow towards the opposite knee while extending the other leg.\n3. Alternate sides in a pedaling motion.',
+    description: '**Target: Abs, Obliques**\n\n1. Lie on your back with your knees bent, hands behind your head.\n2. Bring your right elbow toward your left knee while extending your right leg straight.\n3. Switch sides in a continuous pedaling motion, alternating each rep.\n4. Keep your lower back pressed into the floor throughout.\n5. Perform the movement in a controlled, steady rhythm.',
   ),
   ExercisePoolEntry(
     id: 'core_bw_bird_dog',
@@ -338,7 +338,7 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.isometric,
     laterality: Laterality.alternating,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Core, Lower Back**\n\n1. Start on all fours.\n2. Extend opposite arm and leg simultaneously.\n3. Hold and switch sides.',
+    description: '**Target: Core, Lower Back**\n\n1. Start on all fours with your hands under your shoulders and knees under your hips.\n2. Extend your right arm forward and your left leg back, keeping your hips square.\n3. Hold for a second, then return to the starting position and switch sides.\n4. Keep your core braced and your spine neutral throughout.\n5. This exercise improves stability and coordination.',
   ),
   ExercisePoolEntry(
     id: 'core_bw_crunches',
@@ -365,7 +365,7 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.pull,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Abs**\n\n1. Lie on your back, knees bent, feet flat.\n2. Curl your upper body towards your knees.\n3. Lower back down with control.',
+    description: '**Target: Abs**\n\n1. Lie on your back with your knees bent and feet flat on the floor, hands behind your head.\n2. Curl your upper body toward your knees, lifting only your shoulder blades off the floor.\n3. Squeeze your abs at the top, then lower with control back to the starting position.\n4. Avoid pulling on your neck; keep your chin off your chest.\n5. Use a slow and controlled tempo for maximum muscle engagement.',
   ),
   ExercisePoolEntry(
     id: 'core_bw_dead_bug',
@@ -392,7 +392,7 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.pull,
     laterality: Laterality.alternating,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Deep Core**\n\n1. Lie on your back, arms extended towards ceiling, legs at 90°.\n2. Slowly extend opposite arm and leg.\n3. Return to start and alternate.',
+    description: '**Target: Deep Core**\n\n1. Lie on your back with your arms extended toward the ceiling and your legs raised to a 90° angle.\n2. Slowly extend your right arm overhead and your left leg toward the floor, keeping your lower back pressed down.\n3. Return to the starting position and alternate sides.\n4. Keep your core braced and your hips stable throughout.\n5. This exercise improves core stability and coordination.',
   ),
   ExercisePoolEntry(
     id: 'core_bw_flutter_kicks',
@@ -420,7 +420,7 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.pull,
     laterality: Laterality.alternating,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Lower Abs, Hip Flexors**\n\n1. Lie on your back, hands under glutes.\n2. Flutter your legs up and down.\n3. Keep core engaged and back flat.',
+    description: '**Target: Lower Abs, Hip Flexors**\n\n1. Lie on your back with your legs extended and hands under your glutes.\n2. Lift your legs about 6 inches off the floor and alternate kicking them up and down.\n3. Keep your lower back pressed into the floor and your core engaged.\n4. Perform the movement in a steady, controlled rhythm.\n5. Avoid holding your breath; breathe steadily throughout.',
   ),
   ExercisePoolEntry(
     id: 'core_bw_heel_touches',
@@ -447,7 +447,7 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.pull,
     laterality: Laterality.alternating,
     planeOfMotion: PlaneOfMotion.transverse,
-    description: '**Target: Obliques**\n\n1. Lie on your back, knees bent, feet flat.\n2. Reach your right hand towards your right heel.\n3. Alternate sides in a controlled manner.',
+    description: '**Target: Obliques**\n\n1. Lie on your back with your knees bent and feet flat on the floor.\n2. Reach your right hand toward your right heel, curling your torso to the side.\n3. Return to the centre and repeat on the left side.\n4. Keep your lower back pressed into the floor throughout.\n5. Perform the movement in a controlled, steady rhythm.',
   ),
   ExercisePoolEntry(
     id: 'core_bw_hollow_body_hold',
@@ -474,7 +474,7 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.isometric,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Core**\n\n1. Lie on your back, arms and legs extended.\n2. Lift arms, shoulders, and legs off the floor.\n3. Hold with lower back pressed into the ground.',
+    description: '**Target: Core**\n\n1. Lie on your back with your arms and legs extended.\n2. Lift your arms, shoulders, and legs off the floor, engaging your core.\n3. Your lower back should remain pressed into the floor throughout.\n4. Hold this position for the prescribed time, maintaining tension.\n5. Keep your chin tucked and your core braced.',
   ),
   ExercisePoolEntry(
     id: 'core_bw_leg_raises',
@@ -501,7 +501,7 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.pull,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Lower Abs**\n\n1. Lie on your back, legs straight.\n2. Raise your legs to 90° without bending knees.\n3. Lower them slowly without touching the floor.',
+    description: '**Target: Lower Abs**\n\n1. Lie on your back with your legs straight, hands under your glutes for support.\n2. Raise your legs straight up to a 90° angle, keeping them straight.\n3. Lower them slowly back to the floor, stopping just before they touch to keep tension.\n4. Keep your lower back pressed into the floor throughout.\n5. For added difficulty, lower your legs closer to the floor without touching.',
   ),
   ExercisePoolEntry(
     id: 'core_bw_mountain_climbers',
@@ -529,7 +529,7 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.push,
     laterality: Laterality.alternating,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Core, Shoulders**\n\n1. Plank position.\n2. Drive one knee towards chest.\n3. Alternate quickly.',
+    description: '**Target: Core, Shoulders**\n\n1. Start in a high plank position with your hands directly under your shoulders.\n2. Drive one knee toward your chest, then quickly switch legs in a running motion.\n3. Keep your hips low and your core tight to maintain a stable plank.\n4. Perform at a steady pace, increasing speed as you progress.\n5. Avoid letting your hips rise too high.',
   ),
   ExercisePoolEntry(
     id: 'core_bw_plank',
@@ -557,7 +557,7 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.isometric,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Core**\n\n1. Forearm plank position.\n2. Hold body straight from head to heels.\n3. Engage core and hold for time.',
+    description: '**Target: Core**\n\n1. Start in a forearm plank position with your elbows directly under your shoulders and feet hip‑width apart.\n2. Keep your body in a straight line from head to heels, engaging your core and glutes.\n3. Hold this position for the prescribed time, maintaining tension throughout.\n4. Avoid letting your hips sag or pike up; keep your spine neutral.\n5. Breathe steadily and focus on keeping your core braced.',
   ),
   ExercisePoolEntry(
     id: 'core_bw_plank_jacks',
@@ -586,7 +586,7 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.isometric,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.frontal,
-    description: '**Target: Core, Adductors**\n\n1. Plank position.\n2. Jump your feet apart and together.\n3. Keep hips stable.',
+    description: '**Target: Core, Adductors**\n\n1. Start in a high plank position with your hands directly under your shoulders.\n2. Jump your feet apart and then back together, keeping your hips stable and core engaged.\n3. Maintain a straight body line throughout the movement.\n4. Perform at a steady pace, focusing on control.\n5. To reduce impact, step your feet out one at a time.',
   ),
   ExercisePoolEntry(
     id: 'core_bw_reverse_crunches',
@@ -613,7 +613,7 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.pull,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Lower Abs**\n\n1. Lie on your back, hands at sides.\n2. Lift your legs and curl your hips off the floor.\n3. Lower back down slowly.',
+    description: '**Target: Lower Abs**\n\n1. Lie on your back with your arms at your sides, palms down, and your legs raised to a 90° angle.\n2. Use your lower abs to curl your hips off the floor, lifting your legs toward the ceiling.\n3. Squeeze at the top, then lower your hips back down with control.\n4. Keep your lower back pressed into the floor throughout.\n5. Avoid using momentum; focus on the contraction.',
   ),
   ExercisePoolEntry(
     id: 'core_bw_russian_twists',
@@ -640,7 +640,7 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.pull,
     laterality: Laterality.alternating,
     planeOfMotion: PlaneOfMotion.transverse,
-    description: '**Target: Obliques**\n\n1. Sit with knees bent, torso leaning back slightly, feet off the floor.\n2. Rotate your torso side to side, tapping the floor beside your hips.',
+    description: '**Target: Obliques**\n\n1. Sit on the floor with your knees bent and feet flat, lean your torso back at about 45°.\n2. Lift your feet off the floor and balance on your glutes.\n3. Rotate your torso to the right, tapping the floor beside your hip, then rotate to the left.\n4. Keep your core tight and your back straight.\n5. To increase difficulty, extend your legs further or hold a weight.',
   ),
   ExercisePoolEntry(
     id: 'core_bw_scissor_kicks',
@@ -668,7 +668,7 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.pull,
     laterality: Laterality.alternating,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Lower Abs**\n\n1. Lie on your back, legs extended.\n2. Cross one leg over the other in a scissor motion.\n3. Alternate quickly without arching your back.',
+    description: '**Target: Lower Abs**\n\n1. Lie on your back with your legs extended and hands under your glutes.\n2. Lift your legs about 6 inches off the floor and cross them over each other in a scissor motion.\n3. Keep your lower back pressed into the floor and your core engaged.\n4. Alternate quickly, maintaining control.\n5. This exercise targets the lower abs and hip flexors.',
   ),
   ExercisePoolEntry(
     id: 'core_bw_side_plank',
@@ -696,7 +696,7 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.isometric,
     laterality: Laterality.unilateral,
     planeOfMotion: PlaneOfMotion.frontal,
-    description: '**Target: Obliques**\n\n1. Side support on forearm.\n2. Hold body straight.\n3. Repeat on other side.',
+    description: '**Target: Obliques**\n\n1. Lie on your side, propping yourself up on your forearm, with your elbow directly under your shoulder.\n2. Stack your feet and lift your hips off the floor, forming a straight line from head to heels.\n3. Hold for the prescribed time, keeping your hips elevated and core engaged.\n4. Avoid letting your hips drop or rotate.\n5. Repeat on the other side.',
   ),
   ExercisePoolEntry(
     id: 'core_bw_spiderman_plank',
@@ -724,7 +724,7 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.isometric,
     laterality: Laterality.alternating,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Core, Hip Flexors**\n\n1. Plank position.\n2. Bring one knee towards the same-side elbow.\n3. Alternate sides.',
+    description: '**Target: Core, Hip Flexors**\n\n1. Start in a high plank position with your hands directly under your shoulders.\n2. Bring your right knee toward your right elbow, keeping your hips stable.\n3. Return to the starting position and repeat on the left side.\n4. Keep your core tight and avoid letting your hips rise.\n5. Alternate sides in a controlled manner.',
   ),
   ExercisePoolEntry(
     id: 'core_bw_toe_touches',
@@ -751,11 +751,11 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.pull,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Upper Abs**\n\n1. Lie on your back, legs straight up towards ceiling.\n2. Reach your hands towards your toes.\n3. Lower back down with control.',
+    description: '**Target: Upper Abs**\n\n1. Lie on your back with your legs extended straight up toward the ceiling.\n2. Reach your hands toward your toes, curling your shoulder blades off the floor.\n3. Squeeze your abs at the top, then lower back down with control.\n4. Keep your lower back pressed into the floor throughout.\n5. Avoid using momentum; focus on the contraction.',
   ),
   ExercisePoolEntry(
     id: 'core_bw_v_ups',
-    name: 'V‑Ups',
+    name: 'V-Ups',
     category: ExerciseCategory.isolation,
     difficulty: ExerciseDifficulty.advanced,
     equipmentType: EquipmentType.bodyweight,
@@ -778,7 +778,7 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.pull,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Full Core**\n\n1. Lie on your back, arms and legs extended.\n2. Lift arms and legs simultaneously to form a V shape.\n3. Lower back down with control.',
+    description: '**Target: Full Core**\n\n1. Lie on your back with your arms extended overhead and legs straight.\n2. Simultaneously lift your arms, torso, and legs off the floor, reaching your hands toward your toes.\n3. Your body should form a V shape at the top of the movement.\n4. Hold for a second, then lower back down with control.\n5. Keep your core tight and avoid using momentum.',
   ),
   ExercisePoolEntry(
     id: 'core_cable_crunches',
@@ -806,7 +806,7 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.pull,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Abs**\n\n1. Kneel below a high pulley, rope behind your head.\n2. Crunch down, bringing elbows towards knees.\n3. Return with control.',
+    description: '**Target: Abs**\n\n1. Attach a rope to a high pulley and kneel facing the machine, holding the rope behind your head.\n2. Keep your elbows pointing toward the floor and your core engaged.\n3. Crunch down by curling your upper body toward your knees, squeezing your abs.\n4. Return slowly to the starting position, controlling the resistance.\n5. Avoid pulling with your arms; the movement should come from your core.',
   ),
   ExercisePoolEntry(
     id: 'core_cable_oblique_twist',
@@ -834,7 +834,7 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.pull,
     laterality: Laterality.unilateral,
     planeOfMotion: PlaneOfMotion.transverse,
-    description: '**Target: Obliques**\n\n1. Set cable at waist height with a D-handle.\n2. Stand perpendicular, rotate torso away.\n3. Return and switch sides.',
+    description: '**Target: Obliques**\n\n1. Set the cable at waist height and attach a D‑handle.\n2. Stand perpendicular to the machine, feet shoulder‑width apart, and grip the handle with both hands.\n3. Rotate your torso away from the machine, keeping your arms straight and core tight.\n4. Control the movement back to the starting position.\n5. Complete all reps on one side before switching.',
   ),
   ExercisePoolEntry(
     id: 'core_cable_pallof_press',
@@ -863,7 +863,7 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.push,
     laterality: Laterality.unilateral,
     planeOfMotion: PlaneOfMotion.transverse,
-    description: '**Target: Core (anti-rotation)**\n\n1. Set cable at chest height.\n2. Stand sideways, hold handle with both hands.\n3. Press straight out, resisting rotation.\n4. Return and switch sides.',
+    description: '**Target: Core (anti-rotation)**\n\n1. Set the cable at chest height and attach a D‑handle.\n2. Stand sideways to the machine, feet shoulder‑width apart, and grip the handle with both hands.\n3. Press the handle straight out in front of you, resisting the rotational pull of the cable.\n4. Hold for a second, then return slowly with control.\n5. Complete all reps on one side before switching.',
   ),
   ExercisePoolEntry(
     id: 'core_cable_side_bend',
@@ -891,7 +891,7 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.pull,
     laterality: Laterality.unilateral,
     planeOfMotion: PlaneOfMotion.frontal,
-    description: '**Target: Obliques**\n\n1. Set cable at low position with a D-handle.\n2. Stand sideways, hold handle with one hand.\n3. Bend torso sideways, then return.',
+    description: '**Target: Obliques**\n\n1. Set the cable at the lowest position and attach a D‑handle.\n2. Stand sideways to the machine, holding the handle with one hand at your side.\n3. Bend your torso sideways toward the machine, then return to upright using your obliques.\n4. Perform the movement slowly and with control.\n5. Complete all reps on one side before switching.',
   ),
   ExercisePoolEntry(
     id: 'core_cable_woodchops',
@@ -920,7 +920,7 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.pull,
     laterality: Laterality.alternating,
     planeOfMotion: PlaneOfMotion.transverse,
-    description: '**Target: Core, Shoulders**\n\n1. Set cable at high or low position.\n2. Chop diagonally across body.',
+    description: '**Target: Core, Shoulders**\n\n1. Set the cable at the highest position and attach a rope or D‑handle.\n2. Stand with your side to the machine, feet shoulder‑width apart, and grip the handle with both hands.\n3. Pull the handle diagonally downward across your body, rotating your torso and squeezing your core.\n4. Control the movement back to the starting position.\n5. Complete all reps on one side before switching to the other.',
   ),
   ExercisePoolEntry(
     id: 'core_db_dumbbell_crunches',
@@ -947,7 +947,7 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.pull,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Abs**\n\n1. Hold a dumbbell on your chest.\n2. Crunch up and squeeze abs.\n3. Lower back down with control.',
+    description: '**Target: Abs**\n\n1. Lie on your back with your knees bent and feet flat, holding a dumbbell at your chest.\n2. Curl your upper body toward your knees, keeping the dumbbell stable.\n3. Squeeze your abs at the top, then lower back down with control.\n4. Keep your lower back pressed into the floor throughout.\n5. Use a light weight to maintain proper form.',
   ),
   ExercisePoolEntry(
     id: 'core_db_dumbbell_oblique_crunch',
@@ -974,7 +974,7 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.pull,
     laterality: Laterality.unilateral,
     planeOfMotion: PlaneOfMotion.transverse,
-    description: '**Target: Obliques**\n\n1. Lie on your side, hold a dumbbell near your chest.\n2. Crunch up, bringing shoulder towards hip.\n3. Lower and repeat on other side.',
+    description: '**Target: Obliques**\n\n1. Lie on your side with your legs bent at a slight angle, holding a dumbbell near your chest.\n2. Crunch your torso upward, bringing your shoulder toward your hip.\n3. Squeeze your oblique at the top, then lower back down with control.\n4. Complete all reps on one side before switching.\n5. Keep your movement slow and controlled.',
   ),
   ExercisePoolEntry(
     id: 'core_db_dumbbell_side_bends',
@@ -1001,7 +1001,7 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.pull,
     laterality: Laterality.unilateral,
     planeOfMotion: PlaneOfMotion.frontal,
-    description: '**Target: Obliques**\n\n1. Hold a dumbbell in one hand.\n2. Bend sideways at the waist.\n3. Return to upright and repeat on other side.',
+    description: '**Target: Obliques**\n\n1. Stand with feet shoulder‑width apart, holding a dumbbell in one hand at your side.\n2. Bend your torso sideways toward the weighted side, then return to upright using your obliques.\n3. Perform the movement slowly and with control.\n4. Complete all reps on one side before switching.\n5. Avoid leaning forward or backward; keep the movement strictly lateral.',
   ),
   ExercisePoolEntry(
     id: 'core_db_dumbbell_v_ups',
@@ -1028,7 +1028,7 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.pull,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Full Core**\n\n1. Lie on your back holding a dumbbell overhead.\n2. Simultaneously raise legs and torso.\n3. Bring dumbbell towards feet, then lower.',
+    description: '**Target: Full Core**\n\n1. Lie on your back holding a dumbbell overhead with both hands, legs extended.\n2. Simultaneously raise your arms, torso, and legs off the floor, reaching the dumbbell toward your feet.\n3. Your body should form a V shape at the top.\n4. Lower back down with control.\n5. Use a light weight to maintain control and form.',
   ),
   ExercisePoolEntry(
     id: 'core_db_russian_twists_dumbbell',
@@ -1055,7 +1055,7 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.pull,
     laterality: Laterality.alternating,
     planeOfMotion: PlaneOfMotion.transverse,
-    description: '**Target: Obliques**\n\n1. Sit with knees bent, torso leaning back, holding a dumbbell.\n2. Rotate side to side, tapping the floor.\n3. Keep core tight throughout.',
+    description: '**Target: Obliques**\n\n1. Sit on the floor with your knees bent and feet lifted, holding a dumbbell with both hands.\n2. Lean your torso back slightly, keeping your back straight and core tight.\n3. Rotate your torso to the right, tapping the dumbbell beside your hip, then rotate to the left.\n4. Keep the movement controlled and avoid using momentum.\n5. For added difficulty, extend your legs further or use a heavier dumbbell.',
   ),
   ExercisePoolEntry(
     id: 'core_pullup_hanging_knee_raises',
@@ -1082,7 +1082,7 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.pull,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Lower Abs**\n\n1. Hang from a bar.\n2. Raise knees towards your chest.\n3. Lower with control.',
+    description: '**Target: Lower Abs**\n\n1. Hang from a pull‑up bar with your arms fully extended.\n2. Bend your knees and raise them toward your chest as high as possible.\n3. Squeeze your lower abs at the top, then lower your legs with control.\n4. This is a less demanding alternative to straight leg raises.\n5. Focus on the contraction and avoid using momentum.',
   ),
   ExercisePoolEntry(
     id: 'core_pullup_hanging_leg_raises',
@@ -1109,7 +1109,7 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.pull,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Lower Abs**\n\n1. Hang from a pull-up bar with arms fully extended.\n2. Raise your legs straight up towards your chest.\n3. Lower with control.',
+    description: '**Target: Lower Abs**\n\n1. Hang from a pull‑up bar with your arms fully extended and shoulders relaxed.\n2. Keep your legs straight and raise them up to a 90° angle or higher.\n3. Pause briefly at the top, squeezing your lower abs.\n4. Lower your legs with control back to the starting position.\n5. Avoid swinging; use a controlled tempo to maximise core engagement.',
   ),
   ExercisePoolEntry(
     id: 'core_pullup_l_sit',
@@ -1137,7 +1137,7 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.isometric,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Core, Shoulders**\n\n1. Hang from a bar.\n2. Raise legs to a 90° angle, forming an L-shape.\n3. Hold the position.',
+    description: '**Target: Core, Shoulders**\n\n1. Hang from a pull‑up bar with your arms fully extended.\n2. Raise your legs to a 90° angle, keeping them straight, forming an L shape.\n3. Hold this position for the prescribed time, keeping your core tight.\n4. Avoid swinging; focus on maintaining the L position.\n5. This exercise builds core strength and shoulder endurance.',
   ),
   ExercisePoolEntry(
     id: 'core_pullup_toes_to_bar',
@@ -1165,7 +1165,7 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.pull,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Core, Shoulders**\n\n1. Hang from a bar.\n2. Raise straight legs up to touch the bar with your toes.\n3. Lower with control.',
+    description: '**Target: Core, Shoulders**\n\n1. Hang from a pull‑up bar with your arms fully extended.\n2. Use your core to bring your toes up to touch the bar.\n3. Squeeze your abs at the top, then lower your legs with control.\n4. Keep your arms straight and avoid using momentum.\n5. This is an advanced movement; start with knee raises and progress gradually.',
   ),
   ExercisePoolEntry(
     id: 'core_pullup_windshield_wipers',
@@ -1193,7 +1193,7 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.pull,
     laterality: Laterality.alternating,
     planeOfMotion: PlaneOfMotion.transverse,
-    description: '**Target: Obliques, Core**\n\n1. Hang from a bar with legs extended.\n2. Rotate your legs side to side like windshield wipers.\n3. Keep your upper body stable.',
+    description: '**Target: Obliques, Core**\n\n1. Hang from a pull‑up bar with your legs extended straight.\n2. Rotate your legs to the right, then to the left, like windshield wipers.\n3. Keep your upper body stable and your core engaged throughout.\n4. Perform the movement slowly and with control.\n5. This is an advanced exercise; start with a smaller range of motion.',
   ),
   ExercisePoolEntry(
     id: 'core_selector_ab_crunch',
@@ -1221,7 +1221,7 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.pull,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Abs**\n\n1. Sit on the machine, feet under the pads.\n2. Crunch down, bringing elbows towards knees.\n3. Return with control.',
+    description: '**Target: Abs**\n\n1. Sit on the ab crunch machine, with your feet secured under the pads.\n2. Grip the handles and keep your arms at a 90° angle.\n3. Crunch down by curling your torso toward your knees, squeezing your abs.\n4. Return slowly to the starting position, controlling the resistance.\n5. Avoid pulling with your arms; the movement should come from your core.',
   ),
   ExercisePoolEntry(
     id: 'core_selector_ab_extension',
@@ -1249,7 +1249,7 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.pull,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Lower Abs**\n\n1. Lie back on the machine, holding handles above.\n2. Curl hips off the pad, bringing knees to chest.\n3. Lower with control.',
+    description: '**Target: Lower Abs**\n\n1. Lie back on the ab extension machine, holding the handles above you.\n2. Curl your hips off the pad, bringing your knees toward your chest.\n3. Squeeze your lower abs at the peak, then lower with control.\n4. Keep your neck relaxed and your head resting on the pad.\n5. Use a light weight to focus on the contraction.',
   ),
   ExercisePoolEntry(
     id: 'core_selector_leg_lift',
@@ -1278,7 +1278,7 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.pull,
     laterality: Laterality.bilateral,
     planeOfMotion: PlaneOfMotion.sagittal,
-    description: '**Target: Lower Abs**\n\n1. Sit on a leg lift machine, arms on pads.\n2. Lift knees towards chest.\n3. Lower with control.',
+    description: '**Target: Lower Abs**\n\n1. Sit on the leg lift machine, placing your arms on the pads for support.\n2. Rest your legs on the lower pads and lift your knees toward your chest.\n3. Squeeze your lower abs at the top, then lower with control.\n4. Keep your back against the pad throughout.\n5. Use a moderate weight to maintain control.',
   ),
   ExercisePoolEntry(
     id: 'core_selector_oblique_crunch',
@@ -1306,7 +1306,7 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.pull,
     laterality: Laterality.unilateral,
     planeOfMotion: PlaneOfMotion.transverse,
-    description: '**Target: Obliques**\n\n1. Sit sideways on the machine, one hip against the pad.\n2. Crunch torso towards your hip.\n3. Return and switch sides.',
+    description: '**Target: Obliques**\n\n1. Sit sideways on the oblique crunch machine, placing one hip against the pad.\n2. Grip the handles and crunch your torso sideways toward your hip.\n3. Squeeze your oblique at the peak, then return slowly.\n4. Complete all reps on one side before switching.\n5. Keep the movement controlled and avoid using momentum.',
   ),
   ExercisePoolEntry(
     id: 'core_selector_torso_rotation',
@@ -1334,6 +1334,6 @@ const List<ExercisePoolEntry> coreDefinitions = [
     forceType: ForceType.pull,
     laterality: Laterality.alternating,
     planeOfMotion: PlaneOfMotion.transverse,
-    description: '**Target: Obliques**\n\n1. Sit on the machine, grip handles.\n2. Rotate side to side against resistance.\n3. Control the movement.',
+    description: '**Target: Obliques**\n\n1. Sit on the torso rotation machine, gripping the handles firmly.\n2. Rotate your torso to the right, then to the left, against the resistance.\n3. Keep your hips stationary and your core engaged.\n4. Perform the movement in a controlled, steady rhythm.\n5. Adjust the weight to allow for full range of motion.',
   ),
 ];

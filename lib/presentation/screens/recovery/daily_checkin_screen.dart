@@ -39,12 +39,21 @@ class DailyCheckInScreen extends StatefulWidget {
 }
 
 class _DailyCheckInScreenState extends State<DailyCheckInScreen> {
+  // Controllers
+  final TextEditingController _weightController = TextEditingController();
+
   double _sleepHours = 7.0;
   SorenessLevel _soreness = SorenessLevel.none;
   EnergyLevel _energy = EnergyLevel.moderate;
   int _mood = 3;
 
   bool _submitting = false;
+
+  @override
+  void dispose() {
+    _weightController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -61,24 +70,41 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen> {
         automaticallyImplyLeading: false,
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(
-          20,
-          8,
-          20,
-          32,
-        ),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [
           Text(
             'Good morning! How are you feeling today?',
-            style: tt.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+            style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 24),
-          _SectionTitle(
-            icon: Icons.bedtime_rounded,
-            label: 'Sleep',
+
+          // ------------------------------------------------------------
+          // Weight (NEW)
+          // ------------------------------------------------------------
+          _SectionTitle(icon: Icons.monitor_weight_rounded, label: 'Weight'),
+          const SizedBox(height: 6),
+          TextField(
+            controller: _weightController,
+            enabled: !_submitting,
+            keyboardType: const TextInputType.numberWithOptions(
+              decimal: true,
+            ),
+            decoration: InputDecoration(
+              hintText: 'e.g., 72.5',
+              labelText: 'Weight (kg)',
+              suffixText: 'kg',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              filled: true,
+              fillColor: cs.surfaceContainerHighest,
+            ),
+            onChanged: (_) => setState(() {}),
           ),
+          const SizedBox(height: 20),
+
+          // Sleep
+          _SectionTitle(icon: Icons.bedtime_rounded, label: 'Sleep'),
           const SizedBox(height: 4),
           Text(
             '${_sleepHours.toStringAsFixed(1)} hours',
@@ -96,129 +122,89 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen> {
             onChanged: _submitting
                 ? null
                 : (value) {
-                    setState(
-                      () => _sleepHours = value,
-                    );
+                    setState(() => _sleepHours = value);
                   },
           ),
           const SizedBox(height: 20),
+
+          // Soreness
           _SectionTitle(
-            icon: Icons.fitness_center_rounded,
-            label: 'Muscle Soreness',
-          ),
+              icon: Icons.fitness_center_rounded, label: 'Muscle Soreness'),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
             children: SorenessLevel.values.map((level) {
               final selected = _soreness == level;
-
               return ChoiceChip(
-                label: Text(
-                  level.displayName,
-                ),
+                label: Text(level.displayName),
                 selected: selected,
                 selectedColor: cs.primaryContainer,
                 onSelected: _submitting
                     ? null
-                    : (_) {
-                        setState(
-                          () => _soreness = level,
-                        );
-                      },
+                    : (_) => setState(() => _soreness = level),
               );
             }).toList(),
           ),
           const SizedBox(height: 20),
-          _SectionTitle(
-            icon: Icons.bolt_rounded,
-            label: 'Energy Level',
-          ),
+
+          // Energy
+          _SectionTitle(icon: Icons.bolt_rounded, label: 'Energy Level'),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
             runSpacing: 6,
             children: EnergyLevel.values.map((level) {
               final selected = _energy == level;
-
               return ChoiceChip(
-                label: Text(
-                  level.displayName,
-                ),
+                label: Text(level.displayName),
                 selected: selected,
                 selectedColor: cs.primaryContainer,
-                onSelected: _submitting
-                    ? null
-                    : (_) {
-                        setState(
-                          () => _energy = level,
-                        );
-                      },
+                onSelected:
+                    _submitting ? null : (_) => setState(() => _energy = level),
               );
             }).toList(),
           ),
           const SizedBox(height: 20),
-          _SectionTitle(
-            icon: Icons.sentiment_satisfied_rounded,
-            label: 'Mood',
-          ),
+
+          // Mood
+          _SectionTitle(icon: Icons.sentiment_satisfied_rounded, label: 'Mood'),
           const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: List.generate(
-              5,
-              (index) {
-                final value = index + 1;
-                final selected = _mood == value;
-
-                return GestureDetector(
-                  onTap: _submitting
-                      ? null
-                      : () {
-                          setState(
-                            () => _mood = value,
-                          );
-                        },
-                  child: AnimatedContainer(
-                    duration: const Duration(
-                      milliseconds: 180,
-                    ),
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: selected
-                          ? cs.primaryContainer
-                          : cs.surfaceContainerHigh,
-                      borderRadius: BorderRadius.circular(
-                        12,
-                      ),
-                      border: selected
-                          ? Border.all(
-                              color: cs.primary,
-                              width: 2,
-                            )
-                          : null,
-                    ),
-                    child: Center(
-                      child: Text(
-                        _moodEmoji(value),
-                        style: const TextStyle(
-                          fontSize: 22,
-                        ),
-                      ),
+            children: List.generate(5, (index) {
+              final value = index + 1;
+              final selected = _mood == value;
+              return GestureDetector(
+                onTap: _submitting ? null : () => setState(() => _mood = value),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? cs.primaryContainer
+                        : cs.surfaceContainerHigh,
+                    borderRadius: BorderRadius.circular(12),
+                    border: selected
+                        ? Border.all(color: cs.primary, width: 2)
+                        : null,
+                  ),
+                  child: Center(
+                    child: Text(
+                      _moodEmoji(value),
+                      style: const TextStyle(fontSize: 22),
                     ),
                   ),
-                );
-              },
-            ),
+                ),
+              );
+            }),
           ),
           const SizedBox(height: 36),
+
+          // Submit
           FilledButton.icon(
-            icon: const Icon(
-              Icons.check_rounded,
-            ),
-            label: const Text(
-              'Done — Show My Plan',
-            ),
+            icon: const Icon(Icons.check_rounded),
+            label: const Text('Done — Show My Plan'),
             onPressed: _submitting ? null : _submit,
             style: FilledButton.styleFrom(
               minimumSize: const Size.fromHeight(52),
@@ -226,17 +212,12 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen> {
           ),
           const SizedBox(height: 12),
           TextButton(
-            onPressed: _submitting
-                ? null
-                : () {
-                    Navigator.of(context).pop(null);
-                  },
+            onPressed:
+                _submitting ? null : () => Navigator.of(context).pop(null),
             child: Text(
               'Skip for now',
               style: TextStyle(
-                color: cs.onSurface.withValues(
-                  alpha: 0.5,
-                ),
+                color: cs.onSurface.withValues(alpha: 0.5),
               ),
             ),
           ),
@@ -246,31 +227,27 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen> {
   }
 
   void _submit() {
-    if (_submitting) {
-      return;
-    }
+    if (_submitting) return;
 
-    setState(() {
-      _submitting = true;
-    });
+    setState(() => _submitting = true);
+
+    // Parse weight, fallback to 0.0 if empty or invalid
+    final weightKg = double.tryParse(_weightController.text.trim()) ?? 0.0;
 
     final checkIn = DailyCheckIn(
       userId: widget.userId,
       date: DateTime.now(),
+      weightKg: weightKg,
       sleepHours: _sleepHours,
       sorenessLevel: _soreness,
       energyLevel: _energy,
       mood: _mood,
     );
 
-    Navigator.of(context).pop(
-      checkIn,
-    );
+    Navigator.of(context).pop(checkIn);
   }
 
-  String _moodEmoji(
-    int value,
-  ) {
+  String _moodEmoji(int value) {
     switch (value) {
       case 1:
         return '😞';
@@ -290,24 +267,14 @@ class _SectionTitle extends StatelessWidget {
   final IconData icon;
   final String label;
 
-  const _SectionTitle({
-    required this.icon,
-    required this.label,
-  });
+  const _SectionTitle({required this.icon, required this.label});
 
   @override
-  Widget build(
-    BuildContext context,
-  ) {
+  Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-
     return Row(
       children: [
-        Icon(
-          icon,
-          size: 18,
-          color: cs.primary,
-        ),
+        Icon(icon, size: 18, color: cs.primary),
         const SizedBox(width: 8),
         Text(
           label,

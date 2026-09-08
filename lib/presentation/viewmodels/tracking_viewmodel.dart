@@ -70,6 +70,10 @@ class TrackingViewModel extends ChangeNotifier {
   Set<DateTime> _completedWorkoutDates = {};
   Set<DateTime> get completedWorkoutDates => _completedWorkoutDates;
 
+  // Cached workout logs – source of truth for completed and selected day logs
+  List<WorkoutLog> _workoutLogs = [];
+  List<WorkoutLog> get workoutLogs => List.unmodifiable(_workoutLogs);
+
   List<WorkoutLog> _selectedDayLogs = [];
   List<WorkoutLog> get selectedDayLogs => _selectedDayLogs;
 
@@ -91,6 +95,10 @@ class TrackingViewModel extends ChangeNotifier {
   ProgressPeriod _progressPeriod = ProgressPeriod.weekly;
   ProgressPeriod get progressPeriod => _progressPeriod;
 
+  // ============================================================
+  // Initialization
+  // ============================================================
+
   Future<void> _loadInitialData() async {
     if (_isDisposed) return;
     Log.info("TrackingViewModel: Loading initial data...");
@@ -98,10 +106,9 @@ class TrackingViewModel extends ChangeNotifier {
 
     try {
       await _loadProgramData();
-      await _loadCompletedWorkouts();
+      await _loadWorkoutLogs(); // Replaces _loadCompletedWorkouts and _loadLogsForDay
       await _loadProgressData();
       await _loadHealthPlatformData();
-      await _loadLogsForDay(_selectedDay);
       _setupDataListeners();
       if (!_isDisposed) {
         _setState(TrackingState.loaded);
@@ -111,6 +118,10 @@ class TrackingViewModel extends ChangeNotifier {
       _handleError(error, stackTrace);
     }
   }
+
+  // ============================================================
+  // Program data (planned workouts)
+  // ============================================================
 
   Future<void> _loadProgramData() async {
     if (_isDisposed) return;
@@ -147,6 +158,111 @@ class TrackingViewModel extends ChangeNotifier {
       if (!_isDisposed) notifyListeners();
     }
   }
+
+  void _generatePlannedEventsForProgram(TrainingProgram program) {
+    if (_isDisposed) return;
+    final newEvents = <DateTime, List<String>>{};
+
+    if (program.durationWeeks <= 0 || program.weeklySchedule.isEmpty) {
+      _plannedEvents = newEvents;
+      return;
+    }
+
+    final startDate = program.createdAt;
+    final endDate = program.expiresAt;
+    var currentDate = DateTime(startDate.year, startDate.month, startDate.day);
+
+    final daysOfWeek = [
+      'monday',
+      'tuesday',
+      'wednesday',
+      'thursday',
+      'friday',
+      'saturday',
+      'sunday'
+    ];
+
+    while (!currentDate.isAfter(endDate)) {
+      final dayKey = daysOfWeek[currentDate.weekday - 1];
+      final exercises = program.weeklySchedule[dayKey];
+
+      if (exercises != null && exercises.isNotEmpty) {
+        newEvents[DateTime(
+          currentDate.year,
+          currentDate.month,
+          currentDate.day,
+        )] = ['Planned'];
+      }
+      currentDate = currentDate.add(const Duration(days: 1));
+    }
+
+    _plannedEvents = newEvents;
+  }
+
+  // ============================================================
+  // Workout logs (completed & selected day)
+  // ============================================================
+
+  /// Loads all workout logs from the repository, caches them, and derives
+  /// completed dates and selected-day logs.
+  ///
+  /// This is the single source of truth for workout logs in this ViewModel.
+  Future<void> _loadWorkoutLogs() async {
+    if (_isDisposed) return;
+    Log.info("TrackingViewModel: Loading workout logs...");
+    _isLoadingDayDetails = true;
+    if (!_isDisposed) notifyListeners();
+
+    try {
+      final user = await _userRepository.getCurrentUser();
+      if (user == null) {
+        _workoutLogs = [];
+        _completedWorkoutDates = {};
+        _selectedDayLogs = [];
+        if (!_isDisposed) notifyListeners();
+        return;
+      }
+
+      // Fetch all logs once
+      final logs = await _trackingRepository.getAllLogs();
+      _workoutLogs = logs;
+
+      // Compute completed dates using the business rule: log.isCompleted
+      _completedWorkoutDates = logs.where((log) => log.isCompleted).map((log) {
+        final date = log.savedAt;
+        return DateTime(date.year, date.month, date.day);
+      }).toSet();
+
+      // Set selected-day logs from the cache
+      _selectedDayLogs = _filterLogsForDay(_selectedDay);
+
+      Log.info("TrackingViewModel: Loaded ${_workoutLogs.length} logs, "
+          "${_completedWorkoutDates.length} completed days");
+    } catch (e, s) {
+      Log.error("TrackingViewModel: Failed to load workout logs",
+          error: e, stackTrace: s);
+      _workoutLogs = [];
+      _completedWorkoutDates = {};
+      _selectedDayLogs = [];
+    } finally {
+      if (!_isDisposed) {
+        _isLoadingDayDetails = false;
+        notifyListeners();
+      }
+    }
+  }
+
+  /// Filters cached logs for a given day.
+  List<WorkoutLog> _filterLogsForDay(DateTime day) {
+    final normalizedDay = DateTime(day.year, day.month, day.day);
+    return _workoutLogs
+        .where((log) => isSameDay(log.savedAt, normalizedDay))
+        .toList();
+  }
+
+  // ============================================================
+  // Progress data
+  // ============================================================
 
   Future<void> _loadProgressData() async {
     if (_isDisposed) return;
@@ -186,6 +302,10 @@ class TrackingViewModel extends ChangeNotifier {
     await _loadProgressData();
   }
 
+  // ============================================================
+  // Health platform data
+  // ============================================================
+
   Future<void> _loadHealthPlatformData() async {
     if (_isDisposed) return;
     _isLoadingHealth = true;
@@ -210,103 +330,83 @@ class TrackingViewModel extends ChangeNotifier {
     }
   }
 
-  Future<void> _loadCompletedWorkouts() async {
+  // ============================================================
+  // Data listeners – now actually listening to workout log changes
+  // ============================================================
+
+  void _setupDataListeners() {
     if (_isDisposed) return;
-    Log.info("TrackingViewModel: Loading completed workouts...");
+
+    Log.info("TrackingViewModel: Setting up data listeners...");
+
+    _programSubscription?.cancel();
+    _logsSubscription?.cancel();
+
+    // Subscribe to workout log stream from TrackingRepository.
+    // Whenever a new log is saved, we refresh the cache and update the UI.
+    _logsSubscription = _trackingRepository.getWorkoutLogsStream().listen(
+      (_) {
+        if (_isDisposed) return;
+
+        Log.info(
+          "TrackingViewModel: Workout logs changed — refreshing tracking data",
+        );
+
+        unawaited(_refreshWorkoutLogsFromStream());
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        Log.error(
+          "TrackingViewModel: Workout log stream error",
+          error: error,
+          stackTrace: stackTrace,
+        );
+      },
+    );
+  }
+
+  /// Refreshes the cached workout logs and derived state when the stream fires.
+  Future<void> _refreshWorkoutLogsFromStream() async {
+    if (_isDisposed) return;
+
     try {
-      final user = await _userRepository.getCurrentUser();
-      if (user == null) {
-        _completedWorkoutDates = {};
-        if (!_isDisposed) notifyListeners();
-        return;
-      }
-      final logs = await _workoutRepository.getWorkoutLogs(user.id);
-      final newCompletedDates = logs.map((log) {
+      final logs = await _trackingRepository.getAllLogs();
+
+      if (_isDisposed) return;
+
+      _workoutLogs = logs;
+
+      _completedWorkoutDates = logs.where((log) => log.isCompleted).map((log) {
         final date = log.savedAt;
         return DateTime(date.year, date.month, date.day);
       }).toSet();
 
-      _completedWorkoutDates = newCompletedDates;
+      _selectedDayLogs = _filterLogsForDay(_selectedDay);
+
       Log.info(
-          "TrackingViewModel: Completed dates: ${_completedWorkoutDates.length}");
-      if (!_isDisposed) notifyListeners();
+        "TrackingViewModel: Stream refresh — "
+        "${_workoutLogs.length} logs, "
+        "${_completedWorkoutDates.length} completed days",
+      );
+
+      // Update UI immediately – calendar and day details now reflect the new log.
+      notifyListeners();
+
+      // Then recalculate progress in the background.
+      await _loadProgressData();
     } catch (error, stackTrace) {
-      Log.error("TrackingViewModel: Error loading completed workouts",
-          error: error, stackTrace: stackTrace);
-      _completedWorkoutDates = {};
-      if (!_isDisposed) notifyListeners();
+      if (_isDisposed) return;
+
+      Log.error(
+        "TrackingViewModel: Failed to refresh workout logs from stream",
+        error: error,
+        stackTrace: stackTrace,
+      );
     }
   }
 
-  void _setupDataListeners() {
-    if (_isDisposed) return;
-    Log.info("TrackingViewModel: Setting up data listeners...");
-    _programSubscription?.cancel();
-    _logsSubscription?.cancel();
-
-    // For now, we rely on manual refresh.
-    // In future, we can add streams to the repositories.
-  }
-
-  void _generatePlannedEventsForProgram(TrainingProgram program) {
-    if (_isDisposed) return;
-    final newEvents = <DateTime, List<String>>{};
-
-    if (program.durationWeeks <= 0 || program.weeklySchedule.isEmpty) {
-      _plannedEvents = newEvents;
-      return;
-    }
-
-    final startDate = program.createdAt;
-    final endDate = program.expiresAt;
-    var currentDate = DateTime(startDate.year, startDate.month, startDate.day);
-
-    final daysOfWeek = [
-      'monday',
-      'tuesday',
-      'wednesday',
-      'thursday',
-      'friday',
-      'saturday',
-      'sunday'
-    ];
-
-    while (!currentDate.isAfter(endDate)) {
-      final dayKey = daysOfWeek[currentDate.weekday - 1];
-      final exercises = program.weeklySchedule[dayKey];
-      if (exercises!.isNotEmpty) {
-        newEvents[
-            DateTime(currentDate.year, currentDate.month, currentDate.day)] = [
-          'Planned'
-        ];
-      }
-      currentDate = currentDate.add(const Duration(days: 1));
-    }
-
-    _plannedEvents = newEvents;
-  }
-
-  Future<void> _loadLogsForDay(DateTime day) async {
-    if (_isDisposed) return;
-    Log.info("TrackingViewModel: Loading logs for day: $day");
-    _isLoadingDayDetails = true;
-    if (!_isDisposed) notifyListeners();
-
-    try {
-      _selectedDayLogs = await _trackingRepository.getLogsForDay(day);
-      Log.info(
-          "TrackingViewModel: Loaded ${_selectedDayLogs.length} logs for day $day");
-    } catch (e, s) {
-      Log.error("TrackingViewModel: Failed to load logs for day $day",
-          error: e, stackTrace: s);
-      _selectedDayLogs = [];
-    } finally {
-      if (!_isDisposed) {
-        _isLoadingDayDetails = false;
-        notifyListeners();
-      }
-    }
-  }
+  // ============================================================
+  // User interaction
+  // ============================================================
 
   void selectDay(DateTime day, {DateTime? focusedDay}) {
     if (_isDisposed) return;
@@ -316,8 +416,8 @@ class TrackingViewModel extends ChangeNotifier {
     if (!isSameDay(_selectedDay, normalizedDay)) {
       _selectedDay = normalizedDay;
       _focusedDay = focusedDay ?? normalizedDay;
-      _selectedDayLogs = [];
-      _loadLogsForDay(normalizedDay);
+      // Use cached logs – no extra repository call
+      _selectedDayLogs = _filterLogsForDay(normalizedDay);
       if (!_isDisposed) notifyListeners();
     }
   }
@@ -335,6 +435,10 @@ class TrackingViewModel extends ChangeNotifier {
     if (_plannedEvents[dateOnly]?.isNotEmpty ?? false) return ['Planned'];
     return [];
   }
+
+  // ============================================================
+  // Error and state management
+  // ============================================================
 
   void _handleError(Object error, StackTrace stack) {
     if (_isDisposed) return;
@@ -355,6 +459,10 @@ class TrackingViewModel extends ChangeNotifier {
     Log.info("TrackingViewModel: Manual refresh requested");
     await _loadInitialData();
   }
+
+  // ============================================================
+  // Lifecycle
+  // ============================================================
 
   @override
   void dispose() {

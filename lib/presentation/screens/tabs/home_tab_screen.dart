@@ -1,3 +1,5 @@
+// lib/presentation/screens/home/home_tab_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:gymgenius/presentation/screens/profile_setup/profile_setup_screen.dart';
 import 'package:gymgenius/presentation/viewmodels/home_viewmodel.dart';
@@ -21,57 +23,214 @@ class HomeTabScreen extends StatefulWidget {
   State<HomeTabScreen> createState() => _HomeTabScreenState();
 }
 
-class _HomeTabScreenState extends State<HomeTabScreen> {
-  // Guards against calling triggerCheckInIfNeeded() more than once per
-  // State lifetime — HomeViewModel.notifyListeners() can fire many
-  // times while state stays HomeState.loaded (pull-to-refresh,
-  // _applyCheckIn() re-loading, etc.) and we only want to attempt the
-  // prompt once data first becomes ready. The ViewModel itself is the
-  // authority on whether the check-in was already answered/skipped
-  // today (via RecoveryRepository) — this flag only stops THIS widget
-  // instance from re-asking it repeatedly.
-  bool _checkInTriggered = false;
+class _HomeTabScreenState extends State<HomeTabScreen>
+    with WidgetsBindingObserver {
   HomeViewModel? _viewModel;
+
+  /// Prevents multiple DailyCheckIn screens from being opened
+  /// at the same time.
+  ///
+  /// IMPORTANT:
+  /// This is NOT a "check-in already shown" flag.
+  /// It only protects against concurrent calls.
+  bool _checkInPromptInProgress = false;
 
   @override
   void initState() {
     super.initState();
-    // Previously this called triggerCheckInIfNeeded() exactly once,
-    // right after the first frame — which usually ran BEFORE
-    // HomeViewModel._loadData() (several chained async calls) had
-    // finished, so healthProfile was still null and the check-in
-    // silently never fired. Listening for the ViewModel to actually
-    // reach HomeState.loaded — rather than guessing when that
-    // happens — fixes it regardless of load timing.
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final viewModel = context.read<HomeViewModel>();
       _viewModel = viewModel;
-      viewModel.addListener(_maybeTriggerCheckIn);
+      viewModel.addListener(_onHomeViewModelChanged);
       _maybeTriggerCheckIn();
     });
   }
 
-  void _maybeTriggerCheckIn() {
-    if (_checkInTriggered || !mounted) return;
+  // ===========================================================================
+  // HomeViewModel listener
+  // ===========================================================================
+
+  void _onHomeViewModelChanged() {
+    if (!mounted) return;
+    _maybeTriggerCheckIn();
+  }
+
+  // ===========================================================================
+  // Daily Check-in
+  // ===========================================================================
+
+  Future<void> _maybeTriggerCheckIn() async {
+    if (!mounted) return;
+    if (_checkInPromptInProgress) return;
 
     final viewModel = _viewModel;
-    if (viewModel == null || viewModel.state != HomeState.loaded) return;
+    if (viewModel == null) return;
 
-    _checkInTriggered = true;
-    viewModel.triggerCheckInIfNeeded(context);
+    // Only try to open the check-in once Home has finished loading.
+    if (viewModel.state != HomeState.loaded) return;
+
+    _checkInPromptInProgress = true;
+    try {
+      await viewModel.triggerCheckInIfNeeded(context);
+    } catch (error) {
+      debugPrint('HomeTabScreen: Failed to trigger DailyCheckIn: $error');
+    } finally {
+      _checkInPromptInProgress = false;
+    }
   }
+
+  // ===========================================================================
+  // Application lifecycle
+  // ===========================================================================
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+
+    /*
+     * HomeTabScreen can remain mounted inside the application's PageView.
+     *
+     * Therefore initState() is NOT enough:
+     *
+     *   App opened
+     *      ↓
+     *   DailyCheckIn
+     *      ↓
+     *   "Plus tard"
+     *      ↓
+     *   user closes/minimizes app
+     *      ↓
+     *   user comes back later
+     *      ↓
+     *   Flutter resumes the app
+     *      ↓
+     *   check again
+     *
+     * Since "Plus tard" does not persist anything, the ViewModel
+     * will see that today's check-in is still missing and reopen it.
+     */
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _maybeTriggerCheckIn();
+    });
+  }
+
+  // ===========================================================================
+  // Cleanup
+  // ===========================================================================
 
   @override
   void dispose() {
-    _viewModel?.removeListener(_maybeTriggerCheckIn);
+    WidgetsBinding.instance.removeObserver(this);
+    _viewModel?.removeListener(_onHomeViewModelChanged);
+    _viewModel = null;
     super.dispose();
   }
 
+  // ===========================================================================
+  // UI
+  // ===========================================================================
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<HomeViewModel>(
+      builder: (context, viewModel, child) {
+        return _buildContent(context, viewModel);
+      },
+    );
+  }
+
+  Widget _buildContent(BuildContext context, HomeViewModel viewModel) {
+    switch (viewModel.state) {
+      case HomeState.initial:
+      case HomeState.loading:
+        return const Center(child: CircularProgressIndicator());
+
+      case HomeState.loaded:
+        return _buildLoadedContent(context, viewModel);
+
+      case HomeState.error:
+        return _buildErrorContent(context, viewModel);
+    }
+  }
+
+  Widget _buildLoadedContent(BuildContext context, HomeViewModel viewModel) {
+    final healthProfile = viewModel.healthProfile;
+
+    // Case 1: No profile exists at all → user must create one.
+    if (healthProfile == null) {
+      return wrapInScrollable(CompleteProfileView(
+        key: const ValueKey('no_profile'),
+        onNavigate: () => _completeProfile(context, viewModel),
+        isInsufficient: true,
+      ));
+    }
+
+    // Case 2: Profile exists but is incomplete.
+    if (!healthProfile.isComplete) {
+      return wrapInScrollable(CompleteProfileView(
+        key: const ValueKey('incomplete_profile'),
+        onNavigate: () => _completeProfile(context, viewModel),
+        isInsufficient: true,
+      ));
+    }
+
+    // Case 3: No program yet.
+    if (viewModel.currentProgram == null) {
+      return wrapInScrollable(NoProgramView(
+        key: const ValueKey('no_program'),
+        onGenerate: viewModel.generateNewProgram,
+      ));
+    }
+
+    // Case 4: Program expired.
+    if (viewModel.currentProgram!.isExpired) {
+      return wrapInScrollable(ExpiredProgramView(
+        key: const ValueKey('expired_program'),
+        programName: viewModel.currentProgram!.name,
+        onGenerate: viewModel.generateNewProgram,
+        onDismiss: viewModel.dismissExpiredProgram,
+      ));
+    }
+
+    // Case 5: Everything ready → dashboard.
+    return ProgramDashboardView(
+      key: const ValueKey('dashboard'),
+      program: viewModel.currentProgram!,
+      healthProfile: healthProfile,
+      dailyPlan: viewModel.dailyPlan!,
+    );
+  }
+
+  Widget _buildErrorContent(BuildContext context, HomeViewModel viewModel) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, size: 48),
+            const SizedBox(height: 16),
+            Text(
+              viewModel.errorMessage ??
+                  'Something went wrong while loading your home screen.',
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: viewModel.refresh,
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _completeProfile(
-    BuildContext context,
-    HomeViewModel viewModel,
-  ) async {
+      BuildContext context, HomeViewModel viewModel) async {
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => ProfileSetupScreen(
@@ -85,102 +244,15 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final viewModel = context.watch<HomeViewModel>();
-
-    return Scaffold(
-      body: RefreshIndicator(
-        onRefresh: viewModel.refresh,
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
-          child: _buildBody(context, viewModel),
+  Widget wrapInScrollable(Widget child) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Center(child: child),
         ),
       ),
     );
-  }
-
-  Widget _buildBody(BuildContext context, HomeViewModel viewModel) {
-    Widget wrapInScrollable(Widget child) {
-      return LayoutBuilder(
-        builder: (context, constraints) => SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Center(child: child),
-          ),
-        ),
-      );
-    }
-
-    if (viewModel.isGeneratingProgram) {
-      return const LoadingView(
-        key: ValueKey('generating'),
-        message: "Generating your new training program...",
-      );
-    }
-
-    switch (viewModel.state) {
-      case HomeState.initial:
-      case HomeState.loading:
-        return const LoadingView(
-          key: ValueKey('loading'),
-          message: "Loading your dashboard...",
-        );
-
-      case HomeState.error:
-        return wrapInScrollable(ErrorView(
-          key: const ValueKey('error_view'),
-          message: viewModel.errorMessage ?? "An unknown error occurred.",
-          onRetry: viewModel.refresh,
-        ));
-
-      case HomeState.loaded:
-        final healthProfile = viewModel.healthProfile;
-
-        // Case 1: No profile exists at all → user must create one.
-        if (healthProfile == null) {
-          return wrapInScrollable(CompleteProfileView(
-            key: const ValueKey('no_profile'),
-            onNavigate: () => _completeProfile(context, viewModel),
-            isInsufficient: true, // or false; we can show a specific message
-          ));
-        }
-
-        // Case 2: Profile exists but is incomplete.
-        if (!healthProfile.isComplete) {
-          return wrapInScrollable(CompleteProfileView(
-            key: const ValueKey('incomplete_profile'),
-            onNavigate: () => _completeProfile(context, viewModel),
-            isInsufficient: true,
-          ));
-        }
-
-        // Case 3: No program yet.
-        if (viewModel.currentProgram == null) {
-          return wrapInScrollable(NoProgramView(
-            key: const ValueKey('no_program'),
-            onGenerate: viewModel.generateNewProgram,
-          ));
-        }
-
-        // Case 4: Program expired.
-        if (viewModel.currentProgram!.isExpired) {
-          return wrapInScrollable(ExpiredProgramView(
-            key: const ValueKey('expired_program'),
-            programName: viewModel.currentProgram!.name,
-            onGenerate: viewModel.generateNewProgram,
-            onDismiss: viewModel.dismissExpiredProgram,
-          ));
-        }
-
-        // Case 5: Everything ready → dashboard.
-        return ProgramDashboardView(
-          key: const ValueKey('dashboard'),
-          program: viewModel.currentProgram!,
-          healthProfile: healthProfile,
-          dailyPlan: viewModel.dailyPlan!,
-        );
-    }
   }
 }
