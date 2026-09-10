@@ -12,7 +12,7 @@ import 'package:gymgenius/engines/workout_engine/shared/exercise_pool_entry.dart
 const List<ExercisePoolEntry> chestSelectorizedExercises = [
   ExercisePoolEntry(
     id: 'chest_selector_chest_press',
-    name: 'Selectorized Chest Press',
+    name: 'Machine Chest Press',
     category: ExerciseCategory.compound,
     difficulty: ExerciseDifficulty.beginner,
     equipmentType: EquipmentType.gymMachinesSelectorized,

@@ -14,7 +14,7 @@ import 'package:gymgenius/engines/progress_engine/calculators/strength_progress_
 import 'package:gymgenius/engines/progress_engine/calculators/weight_progress_calculator.dart';
 import 'package:gymgenius/engines/progress_engine/detectors/plateau_detector.dart';
 
-/// Public façade for the Progress Engine (Phase 5).
+/// Public façade for the Progress Engine.
 ///
 /// Pure, deterministic calculations — no IO.
 class ProgressEngine {
@@ -36,13 +36,18 @@ class ProgressEngine {
         _plateauDetector = plateauDetector;
 
   /// Builds a [ProgressSnapshot] from raw historical inputs.
+  ///
+  /// The [targetPerWeek] parameter (from HealthProfile.training.frequency.toDays())
+  /// replaces the old [plannedWorkoutDates] Set for consistency calculation.
+  /// This decouples consistency from the active program's calendar,
+  /// making it stable across regenerations.
   ProgressSnapshot computeSnapshot({
     required String userId,
     required DateTime now,
     ProgressPeriod period = ProgressPeriod.weekly,
     required List<DailyCheckIn> checkIns,
     required List<WorkoutLog> workoutLogs,
-    required Set<DateTime> plannedWorkoutDates,
+    required int targetPerWeek, // NEW: from WorkoutFrequency.toDays()
     double? targetWeightKg,
   }) {
     final from = now.subtract(period.lookback);
@@ -61,8 +66,9 @@ class ProgressEngine {
       to: to,
     );
 
+    // NEW: consistency based on targetPerWeek instead of plannedDates
     final consistency = _consistencyCalculator.calculate(
-      plannedDates: plannedWorkoutDates,
+      targetPerWeek: targetPerWeek,
       logs: workoutLogs,
       from: from,
       to: to,
@@ -99,12 +105,14 @@ class ProgressEngine {
   }
 
   /// Builds a weekly report for the calendar week containing [weekStart].
+  ///
+  /// Similarly uses [targetPerWeek] for consistency, not planned dates.
   WeeklyProgressReport buildWeeklyReport({
     required String userId,
     required DateTime weekStart,
     required List<DailyCheckIn> checkIns,
     required List<WorkoutLog> workoutLogs,
-    required Set<DateTime> plannedWorkoutDates,
+    required int targetPerWeek, // NEW
     List<RecoveryStatus> recoveryStatuses = const [],
   }) {
     final start = _dayKey(weekStart);
@@ -126,22 +134,18 @@ class ProgressEngine {
         ? weightEnd - weightStart
         : null;
 
-    final weekLogs = workoutLogs.where((l) {
-      final day = _dayKey(l.savedAt);
-      return !day.isBefore(start) && !day.isAfter(end);
-    }).toList();
-
-    final plannedInWeek = plannedWorkoutDates.where((d) {
-      final day = _dayKey(d);
-      return !day.isBefore(start) && !day.isAfter(end);
-    }).length;
-
-    final completedInWeek = weekLogs
-        .where((l) => l.completionScore > 0)
+    // Distinct completed days in the week
+    final completedDays = workoutLogs
+        .where((l) => l.isCompleted)
         .map((l) => _dayKey(l.savedAt))
-        .toSet()
-        .length;
+        .where((d) => !d.isBefore(start) && !d.isAfter(end))
+        .toSet();
+    final completedInWeek = completedDays.length;
 
+    // Weekly target based on frequency
+    final daysSpan = end.difference(start).inDays + 1;
+    final weeks = daysSpan / 7.0;
+    final plannedInWeek = (targetPerWeek * weeks).round();
     final consistencyScore = plannedInWeek > 0
         ? ((completedInWeek / plannedInWeek) * 100).round().clamp(0, 100)
         : 0;
@@ -214,6 +218,7 @@ class ProgressEngine {
   }
 
   /// Extracts planned workout calendar days from an active [TrainingProgram].
+  /// This is used ONLY for the calendar UI (Planned markers), NOT for consistency.
   static Set<DateTime> plannedDatesFromProgram(TrainingProgram program) {
     final dates = <DateTime>{};
     if (program.durationWeeks <= 0 || program.weeklySchedule.isEmpty) {

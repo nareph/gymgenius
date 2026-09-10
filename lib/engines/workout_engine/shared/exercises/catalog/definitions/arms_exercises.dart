@@ -462,7 +462,7 @@ const List<ExercisePoolEntry> armsDefinitions = [
   ),
   ExercisePoolEntry(
     id: 'arms_bw_incline_pushups',
-    name: 'Incline Push-Up (Tricep Focus)',
+    name: 'Incline Push-Up',
     category: ExerciseCategory.compound,
     difficulty: ExerciseDifficulty.beginner,
     equipmentType: EquipmentType.bodyweight,

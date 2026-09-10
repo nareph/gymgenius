@@ -149,12 +149,8 @@ void main() {
         ),
       ];
 
-      final planned = {
-        now.subtract(const Duration(days: 7)),
-        now.subtract(const Duration(days: 5)),
-        now.subtract(const Duration(days: 3)),
-        now,
-      };
+      // NEW: targetPerWeek = 4 (WorkoutFrequency.threeToFour.toDays())
+      const targetPerWeek = 4;
 
       final snapshot = engine.computeSnapshot(
         userId: 'u1',
@@ -162,7 +158,7 @@ void main() {
         period: ProgressPeriod.weekly,
         checkIns: checkIns,
         workoutLogs: logs,
-        plannedWorkoutDates: planned,
+        targetPerWeek: targetPerWeek,
         targetWeightKg: 75,
       );
 
@@ -174,12 +170,14 @@ void main() {
     });
 
     test('handles new user with no history', () {
+      const targetPerWeek = 4;
+
       final snapshot = engine.computeSnapshot(
         userId: 'u1',
         now: now,
         checkIns: const [],
         workoutLogs: const [],
-        plannedWorkoutDates: const {},
+        targetPerWeek: targetPerWeek,
       );
 
       expect(snapshot.hasSufficientData, isFalse);

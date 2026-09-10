@@ -3,12 +3,15 @@ import 'package:gymgenius/domain/entities/workout_log.dart';
 import 'package:gymgenius/domain/enums/trend_direction.dart';
 import 'package:gymgenius/engines/progress_engine/progress_thresholds.dart';
 
-/// Computes training adherence from planned vs completed workouts.
+/// Computes training adherence against a DECLARED weekly frequency
+/// target (from the user's profile), not a calendar of days planned
+/// by whichever training program happens to be active right now.
 class ConsistencyCalculator {
   const ConsistencyCalculator();
 
+  /// [targetPerWeek] — from HealthProfile.training.frequency.toDays().
   WorkoutConsistency? calculate({
-    required Set<DateTime> plannedDates,
+    required int targetPerWeek,
     required List<WorkoutLog> logs,
     required DateTime from,
     required DateTime to,
@@ -16,38 +19,34 @@ class ConsistencyCalculator {
     final fromDay = _dayKey(from);
     final toDay = _dayKey(to);
 
-    final plannedInWindow = plannedDates.where((d) {
-      final day = _dayKey(d);
-      return !day.isBefore(fromDay) && !day.isAfter(toDay);
-    }).toSet();
+    final daysSpan = toDay.difference(fromDay).inDays + 1;
+    final weeks = daysSpan / 7.0;
 
-    if (plannedInWindow.length < ProgressThresholds.minPlannedWorkouts) {
+    final plannedWorkouts = (targetPerWeek * weeks).round();
+    if (plannedWorkouts < ProgressThresholds.minPlannedWorkouts) {
       return null;
     }
 
     final completedDays = logs
-        .where((l) => l.completionScore > 0)
+        .where((l) => l.isCompleted)
         .map((l) => _dayKey(l.savedAt))
         .where((d) => !d.isBefore(fromDay) && !d.isAfter(toDay))
         .toSet();
 
-    final completedOnPlanned =
-        plannedInWindow.where(completedDays.contains).length;
+    final completedWorkouts = completedDays.length;
 
-    final completionRate = plannedInWindow.isNotEmpty
-        ? completedOnPlanned / plannedInWindow.length
-        : 0.0;
+    final rawScore = plannedWorkouts > 0
+        ? (completedWorkouts / plannedWorkouts * 100).round()
+        : 0;
+    final score = rawScore.clamp(0, 100);
 
-    final score = (completionRate * 100).round().clamp(0, 100);
-    final daysSpan = toDay.difference(fromDay).inDays + 1;
-    final weeks = daysSpan / 7.0;
     final weeklyFrequency = weeks > 0 ? completedDays.length / weeks : 0.0;
     final consecutive = _consecutiveTrainingDays(completedDays, toDay);
-    final trend = _trend(plannedInWindow, completedDays, fromDay, toDay);
+    final trend = _trend(completedDays, fromDay, toDay, targetPerWeek);
 
     return WorkoutConsistency(
-      plannedWorkouts: plannedInWindow.length,
-      completedWorkouts: completedOnPlanned,
+      plannedWorkouts: plannedWorkouts,
+      completedWorkouts: completedWorkouts,
       consistencyScore: score,
       weeklyFrequency: weeklyFrequency,
       consecutiveTrainingDays: consecutive,
@@ -55,10 +54,22 @@ class ConsistencyCalculator {
     );
   }
 
+  /// Counts the most recent unbroken run of trained days.
+  ///
+  /// Previously always started counting from `to` (today) — if today
+  /// had no log yet (the day may simply not be over), the loop's
+  /// while-condition failed on its very first check and returned 0,
+  /// discarding an otherwise perfect streak from prior days. Now: if
+  /// today isn't logged, start from yesterday instead — an unlogged
+  /// "today" no longer zeroes out yesterday's real streak. The streak
+  /// only truly breaks once a full day is skipped.
   int _consecutiveTrainingDays(Set<DateTime> completed, DateTime to) {
-    var count = 0;
-    var day = _dayKey(to);
+    final todayKey = _dayKey(to);
+    var day = completed.contains(todayKey)
+        ? todayKey
+        : todayKey.subtract(const Duration(days: 1));
 
+    var count = 0;
     while (completed.contains(day)) {
       count++;
       day = day.subtract(const Duration(days: 1));
@@ -67,43 +78,34 @@ class ConsistencyCalculator {
   }
 
   TrendDirection _trend(
-    Set<DateTime> planned,
-    Set<DateTime> completed,
+    Set<DateTime> completedDays,
     DateTime from,
     DateTime to,
+    int targetPerWeek,
   ) {
     final mid = from.add(to.difference(from) ~/ 2);
-    final firstHalfPlanned =
-        planned.where((d) => d.isBefore(mid) || _sameDay(d, mid)).length;
-    final secondHalfPlanned = planned.length - firstHalfPlanned;
 
-    final firstHalfCompleted = completed
-        .where((d) => d.isBefore(mid) || _sameDay(d, mid))
-        .where(planned.contains)
-        .length;
-    final secondHalfCompleted =
-        completed.where(planned.contains).length - firstHalfCompleted;
+    final firstHalfCompleted =
+        completedDays.where((d) => !d.isAfter(mid)).length;
+    final secondHalfCompleted = completedDays.length - firstHalfCompleted;
 
-    if (firstHalfPlanned == 0 || secondHalfPlanned == 0) {
-      final rate = planned.isNotEmpty
-          ? completed.where(planned.contains).length / planned.length
-          : 0.0;
-      if (rate >= ProgressThresholds.irregularWeekCompletionRate) {
-        return TrendDirection.stable;
-      }
-      return TrendDirection.losing;
-    }
+    final firstHalfDays = mid.difference(from).inDays + 1;
+    final secondHalfDays = to.difference(mid).inDays;
 
-    final firstRate = firstHalfCompleted / firstHalfPlanned;
-    final secondRate = secondHalfCompleted / secondHalfPlanned;
+    final firstHalfTarget = targetPerWeek * (firstHalfDays / 7.0);
+    final secondHalfTarget = targetPerWeek * (secondHalfDays / 7.0);
+
+    final firstRate =
+        firstHalfTarget > 0 ? firstHalfCompleted / firstHalfTarget : 0.0;
+    final secondRate =
+        secondHalfTarget > 0 ? secondHalfCompleted / secondHalfTarget : 0.0;
+
     final delta = secondRate - firstRate;
 
     if (delta.abs() < 0.1) return TrendDirection.stable;
     return delta > 0 ? TrendDirection.gaining : TrendDirection.losing;
   }
 
-  bool _sameDay(DateTime a, DateTime b) =>
-      a.year == b.year && a.month == b.month && a.day == b.day;
-
   DateTime _dayKey(DateTime date) => DateTime(date.year, date.month, date.day);
 }
+

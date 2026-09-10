@@ -211,4 +211,156 @@ const List<MealTemplate> cameroonTraditionalAndSoups = [
     allergens: ['fish'],
     tags: ['street_food', 'dinner', 'recovery'],
   ),
+  MealTemplate(
+    id: 'cm_meal_white_peanut_sauce_fish_potato',
+    name: 'White peanut sauce with fried fish & potatoes',
+    objective: MealObjective.highEnergy,
+    ingredientIds: [
+      'cm_peanut_paste',
+      'cm_fish',
+      'cm_irish_potato',
+      'cm_onion',
+      'cm_hot_pepper',
+      'cm_palm_oil'
+    ],
+    ingredientNames: [
+      'Peanut paste',
+      'Fresh fish',
+      'Irish potato',
+      'Onion',
+      'Hot pepper',
+      'Palm oil'
+    ],
+    baseMacros: MacroTargets(calories: 650, proteinG: 32, carbsG: 55, fatG: 34),
+    minBudget: BudgetLevel.medium,
+    allergens: ['peanut', 'fish'],
+    tags: ['traditional', 'lunch', 'dinner', 'staple'],
+  ),
+  MealTemplate(
+    id: 'cm_meal_white_peanut_sauce_fish_plantain',
+    name: 'White peanut sauce with fried fish & plantains',
+    objective: MealObjective.highEnergy,
+    ingredientIds: [
+      'cm_peanut_paste',
+      'cm_fish',
+      'cm_plantain_boiled',
+      'cm_onion',
+      'cm_hot_pepper',
+      'cm_palm_oil'
+    ],
+    ingredientNames: [
+      'Peanut paste',
+      'Fresh fish',
+      'Boiled plantain',
+      'Onion',
+      'Hot pepper',
+      'Palm oil'
+    ],
+    baseMacros: MacroTargets(calories: 680, proteinG: 32, carbsG: 60, fatG: 34),
+    minBudget: BudgetLevel.medium,
+    allergens: ['peanut', 'fish'],
+    tags: ['traditional', 'lunch', 'dinner', 'staple'],
+  ),
+  MealTemplate(
+    id: 'cm_meal_white_peanut_sauce_fish_rice',
+    name: 'White peanut sauce with fried fish & rice',
+    objective: MealObjective.highEnergy,
+    ingredientIds: [
+      'cm_peanut_paste',
+      'cm_fish',
+      'cm_rice',
+      'cm_onion',
+      'cm_hot_pepper',
+      'cm_palm_oil'
+    ],
+    ingredientNames: [
+      'Peanut paste',
+      'Fresh fish',
+      'White rice',
+      'Onion',
+      'Hot pepper',
+      'Palm oil'
+    ],
+    baseMacros: MacroTargets(calories: 680, proteinG: 32, carbsG: 65, fatG: 34),
+    minBudget: BudgetLevel.medium,
+    allergens: ['peanut', 'fish'],
+    tags: ['traditional', 'lunch', 'dinner', 'staple'],
+  ),
+  MealTemplate(
+    id: 'cm_meal_white_peanut_sauce_fish_bobolo',
+    name: 'White peanut sauce with fried fish & Bobolo',
+    objective: MealObjective.highEnergy,
+    ingredientIds: [
+      'cm_peanut_paste',
+      'cm_fish',
+      'cm_cassava_bobolo',
+      'cm_onion',
+      'cm_hot_pepper',
+      'cm_palm_oil'
+    ],
+    ingredientNames: [
+      'Peanut paste',
+      'Fresh fish',
+      'Bobolo',
+      'Onion',
+      'Hot pepper',
+      'Palm oil'
+    ],
+    baseMacros: MacroTargets(calories: 660, proteinG: 32, carbsG: 58, fatG: 34),
+    minBudget: BudgetLevel.medium,
+    allergens: ['peanut', 'fish'],
+    tags: ['traditional', 'lunch', 'dinner', 'staple'],
+  ),
+  MealTemplate(
+    id: 'cm_meal_white_peanut_sauce_chicken_potato',
+    name: 'White peanut sauce with grilled chicken & potatoes',
+    objective: MealObjective.highProtein,
+    ingredientIds: [
+      'cm_peanut_paste',
+      'cm_chicken',
+      'cm_irish_potato',
+      'cm_onion',
+      'cm_hot_pepper',
+      'cm_palm_oil'
+    ],
+    ingredientNames: [
+      'Peanut paste',
+      'Chicken',
+      'Irish potato',
+      'Onion',
+      'Hot pepper',
+      'Palm oil'
+    ],
+    baseMacros: MacroTargets(calories: 620, proteinG: 38, carbsG: 55, fatG: 30),
+    minBudget: BudgetLevel.medium,
+    allergens: ['peanut'],
+    tags: ['traditional', 'lunch', 'dinner', 'staple'],
+  ),
+  MealTemplate(
+    id: 'cm_meal_white_peanut_sauce_fish_potato_spinach',
+    name: 'White peanut sauce with fried fish, potatoes & spinach',
+    objective: MealObjective.highEnergy,
+    ingredientIds: [
+      'cm_peanut_paste',
+      'cm_fish',
+      'cm_irish_potato',
+      'cm_spinach',
+      'cm_onion',
+      'cm_hot_pepper',
+      'cm_palm_oil'
+    ],
+    ingredientNames: [
+      'Peanut paste',
+      'Fresh fish',
+      'Irish potato',
+      'Spinach',
+      'Onion',
+      'Hot pepper',
+      'Palm oil'
+    ],
+    baseMacros: MacroTargets(calories: 610, proteinG: 34, carbsG: 50, fatG: 32),
+    minBudget: BudgetLevel.medium,
+    allergens: ['peanut', 'fish'],
+    tags: ['traditional', 'lunch', 'dinner', 'vegetable'],
+  ),
 ];

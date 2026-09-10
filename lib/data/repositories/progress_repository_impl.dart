@@ -4,6 +4,7 @@ import 'package:gymgenius/domain/entities/progress_snapshot.dart';
 import 'package:gymgenius/domain/entities/weekly_progress_report.dart';
 import 'package:gymgenius/domain/enums/progress_period.dart';
 import 'package:gymgenius/domain/entities/recovery_status.dart';
+import 'package:gymgenius/domain/enums/workout_frequency.dart';
 import 'package:gymgenius/domain/repositories/health_repository.dart';
 import 'package:gymgenius/domain/repositories/progress_repository.dart';
 import 'package:gymgenius/domain/repositories/recovery_repository.dart';
@@ -82,13 +83,13 @@ class ProgressRepositoryImpl implements ProgressRepository {
       to: current,
     );
 
-    final program = await _workoutRepository.getCurrentProgram(userId);
-    final plannedDates = program != null && !program.isExpired
-        ? ProgressEngine.plannedDatesFromProgram(program)
-        : <DateTime>{};
+    await _workoutRepository.getCurrentProgram(userId);
 
     final healthProfile = await _healthRepository.getHealthProfile(userId);
     final targetWeight = healthProfile?.targetWeightKg;
+
+    // Determine targetPerWeek from profile frequency.
+    final targetPerWeek = healthProfile?.training.frequency.toDays() ?? 4;
 
     final snapshot = _engine.computeSnapshot(
       userId: userId,
@@ -96,7 +97,7 @@ class ProgressRepositoryImpl implements ProgressRepository {
       period: period,
       checkIns: checkIns,
       workoutLogs: logs,
-      plannedWorkoutDates: plannedDates,
+      targetPerWeek: targetPerWeek, // NEW: use targetPerWeek
       targetWeightKg: targetWeight,
     );
 
@@ -124,11 +125,6 @@ class ProgressRepositoryImpl implements ProgressRepository {
       to: start.add(const Duration(days: 6)),
     );
 
-    final program = await _workoutRepository.getCurrentProgram(userId);
-    final plannedDates = program != null && !program.isExpired
-        ? ProgressEngine.plannedDatesFromProgram(program)
-        : <DateTime>{};
-
     final recoveryStatuses = <RecoveryStatus>[];
     for (var i = 0; i < 7; i++) {
       final day = start.add(Duration(days: i));
@@ -136,12 +132,15 @@ class ProgressRepositoryImpl implements ProgressRepository {
       if (status != null) recoveryStatuses.add(status);
     }
 
+    final healthProfile = await _healthRepository.getHealthProfile(userId);
+    final targetPerWeek = healthProfile?.training.frequency.toDays() ?? 4;
+
     return _engine.buildWeeklyReport(
       userId: userId,
       weekStart: start,
       checkIns: checkIns,
       workoutLogs: logs,
-      plannedWorkoutDates: plannedDates,
+      targetPerWeek: targetPerWeek,
       recoveryStatuses: recoveryStatuses,
     );
   }

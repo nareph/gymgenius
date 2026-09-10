@@ -31,7 +31,7 @@ const List<ExercisePoolEntry> chestChairExercises = [
   ),
   ExercisePoolEntry(
     id: 'chest_chair_decline_pushup',
-    name: 'Decline Bench Push-Up',
+    name: 'Decline Push-Up',
     category: ExerciseCategory.compound,
     difficulty: ExerciseDifficulty.intermediate,
     equipmentType: EquipmentType.chairOrSimpleBench,
