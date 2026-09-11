@@ -17,7 +17,9 @@ class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   static Route<void> route() {
-    return MaterialPageRoute<void>(builder: (_) => const HomeScreen());
+    return MaterialPageRoute<void>(
+      builder: (_) => const HomeScreen(),
+    );
   }
 
   @override
@@ -26,6 +28,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   _HomeView _currentView = _HomeView.landing;
+
   final _secureStorage = const FlutterSecureStorage();
 
   void _showLogin() {
@@ -51,53 +54,95 @@ class _HomeScreenState extends State<HomeScreen> {
     final hasExistingData = HiveDatasource.getAllUsers().isNotEmpty ||
         HiveDatasource.getCurrentUserId() != null;
 
-    Log.debug('HomeScreen: Has existing data? $hasExistingData');
+    Log.debug(
+      'HomeScreen: Has existing data? $hasExistingData',
+    );
 
     if (hasExistingData) {
-      Log.debug('HomeScreen: Showing data loss warning dialog');
-      final confirmed = await DataLossWarningDialog.show(context);
-      Log.debug('HomeScreen: User confirmed? $confirmed');
+      Log.debug(
+        'HomeScreen: Showing data loss warning dialog',
+      );
+
+      final confirmed = await DataLossWarningDialog.show(
+        context,
+      );
+
+      Log.debug(
+        'HomeScreen: User confirmed? $confirmed',
+      );
 
       if (confirmed != true) {
-        Log.debug('HomeScreen: User cancelled');
+        Log.debug(
+          'HomeScreen: User cancelled',
+        );
+
         return;
       }
 
-      Log.warning('HomeScreen: User confirmed deletion, clearing data...');
+      Log.warning(
+        'HomeScreen: User confirmed deletion, clearing data...',
+      );
+
       await _clearAllUserData();
     }
 
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
+
     _showSignUp();
   }
 
-  /// Clear ALL user data (Hive + FlutterSecureStorage)
+  /// Clear ALL user data (Hive + FlutterSecureStorage).
   Future<void> _clearAllUserData() async {
     try {
-      Log.warning('═══════════════════════════════════════════════════');
-      Log.warning('HomeScreen: USER CONFIRMED DATA DELETION');
-      Log.warning('═══════════════════════════════════════════════════');
+      Log.warning(
+        '═══════════════════════════════════════════════════',
+      );
+      Log.warning(
+        'HomeScreen: USER CONFIRMED DATA DELETION',
+      );
+      Log.warning(
+        '═══════════════════════════════════════════════════',
+      );
 
       await HiveDatasource.clearAll();
 
       final allKeys = await _secureStorage.readAll();
+
       int deletedCount = 0;
 
-      for (var key in allKeys.keys) {
+      for (final key in allKeys.keys) {
         if (key.startsWith('uid_') ||
             key.startsWith('password_') ||
             key.startsWith('reset_token_')) {
-          await _secureStorage.delete(key: key);
+          await _secureStorage.delete(
+            key: key,
+          );
+
           deletedCount++;
         }
       }
 
       Log.debug(
-          'HomeScreen: Deleted $deletedCount credential(s) from secure storage');
-      Log.warning('HomeScreen: ✅ ALL DATA WIPED SUCCESSFULLY');
-      Log.warning('═══════════════════════════════════════════════════');
+        'HomeScreen: Deleted '
+        '$deletedCount credential(s) from secure storage',
+      );
+
+      Log.warning(
+        'HomeScreen: ✅ ALL DATA WIPED SUCCESSFULLY',
+      );
+
+      Log.warning(
+        '═══════════════════════════════════════════════════',
+      );
     } catch (e, s) {
-      Log.error('HomeScreen: ❌ FAILED to clear data', error: e, stackTrace: s);
+      Log.error(
+        'HomeScreen: ❌ FAILED to clear data',
+        error: e,
+        stackTrace: s,
+      );
+
       rethrow;
     }
   }
@@ -105,9 +150,17 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 300),
-      transitionBuilder: (Widget child, Animation<double> animation) {
-        return FadeTransition(opacity: animation, child: child);
+      duration: const Duration(
+        milliseconds: 300,
+      ),
+      transitionBuilder: (
+        Widget child,
+        Animation<double> animation,
+      ) {
+        return FadeTransition(
+          opacity: animation,
+          child: child,
+        );
       },
       child: _buildCurrentView(),
     );
@@ -121,11 +174,13 @@ class _HomeScreenState extends State<HomeScreen> {
           onGetStarted: _startSignUp,
           onLogin: _showLogin,
         );
+
       case _HomeView.login:
         return LoginScreen(
           key: const ValueKey('login'),
           onSignUpRequested: _startSignUp,
         );
+
       case _HomeView.signUp:
         return SignUpScreen(
           key: const ValueKey('signUp'),
@@ -155,6 +210,7 @@ class _LandingPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
+
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
 
@@ -178,9 +234,17 @@ class _LandingPage extends StatelessWidget {
                 Image.asset(
                   'assets/launcher_icon/launcher_icon.png',
                   height: screenHeight * 0.15,
-                  errorBuilder: (context, error, stackTrace) {
-                    Log.error('Failed to load app logo',
-                        error: error, stackTrace: stackTrace);
+                  errorBuilder: (
+                    context,
+                    error,
+                    stackTrace,
+                  ) {
+                    Log.error(
+                      'Failed to load app logo',
+                      error: error,
+                      stackTrace: stackTrace,
+                    );
+
                     return Icon(
                       Icons.fitness_center,
                       size: screenHeight * 0.15,
@@ -188,51 +252,70 @@ class _LandingPage extends StatelessWidget {
                     );
                   },
                 ),
-                SizedBox(height: screenHeight * 0.02),
+                SizedBox(
+                  height: screenHeight * 0.02,
+                ),
                 Text(
-                  "GYMGENIUS",
+                  'NUVORA',
                   textAlign: TextAlign.center,
                   style: textTheme.displayMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: colorScheme.primary,
+                    letterSpacing: 1.5,
                   ),
                 ),
-                SizedBox(height: screenHeight * 0.01),
+                SizedBox(
+                  height: screenHeight * 0.01,
+                ),
                 Text(
-                  "Your AI-Powered Fitness Coach",
+                  'Your Personal Health Intelligence',
                   textAlign: TextAlign.center,
                   style: textTheme.headlineSmall?.copyWith(
                     color: colorScheme.onSurface.withAlpha(217),
                   ),
                 ),
-                SizedBox(height: screenHeight * 0.1),
+                SizedBox(
+                  height: screenHeight * 0.1,
+                ),
                 ElevatedButton(
                   onPressed: () {
-                    Log.debug('User tapped GET STARTED button');
+                    Log.debug(
+                      'User tapped GET STARTED button',
+                    );
+
                     onGetStarted();
                   },
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 16,
+                    ),
                   ),
-                  child: const Text("GET STARTED"),
+                  child: const Text(
+                    'GET STARTED',
+                  ),
                 ),
-                SizedBox(height: screenHeight * 0.025),
+                SizedBox(
+                  height: screenHeight * 0.025,
+                ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      "Already have an account? ",
+                      'Already have an account? ',
                       style: textTheme.bodyMedium?.copyWith(
                         color: colorScheme.onSurface.withAlpha(204),
                       ),
                     ),
                     TextButton(
                       onPressed: () {
-                        Log.debug('User tapped Log In button');
+                        Log.debug(
+                          'User tapped Log In button',
+                        );
+
                         onLogin();
                       },
                       child: Text(
-                        "Log In",
+                        'Log In',
                         style: textTheme.bodyMedium?.copyWith(
                           color: colorScheme.primary,
                           fontWeight: FontWeight.bold,
@@ -241,7 +324,9 @@ class _LandingPage extends StatelessWidget {
                     ),
                   ],
                 ),
-                SizedBox(height: screenHeight * 0.04),
+                SizedBox(
+                  height: screenHeight * 0.04,
+                ),
               ],
             ),
           ),

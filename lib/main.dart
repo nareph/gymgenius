@@ -27,7 +27,7 @@ Future<void> main() async {
   await getIt<WorkoutSessionManager>().initialize();
   await getIt<WorkoutSessionSettingsController>().load();
 
-  Log.info('--- GymGenius Started (Local Database Mode) ---');
+  Log.info('--- Nuvora Started (Local Database Mode) ---');
 
   runApp(const MyApp());
 }
@@ -48,16 +48,13 @@ class MyApp extends StatelessWidget {
         BlocProvider<SignUpBloc>(
           create: (context) => getIt<SignUpBloc>(),
         ),
-        // NOTE: registered in GetIt (injection.dart) but was never
-        // bridged into the widget tree — GetIt and Provider are
-        // separate mechanisms; being in GetIt doesn't make something
-        // reachable via context.read<>(). ActiveWorkoutSessionScreen
-        // calls context.read<WorkoutRepository>() when building
-        // ActiveWorkoutViewModel — without this line, that throws
-        // ProviderNotFoundException the moment "Start" is tapped.
+
+        // Registered in GetIt, but also exposed through Provider because
+        // some screens access WorkoutRepository using context.read<>().
         Provider<WorkoutRepository>(
           create: (context) => getIt<WorkoutRepository>(),
         ),
+
         ChangeNotifierProvider(
           create: (context) => getIt<WorkoutSessionManager>(),
         ),
@@ -86,7 +83,7 @@ class AppView extends StatelessWidget {
   Widget build(BuildContext context) {
     return WorkoutAppLifecycleBridge(
       child: MaterialApp(
-        title: 'GymGenius',
+        title: 'Nuvora',
         theme: AppTheme.darkTheme,
         debugShowCheckedModeBanner: false,
         home: const AuthWrapper(),

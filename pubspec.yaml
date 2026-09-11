@@ -1,5 +1,5 @@
 name: gymgenius
-description: "AI-Powered Fitness App"
+description: "Nuvora — Personal Health Intelligence"
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -63,8 +63,12 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: true
+
+  # Master PNG exported from the Nuvora SVG.
   image_path: "assets/launcher_icon/launcher_icon.png"
+
   min_sdk_android: 21
   remove_alpha_ios: true
+
   adaptive_icon_background: "#1565C0"
   adaptive_icon_foreground: "assets/launcher_icon/launcher_icon.png"
